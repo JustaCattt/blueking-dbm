@@ -13,6 +13,7 @@
 import pinyin from 'tiny-pinyin';
 
 import http from '../http';
+import type BizModuleTopoTree from '../model/config/biz-module-topo-tree';
 import type { BizItem } from '../types';
 
 const path = '/apis/cmdb';
@@ -120,3 +121,12 @@ export function createAppAbbr(params: { db_app_abbr: string; id: number }) {
     db_app_abbr: string;
   }>(`${path}/${params.id}/set_db_app_abbr/`, params);
 }
+
+/**
+ * 获取当前集群类型所有业务下模型列表
+ */
+export const getBizModuleTopoTree = (params: { bk_biz_id: number; cluster_type: string }) => {
+  const { cluster_type } = params;
+  // params、api要调整
+  return http.get<BizModuleTopoTree[]>(`/apis/cmdb/${params.bk_biz_id}/list_modules/`, { cluster_type });
+};
