@@ -164,16 +164,19 @@
     {
       label: t('变更前'),
       field: 'oldAccessDb',
+      width: 395,
     },
     {
       label: t('变更后'),
       field: 'newAccessDb',
+      width: 395,
     },
   ];
   const privilegeColumns: Column[] = [
     {
       label: t('权限类型'),
       field: 'privilegeDisplay',
+      width: 263,
       rowspan: ({ row }: { row: PrivilegeRow }) => {
         const { privilegeKey } = row;
         const rowSpan = privilegeData.value.filter((item) => item.privilegeKey === privilegeKey).length;
@@ -184,10 +187,12 @@
     {
       label: t('变更前'),
       field: 'beforePrivilege',
+      width: 263,
     },
     {
       label: t('变更后'),
       field: 'afterPrivilege',
+      width: 263,
       render: ({ row }: { row: PrivilegeRow }) => {
         const { afterPrivilege, isSensitiveWord } = row;
         return (
