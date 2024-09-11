@@ -126,7 +126,10 @@
     <EditEntryConfig
       :id="clusterId"
       v-model:is-show="showEditEntryConfig"
-      :get-detail-info="getRedisDetail" />
+      db-console="redis.haClusterManage.modifyEntryConfiguration"
+      :get-detail-info="getRedisDetail"
+      :permission="entryEditable"
+      :resource="DBTypes.REDIS" />
   </div>
 </template>
 
@@ -274,7 +277,7 @@
 
   const isShowDropdown = ref(false);
   const showEditEntryConfig = ref(false);
-
+  const entryEditable = ref(false);
   const selected = shallowRef<RedisModel[]>([])
 
   /** 查看密码 */
@@ -464,14 +467,14 @@
                 )}
                 <auth-button
                   v-db-console="redis.haClusterManage.modifyEntryConfiguration"
-                  v-bk-tooltips={t('修改入口配置')}
+                  v-bk-tooltips={t('查看域名/IP对应关系')}
                   action-id="access_entry_edit"
                   resource="redis"
                   permission={data.permission.access_entry_edit}
                   text
                   theme="primary"
                   onClick={() => handleOpenEntryConfig(data)}>
-                  <db-icon type="edit" />
+                  <db-icon type="bk-dbm-icon db-icon-visible1" />
                 </auth-button>
               </>
             ),
@@ -634,15 +637,19 @@
                 )}
                 <auth-button
                   v-db-console="redis.haClusterManage.modifyEntryConfiguration"
-                  v-bk-tooltips={t('修改入口配置')}
+                  v-bk-tooltips={t('查看域名/IP对应关系')}
                   action-id="access_entry_edit"
                   resource="redis"
                   permission={data.permission.access_entry_edit}
                   text
                   theme="primary"
                   onClick={() => handleOpenEntryConfig(data)}>
-                  <db-icon type="edit" />
+                  <db-icon type="bk-dbm-icon db-icon-visible1" />
                 </auth-button>
+                <db-icon
+                  v-bk-tooltips={t('查看域名/IP对应关系')}
+                  type="bk-dbm-icon db-icon-visible1"
+                  onClick={() => handleOpenEntryConfig(data)} />
               </>
             )
           }}
@@ -1136,6 +1143,7 @@
   const handleOpenEntryConfig = (row: RedisModel) => {
     showEditEntryConfig.value = true;
     clusterId.value = row.id;
+    entryEditable.value = row.permission.access_entry_edit;
   };
 
   const handleShowPassword = (id: number) => {
@@ -1319,7 +1327,7 @@
           line-height: unset !important;
 
           .db-icon-copy,
-          .db-icon-edit {
+          .db-icon-visible1 {
             display: none;
             margin-top: 1px;
             margin-left: 4px;
@@ -1386,7 +1394,7 @@
         :deep(th:hover),
         :deep(td:hover) {
           .db-icon-copy,
-          .db-icon-edit {
+          .db-icon-visible1 {
             display: inline-block;
           }
         }
