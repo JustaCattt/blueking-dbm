@@ -73,10 +73,6 @@
     v-model:is-show="isShowExcelAuthorize"
     :cluster-type="ClusterTypes.SQLSERVER_HA"
     :ticket-type="TicketTypes.SQLSERVER_EXCEL_AUTHORIZE_RULES" />
-  <EditEntryConfig
-    :id="showEnterConfigClusterId"
-    v-model:is-show="showEditEntryConfig"
-    :get-detail-info="getHaClusterDetail" />
   <ClusterReset
     v-if="currentData"
     v-model:is-show="isShowClusterReset"
@@ -113,6 +109,7 @@
   import {
     AccountTypes,
     ClusterTypes,
+    DBTypes,
     TicketTypes,
     type TicketTypesStrings,
     UserPersonalSettings,
@@ -199,8 +196,6 @@
   const tableRef = ref<InstanceType<typeof DbTable>>();
   const isShowExcelAuthorize = ref(false);
   const isShowClusterReset = ref(false)
-  const showEditEntryConfig = ref(false);
-  const showEnterConfigClusterId = ref(0);
   const currentData = ref<SqlServerHaClusterModel>()
   const selected = ref<SqlServerHaClusterModel[]>([])
 
@@ -377,14 +372,13 @@
                       data-text="NEW"/>
                   )
                 }
-                <bk-button
-                  v-bk-tooltips={t('修改入口配置')}
-                  class="ml-4"
-                  text
-                  theme="primary"
-                  onClick={() => handleOpenEntryConfig(data)}>
-                  <db-icon type="edit" />
-                </bk-button>
+                <EditEntryConfig
+                  id={data.id}
+                  dbConsole="sqlserver.haClusterList.modifyEntryConfiguration"
+                  getDetailInfo={getHaClusterDetail}
+                  permission={data.permission.access_entry_edit}
+                  resource={DBTypes.SQLSERVER}
+                  onSuccess={fetchData} />
               </>
             ),
           }}
@@ -528,14 +522,13 @@
                     }
                   ]
                 } />
-                <bk-button
-                  v-bk-tooltips={t('修改入口配置')}
-                  class="ml-4"
-                  text
-                  theme="primary"
-                  onClick={() => handleOpenEntryConfig(data)}>
-                  <db-icon type="edit" />
-                </bk-button>
+                <EditEntryConfig
+                  id={data.id}
+                  dbConsole="sqlserver.haClusterList.modifyEntryConfiguration"
+                  getDetailInfo={getHaClusterDetail}
+                  permission={data.permission.access_entry_edit}
+                  resource={DBTypes.SQLSERVER}
+                  onSuccess={fetchData} />
               </>
             )
           }}
@@ -824,10 +817,6 @@
     }, [] as string[]);
     copy(copyList.join('\n'));
   }
-  const handleOpenEntryConfig = (row: SqlServerHaClusterModel) => {
-    showEditEntryConfig.value  = true;
-    showEnterConfigClusterId.value = row.id;
-  };
 
   // 获取列表数据下的实例子列表
   const getInstanceListByRole = (dataList: SqlServerHaClusterModel[], field: keyof SqlServerHaClusterModel) => dataList.reduce((result, curRow) => {
@@ -1022,7 +1011,7 @@
 
       .db-icon-copy,
       .db-icon-link,
-      .db-icon-edit {
+      .db-icon-visible1 {
         display: none;
         margin-left: 4px;
         color: @primary-color;
@@ -1049,7 +1038,7 @@
     td:hover {
       .db-icon-copy,
       .db-icon-link,
-      .db-icon-edit {
+      .db-icon-visible1 {
         display: inline-block !important;
       }
     }

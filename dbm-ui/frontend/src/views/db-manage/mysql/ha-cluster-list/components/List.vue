@@ -12,7 +12,7 @@
 -->
 
 <template>
-  <div class="mysql-ha-cluster-list">
+  <div class="mysql-ha-cluster-list-page">
     <div class="operation-box">
       <AuthButton
         v-db-console="'mysql.haClusterList.instanceApply'"
@@ -100,10 +100,6 @@
   <ExcelAuthorize
     v-model:is-show="isShowExcelAuthorize"
     :cluster-type="ClusterTypes.TENDBHA" />
-  <EditEntryConfig
-    :id="showEnterConfigClusterId"
-    v-model:is-show="showEditEntryConfig"
-    :get-detail-info="getTendbhaDetail" />
   <CreateSubscribeRuleSlider
     v-model="showCreateSubscribeRuleSlider"
     :selected-clusters="selectedClusterList"
@@ -146,6 +142,7 @@
   import {
     AccountTypes,
     ClusterTypes,
+    DBTypes,
     TicketTypes,
     type TicketTypesStrings,
     UserPersonalSettings,
@@ -237,12 +234,10 @@
   const tableRef = ref<InstanceType<typeof DbTable>>();
   const isShowExcelAuthorize = ref(false);
   const isInit = ref(false);
-  const showEditEntryConfig = ref(false);
-  const showEnterConfigClusterId = ref(0);
   const showCreateSubscribeRuleSlider = ref(false);
   const showDataExportSlider = ref(false)
   const selectedClusterList = ref<ColumnData['data'][]>([]);
-  const currentData = ref<ColumnData['data']>()
+  const currentData = ref<ColumnData['data']>();
 
   const selected = ref<TendbhaModel[]>([])
   /** 集群授权 */
@@ -400,17 +395,13 @@
                     }
                   ]
                 } />
-                <auth-button
-                  v-bk-tooltips={t('修改入口配置')}
-                  v-db-console="mysql.haClusterList.modifyEntryConfiguration"
-                  action-id="access_entry_edit"
-                  resource="mysql"
+                <EditEntryConfig
+                  id={data.id}
+                  dbConsole="mysql.haClusterList.modifyEntryConfiguration"
+                  getDetailInfo={getTendbhaDetail}
                   permission={data.permission.access_entry_edit}
-                  text
-                  theme="primary"
-                  onClick={() => handleOpenEntryConfig(data)}>
-                  <db-icon type="edit" />
-                </auth-button>
+                  resource={DBTypes.MYSQL}
+                  onSuccess={fetchData} />
               </>
             ),
           }}
@@ -463,10 +454,13 @@
                       data-text="NEW" />
                   )
                 }
-                <db-icon
-                  v-bk-tooltips={t('复制集群名称')}
-                  type="copy"
-                  onClick={() => copy(data.cluster_name)} />
+                <EditEntryConfig
+                  id={data.id}
+                  dbConsole="mysql.haClusterList.modifyEntryConfiguration"
+                  getDetailInfo={getTendbhaDetail}
+                  permission={data.permission.access_entry_edit}
+                  resource={DBTypes.MYSQL}
+                  onSuccess={fetchData} />
               </>
             ),
           }}
@@ -557,17 +551,13 @@
                     }
                   ]
                 } />
-                <auth-button
-                  v-bk-tooltips={t('修改入口配置')}
-                  v-db-console="mysql.haClusterList.modifyEntryConfiguration"
-                  action-id="access_entry_edit"
-                  resource="mysql"
+                <EditEntryConfig
+                  id={data.id}
+                  dbConsole="mysql.haClusterList.modifyEntryConfiguration"
+                  getDetailInfo={getTendbhaDetail}
                   permission={data.permission.access_entry_edit}
-                  text
-                  theme="primary"
-                  onClick={() => handleOpenEntryConfig(data)}>
-                  <db-icon type="edit" />
-                </auth-button>
+                  resource={DBTypes.MYSQL}
+                  onSuccess={fetchData} />
               </>
             )
           }}
@@ -685,7 +675,13 @@
           role="slave"
           clusterId={data.id}
           dataSource={getTendbhaInstanceList}
-        />
+        >
+          {{
+            append: ({ data }: { data: TendbhaModel['slaves'][number] }) =>
+              data.is_stand_by &&
+              (<bk-tag class="is-stand-by" size="small">Standby</bk-tag>)
+          }}
+        </RenderInstances>
       ),
     },
     {
@@ -955,11 +951,6 @@
     handleCopy(allData as T[], field)
   }
 
-  const handleOpenEntryConfig = (row: TendbhaModel) => {
-    showEditEntryConfig.value  = true;
-    showEnterConfigClusterId.value = row.id;
-  };
-
   const handleSelection = (data: TendbhaModel, list: TendbhaModel[]) => {
     selected.value = list;
     selectedClusterList.value = list;
@@ -1103,7 +1094,7 @@
 <style lang="less" scoped>
   @import '@styles/mixins.less';
 
-  .mysql-ha-cluster-list {
+  .mysql-ha-cluster-list-page {
     height: 100%;
     padding: 24px 0;
     margin: 0 24px;
@@ -1155,31 +1146,18 @@
         }
       }
 
+      .is-stand-by {
+        color: #531dab !important;
+        background: #f9f0ff !important;
+      }
+
       .db-icon-copy,
-      .db-icon-edit {
+      .db-icon-visible1 {
         display: none;
         margin-top: 1px;
         margin-left: 4px;
         color: @primary-color;
         cursor: pointer;
-      }
-
-      .table-wrapper {
-        background-color: white;
-
-        .bk-table {
-          height: 100% !important;
-        }
-
-        :deep(.bk-table-body) {
-          max-height: calc(100% - 100px);
-        }
-      }
-
-      .is-shrink-table {
-        :deep(.bk-table-body) {
-          overflow: hidden auto;
-        }
       }
 
       :deep(.cluster-name-container) {
@@ -1218,7 +1196,7 @@
 
     :deep(td:hover) {
       .db-icon-copy,
-      .db-icon-edit {
+      .db-icon-visible1 {
         display: inline-block !important;
       }
     }

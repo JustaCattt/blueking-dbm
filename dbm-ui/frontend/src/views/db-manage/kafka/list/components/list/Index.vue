@@ -96,10 +96,6 @@
       </template>
     </BkDialog>
   </div>
-  <EditEntryConfig
-    :id="clusterId"
-    v-model:is-show="showEditEntryConfig"
-    :get-detail-info="getKafkaDetail" />
 </template>
 <script setup lang="tsx">
   import { InfoBox, Message } from 'bkui-vue';
@@ -218,7 +214,6 @@
   const isShowShrink = ref(false);
   const isShowPassword = ref(false);
   const isInit = ref(true);
-  const showEditEntryConfig = ref(false);
   const selected = ref<KafkaModel[]>([])
   const operationData = shallowRef<KafkaModel>();
 
@@ -375,17 +370,13 @@
                     ]
                   } />
                 )}
-                <auth-button
-                  v-bk-tooltips={t('修改入口配置')}
-                  v-db-console="kafka.clusterManage.modifyEntryConfiguration"
-                  action-id="access_entry_edit"
-                  resource="kafka"
+                <EditEntryConfig
+                  id={data.id}
+                  dbConsole="kafka.clusterManage.modifyEntryConfiguration"
+                  getDetailInfo={getKafkaDetail}
                   permission={data.permission.access_entry_edit}
-                  text
-                  theme="primary"
-                  onClick={() => handleOpenEntryConfig(data)}>
-                  <db-icon type="edit" />
-                </auth-button>
+                  resource={DBTypes.KAFKA}
+                  onSuccess={fetchTableData} />
               </>
             ),
           }}
@@ -774,11 +765,6 @@
     selected.value = list;
   };
 
-  const handleOpenEntryConfig = (row: KafkaModel) => {
-    showEditEntryConfig.value  = true;
-    clusterId.value = row.id;
-  };
-
   const fetchTableData = (loading?:boolean) => {
     const searchParams = getSearchSelectorParams(searchValue.value);
     tableRef.value?.fetchData(searchParams, { ...sortValue }, loading);
@@ -1075,7 +1061,7 @@
         align-items: center;
       }
 
-      .db-icon-edit {
+      .db-icon-visible1 {
         display: none;
         margin-top: 2px;
         margin-left: 4px;
@@ -1085,7 +1071,7 @@
     }
 
     :deep(tr:hover) {
-      .db-icon-edit {
+      .db-icon-visible1 {
         display: inline-block !important;
       }
     }

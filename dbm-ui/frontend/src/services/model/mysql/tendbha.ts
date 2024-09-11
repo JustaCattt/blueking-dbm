@@ -23,6 +23,7 @@ interface TendbhaInstance {
   bk_instance_id: number;
   instance: string;
   ip: string;
+  is_stand_by: boolean;
   name: string;
   phase: string;
   port: number;

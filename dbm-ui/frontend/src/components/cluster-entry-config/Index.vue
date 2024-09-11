@@ -12,12 +12,19 @@
 -->
 
 <template>
+  <DbIcon
+    v-bk-tooltips="t('查看域名/IP对应关系')"
+    type="visible1"
+    @click="() => (isShow = true)" />
   <BkDialog
+    class="entry-config-dialog"
+    draggable
     :is-show="isShow"
     :quick-close="false"
-    :title="t('修改入口配置')"
+    :show-mask="false"
+    :title="t('查看域名/IP对应关系')"
     :width="640"
-    @closed="handleClose">
+    @closed="() => (isShow = false)">
     <BkLoading :loading="isLoading">
       <BkTable
         ref="tableRef"
@@ -27,58 +34,20 @@
         :columns="columns"
         :data="tableData" />
     </BkLoading>
-    <template #footer>
-      <BkButton
-        class="mr-8"
-        style="width: 64px"
-        theme="primary"
-        @click="handleConfirm">
-        {{ t('保存') }}
-      </BkButton>
-      <BkButton
-        style="width: 64px"
-        @click="handleClose">
-        {{ t('取消') }}
-      </BkButton>
-    </template>
   </BkDialog>
 </template>
 
-<script
-  setup
-  lang="tsx"
-  generic="
-    T extends
-      | ResourceItem
-      | ResourceRedisItem
-      | SpiderModel
-      | EsModel
-      | HdfsModel
-      | KafkaModel
-      | PulsarModel
-      | SqlServerHaClusterDetailModel
-      | SqlServerSingleClusterDetailModel
-  ">
+<script setup lang="tsx">
   import { useI18n } from 'vue-i18n';
-  import { useRequest } from 'vue-request';
 
-  import EsModel from '@services/model/es/es';
-  import HdfsModel from '@services/model/hdfs/hdfs';
-  import KafkaModel from '@services/model/kafka/kafka';
-  import PulsarModel from '@services/model/pulsar/pulsar';
-  import SpiderModel from '@services/model/spider/spider';
-  import SqlServerHaClusterDetailModel from '@services/model/sqlserver/sqlserver-ha-cluster-detail';
-  import SqlServerSingleClusterDetailModel from '@services/model/sqlserver/sqlserver-single-cluster-detail';
-  import { updateClusterEntryConfig } from '@services/source/clusters';
-  import type { ResourceItem, ResourceRedisItem } from '@services/types';
+  import type { DBTypes } from '@common/const';
 
-  import { messageError, messageSuccess } from '@utils';
-
-  import MultipleInput, { checkIp } from './MultipleInput.vue';
+  import RenderBindIps from './RenderBindIps.vue';
 
   export interface RowData {
     type: string,
     entry: string,
+    role: string,
     ips: string,
     port: number,
   }
@@ -89,12 +58,26 @@
 
   interface Props {
     id?: number
-    getDetailInfo: (params: any) => Promise<T>
+    dbConsole: string;
+    resource: DBTypes;
+    permission: boolean;
+    getDetailInfo: (params: any) => Promise<{
+      cluster_entry_details: {
+        cluster_entry_type: string,
+        entry: string,
+        role: string,
+        target_details: {
+          ip: string,
+          port: number
+        }[]
+      }[]
+    }>
   }
 
-  type UpdateClusterEntryConfigParams = ServiceParameters<typeof updateClusterEntryConfig>;
-
-  const props = defineProps<Props>();
+  const props = withDefaults(defineProps<Props>(), {
+    id: 0,
+    disabled: true,
+  });
 
   const emits = defineEmits<Emits>();
 
@@ -112,33 +95,43 @@
     {
       label: t('访问入口'),
       field: 'entry',
+      width: 263,
       showOverflowTooltip: true,
+      render: ({ data }: { data: RowData }) => {
+        if (data.role === 'master_entry') {
+          return (
+            <>
+              <bk-tag size="small" theme="success">{ t('主') }</bk-tag>{ data.entry }
+            </>
+          )
+        }
+        return (
+          <>
+            <bk-tag size="small" theme="info">{ t('从') }</bk-tag>{ data.entry }
+          </>
+        )
+      },
     },
     {
       label: 'Bind IP',
       field: 'ips',
-      render: ({ data }: {data: RowData}) => <MultipleInput v-model={data.ips} disabled={data.type !== 'dns'} />,
+      width: 263,
+      render: ({ data }: { data: RowData }) => (
+        <RenderBindIps
+          v-model={props.id}
+          data={data}
+          dbConsole={props.dbConsole}
+          permission={props.permission}
+          resource={props.resource}
+          onSuccess={handleSuccess} />
+      )
     },
   ];
 
-  const { run: runUpdateClusterEntryConfig } = useRequest(updateClusterEntryConfig, {
-    manual: true,
-    onSuccess: () => {
-      messageSuccess(t('修改成功'));
-      emits('success');
-      handleClose();
-    },
-    onError: () => {
-      messageError(t('修改失败'));
-    },
-  });
-
-  watch(() => props.id, (id) => {
-    if (id) {
+  watch(isShow, () => {
+    if (isShow.value && props.id !== 0) {
       fetchResources();
     }
-  }, {
-    immediate: true,
   });
 
   const fetchResources = () => {
@@ -146,10 +139,11 @@
     props.getDetailInfo({
       id: props.id,
     })
-      .then((res: T) => {
+      .then((res) => {
         tableData.value = res.cluster_entry_details.map(item => ({
           type: item.cluster_entry_type,
           entry: item.entry,
+          role: item.role,
           ips: item.target_details.map(row => row.ip).join('\n'),
           port: item.target_details[0].port,
         }));
@@ -162,35 +156,11 @@
       });
   };
 
-  const generateCellClass = (cell: { field: string}) => (cell.field === 'ips' ? 'entry-config-ips-column' : '');
+  const generateCellClass = (cell: { field: string }) => (cell.field === 'ips' ? 'entry-config-ips-column' : '');
 
-  const handleClose = () => {
-    isShow.value = false;
-  };
-
-  const handleConfirm = () => {
-    if (!props.id) {
-      return;
-    }
-    const dnsData = tableData.value.filter(item => item.type === 'dns');
-    const isChecked = dnsData.every(item => item.ips.split('\n').every(ip => checkIp(ip)));
-    if (isChecked) {
-      const details = dnsData.reduce((results, item) => {
-        const obj = {
-          cluster_entry_type: item.type,
-          domain_name: item.entry,
-          target_instances: item.ips.split('\n').map(row => `${row}#${item.port}`),
-        };
-        results.push(obj);
-        return results;
-      }, [] as UpdateClusterEntryConfigParams['cluster_entry_details']);
-      const params = {
-        cluster_id: props.id,
-        cluster_entry_details: details,
-      };
-      runUpdateClusterEntryConfig(params);
-    }
-  };
+  const handleSuccess = () => {
+    emits('success');
+  }
 </script>
 
 <style lang="less" scoped>
@@ -203,6 +173,12 @@
     .cell {
       padding: 0 !important;
       line-height: normal !important;
+    }
+  }
+
+  .entry-config-dialog {
+    .bk-modal-footer {
+      display: none;
     }
   }
 </style>
