@@ -26,7 +26,7 @@
   import TicketModel from '@services/model/ticket/ticket';
   import { queryClusters } from '@services/source/mysqlCluster';
 
-  import { type BackupSources, selectList } from '@views/db-manage/mysql/rollback/pages/page1/components/common/const';
+  import { backupSourceList, type BackupSources } from '@views/db-manage/mysql/rollback/pages/page1/const';
 
   import { utcDisplayTime } from '@utils';
 
@@ -55,7 +55,7 @@
       label: t('备份源'),
       field: 'backup_source',
       width: 100,
-      render: ({ cell }: { cell: BackupSources }) => <span>{ selectList.backupSource.find(item => item.value === cell)?.label || '--' }</span>,
+      render: ({ cell }: { cell: BackupSources }) => <span>{ backupSourceList.find(item => item.value === cell)?.label || '--' }</span>,
     },
     {
       label: t('回档类型'),
