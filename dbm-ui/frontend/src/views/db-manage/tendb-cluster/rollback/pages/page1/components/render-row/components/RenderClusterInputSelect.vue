@@ -15,7 +15,7 @@
   <div class="render-host-box">
     <TableSeletorInput
       ref="editRef"
-      v-model="localValue"
+      v-model="localClusterDomain"
       :rules="rules"
       @click-seletor="handleOpenSeletor" />
   </div>
@@ -32,9 +32,6 @@
   import TendbhaModel from '@services/model/mysql/tendbha';
   import type TendbClusterModel from '@services/model/spider/tendbCluster';
   import { queryClusters } from '@services/source/mysqlCluster';
-  import { getSpiderListByBizId } from '@services/source/spider';
-
-  import { useGlobalBizs } from '@stores';
 
   import { ClusterTypes } from '@common/const';
   import { batchSplitRegex, domainRegex } from '@common/regex';
@@ -60,20 +57,17 @@
   });
 
   const { t } = useI18n();
-  const { currentBizId } = useGlobalBizs();
-
-  const isShowSelector = ref(false);
 
   const editRef = ref<InstanceType<typeof TableSeletorInput>>();
-  const localValue = ref();
-  const localClusterIds = ref<number[]>([props.targetClusterId]);
+  const isShowSelector = ref(false);
+  const localClusterDomain = ref('');
+  const localClusterId = ref<number>(props.targetClusterId);
   const selectedClusters = shallowRef<{ [key: string]: Array<TendbClusterModel> }>({
     [ClusterTypes.TENDBCLUSTER]: [],
   });
 
   const tabListConfig = {
     [ClusterTypes.TENDBCLUSTER]: {
-      showPreviewResultTitle: true,
       disabledRowConfig: [
         {
           handler: (data: TendbhaModel) => data.id === props.sourceClusterId,
@@ -100,7 +94,7 @@
           cluster_filters: list.map((item) => ({
             immute_domain: item,
           })),
-          bk_biz_id: currentBizId,
+          bk_biz_id: window.PROJECT_CONFIG.BIZ_ID,
         }).then((data) => {
           if (data.length === list.length) {
             return true;
@@ -113,13 +107,34 @@
   ];
 
   const queryClustersById = (id: number) => {
-    getSpiderListByBizId({
-      cluster_ids: [id],
-      bk_biz_id: currentBizId,
+    queryClusters({
+      cluster_filters: [
+        {
+          id,
+        },
+      ],
+      bk_biz_id: window.PROJECT_CONFIG.BIZ_ID,
     }).then((data) => {
-      if (data?.results.length > 0) {
-        localValue.value = data.results[0]?.master_domain;
+      if (data) {
+        localClusterDomain.value = data[0].master_domain;
       }
+    });
+  };
+
+  const handleOpenSeletor = () => {
+    isShowSelector.value = true;
+  };
+
+  // 批量选择
+  const handelClusterChange = (selected: { [key: string]: TendbClusterModel[] }) => {
+    selectedClusters.value = selected;
+    const list = Object.values(selected).flat();
+    const [firstItem] = list;
+    localClusterDomain.value = firstItem.master_domain;
+    localClusterId.value = firstItem.id;
+    window.changeConfirm = true;
+    setTimeout(() => {
+      editRef.value!.getValue();
     });
   };
 
@@ -135,26 +150,10 @@
     },
   );
 
-  const handleOpenSeletor = () => {
-    isShowSelector.value = true;
-  };
-
-  // 批量选择
-  const handelClusterChange = (selected: { [key: string]: TendbClusterModel[] }) => {
-    selectedClusters.value = selected;
-    const list = Object.keys(selected).reduce((list: TendbClusterModel[], key) => list.concat(...selected[key]), []);
-    localValue.value = list.map((item) => item.master_domain).join(',');
-    localClusterIds.value = list.map((item) => item.id);
-    window.changeConfirm = true;
-    setTimeout(() => {
-      editRef.value!.getValue();
-    });
-  };
-
   defineExpose<Exposes>({
     getValue() {
       return editRef.value!.getValue().then(() => ({
-        target_cluster_id: localClusterIds.value[0],
+        target_cluster_id: localClusterId.value,
       }));
     },
   });
