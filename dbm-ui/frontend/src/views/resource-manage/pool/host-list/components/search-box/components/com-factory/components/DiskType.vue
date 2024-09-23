@@ -42,7 +42,7 @@
     (e: 'change', value: Props['defaultValue']): void;
   }
 
-  const props = defineProps<Props>();
+  defineProps<Props>();
   const emits = defineEmits<Emits>();
   defineOptions({
     inheritAttrs: false,
@@ -56,16 +56,4 @@
   const handleChange = (value: Props['defaultValue']) => {
     emits('change', value);
   };
-
-  watch(
-    () => props.model,
-    () => {
-      if (props.model.spec_id) {
-        handleChange('');
-      }
-    },
-    {
-      immediate: true,
-    },
-  );
 </script>

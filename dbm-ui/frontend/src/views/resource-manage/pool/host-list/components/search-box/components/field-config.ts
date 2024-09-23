@@ -16,26 +16,55 @@ import _ from 'lodash';
 import { getBizs } from '@services/source/cmdb';
 import { fetchMountPoints } from '@services/source/dbresourceResource';
 import { getResourceSpec } from '@services/source/dbresourceSpec';
-import { fetchDbTypeList, getInfrasCities, getInfrasSubzonesByCity } from '@services/source/infras';
+import { fetchDbTypeList } from '@services/source/infras';
 import { getCloudList } from '@services/source/ipchooser';
 
 import { ipv4 } from '@common/regex';
 
 import { t } from '@locales/index';
 
+import { isValueEmpty } from './utils';
+
 type Config = {
   label: string;
   component: string;
-  type?: 'number' | 'string' | 'array' | 'rang';
+  type: 'number' | 'string' | 'array' | 'rang';
   flex?: number;
+  // 格式化搜索参数
+  formatValue: (value: any) => any;
   validator?: (value: any) => boolean | string;
   service?: (params?: any) => Promise<Array<any>> | Promise<any>;
   getNameByKey?: (value: string | number, item: any) => string | undefined;
+  // 组件额外关联参数
+  relatedFields?: {
+    name: string;
+    type: Config['type'];
+    formatValue: (value: any) => any;
+  }[];
+};
+
+const formatValueHelper = (field: string, value: any, type?: string) => {
+  if (isValueEmpty(value)) {
+    return {};
+  }
+  if (type === 'array' && value.length > 0) {
+    return {
+      [field]: value.join(','),
+    };
+  }
+  if (type === 'rang' && value.length > 0) {
+    return {
+      [field]: `${value[0]}-${value[1]}`,
+    };
+  }
+  return {
+    [field]: value,
+  };
 };
 
 export default {
   for_biz: {
-    label: t('专用业务'),
+    label: t('所属业务'),
     component: 'for_biz',
     type: 'number',
     service: getBizs,
@@ -45,9 +74,10 @@ export default {
       }
       return undefined;
     },
+    formatValue: (value: number) => formatValueHelper('for_biz', value, 'number'),
   },
   resource_type: {
-    label: t('专用 DB'),
+    label: t('所属DB类型'),
     component: 'resource_type',
     type: 'string',
     service: fetchDbTypeList,
@@ -57,6 +87,7 @@ export default {
       }
       return undefined;
     },
+    formatValue: (value: string) => formatValueHelper('resource_type', value),
   },
   hosts: {
     label: 'IP',
@@ -73,40 +104,46 @@ export default {
       }
       return true;
     },
+    formatValue: (value: string[]) => formatValueHelper('hosts', value, 'array'),
   },
   agent_status: {
     label: t('Agent 状态'),
     component: 'agent_status',
     type: 'number',
+    formatValue: (value: number) => formatValueHelper('agent_status', value, 'number'),
   },
   city: {
-    label: t('城市'),
+    label: t('地域 - 园区'),
     component: 'city',
-    service: getInfrasCities,
-    getNameByKey: (value: string, item: { city_code: string; city_name: string }) => {
-      if (value === item.city_code) {
-        return item.city_name;
-      }
-      return undefined;
-    },
-  },
-  subzone_ids: {
-    label: t('园区'),
-    component: 'subzone_ids',
-    service: getInfrasSubzonesByCity,
+    flex: 2,
+    type: 'string',
+    formatValue: (value: string) => formatValueHelper('city', value, 'string'),
+    relatedFields: [
+      {
+        name: 'subzone_ids',
+        type: 'array',
+        formatValue: (value: string[]) => formatValueHelper('subzone_ids', value),
+      },
+    ],
   },
   device_class: {
     label: t('机型'),
     component: 'device_class',
+    type: 'string',
+    formatValue: (value: string) => formatValueHelper('device_class', value, 'string'),
   },
   os_type: {
     label: t('操作系统类型'),
     component: 'os_type',
+    type: 'string',
+    formatValue: (value: string) => formatValueHelper('os_type', value, 'string'),
   },
   mount_point: {
     label: t('磁盘挂载点'),
     component: 'mount_point',
+    type: 'string',
     service: fetchMountPoints,
+    formatValue: (value: string) => formatValueHelper('mount_point', value, 'string'),
   },
   cpu: {
     label: t('CPU(核)'),
@@ -122,6 +159,7 @@ export default {
       }
       return true;
     },
+    formatValue: (value: string) => formatValueHelper('cpu', value, 'rang'),
   },
   mem: {
     label: t('内存(G)'),
@@ -137,6 +175,7 @@ export default {
       }
       return true;
     },
+    formatValue: (value: string) => formatValueHelper('mem', value, 'rang'),
   },
   disk: {
     label: t('磁盘(G)'),
@@ -152,10 +191,13 @@ export default {
       }
       return true;
     },
+    formatValue: (value: string) => formatValueHelper('disk', value, 'rang'),
   },
   disk_type: {
     label: t('磁盘类型'),
     component: 'disk_type',
+    type: 'string',
+    formatValue: (value: string) => formatValueHelper('disk_type', value, 'string'),
   },
   spec_id: {
     label: t('规格'),
@@ -169,6 +211,7 @@ export default {
       }
       return undefined;
     },
+    formatValue: (value: number) => formatValueHelper('spec_id', value, 'number'),
   },
   bk_cloud_ids: {
     label: t('管控区域'),
@@ -181,5 +224,6 @@ export default {
       }
       return undefined;
     },
+    formatValue: (value: string[]) => formatValueHelper('bk_cloud_ids', value, 'array'),
   },
 } as Record<string, Config>;

@@ -78,6 +78,36 @@
   export interface IPaginationExtra {
     small?: boolean;
   }
+
+  interface Props {
+    columns: InstanceType<typeof Table>['$props']['columns'];
+    dataSource: (params: any, payload?: IRequestPayload) => Promise<any>;
+    fixedPagination?: boolean;
+    clearSelection?: boolean;
+    paginationExtra?: IPaginationExtra;
+    selectable?: boolean;
+    disableSelectMethod?: (data: any) => boolean | string;
+    // data 数据的主键
+    primaryKey?: string;
+  }
+
+  interface Emits {
+    (e: 'requestSuccess', value: any): void;
+    (e: 'requestFinished', value: any[]): void;
+    (e: 'clearSearch'): void;
+    (e: 'selection', key: string[], list: any[]): void;
+    (e: 'selection', key: number[], list: any[]): void;
+  }
+
+  interface Exposes {
+    fetchData: (params: Record<string, any>, baseParams: Record<string, any>) => void;
+    getData: <T>() => Array<T>;
+    clearSelected: () => void;
+    loading: Ref<boolean>;
+    bkTableRef: Ref<InstanceType<typeof Table>>;
+    updateTableKey: () => void;
+    removeSelectByKey: (key: string) => void;
+  }
 </script>
 <script setup lang="tsx">
   import type { Table } from 'bkui-vue';
@@ -105,36 +135,6 @@
     getOffset,
     random,
   } from '@utils';
-
-  interface Props {
-    columns: InstanceType<typeof Table>['$props']['columns'],
-    dataSource: (params: any, payload?: IRequestPayload)=> Promise<any>,
-    fixedPagination?: boolean,
-    clearSelection?: boolean,
-    paginationExtra?: IPaginationExtra,
-    selectable?: boolean,
-    disableSelectMethod?: (data: any) => boolean|string,
-    // data 数据的主键
-    primaryKey?: string,
-  }
-
-  interface Emits {
-    (e: 'requestSuccess', value: any): void,
-    (e: 'requestFinished', value: any[]): void,
-    (e: 'clearSearch'): void,
-    (e: 'selection', key: string[], list: any[]): void,
-    (e: 'selection', key: number[], list: any[]): void,
-  }
-
-  interface Exposes {
-    fetchData: (params: Record<string, any>, baseParams: Record<string, any>) => void,
-    getData: <T>() => Array<T>,
-    clearSelected: () => void,
-    loading: Ref<boolean>,
-    bkTableRef: Ref<InstanceType<typeof Table>>,
-    updateTableKey: () => void,
-    removeSelectByKey: (key: string) => void,
-  }
 
   const props = withDefaults(defineProps<Props>(), {
     fixedPagination: false,
@@ -496,9 +496,11 @@
   };
 
   const calcTableHeight = _.throttle(() => {
-    const windowInnerHeight = window.innerHeight;
-    const { top } = getOffset(rootRef.value);
-    tableMaxHeight.value = windowInnerHeight - top - 24;
+    if (rootRef.value) {
+      const windowInnerHeight = window.innerHeight;
+      const { top } = getOffset(rootRef.value);
+      tableMaxHeight.value = windowInnerHeight - top - 24;
+    }
   }, 100);
 
   onMounted(() => {

@@ -155,7 +155,7 @@ const redis: InfoType = {
 const bigdata: InfoType = {
   [ClusterTypes.ES]: {
     id: ClusterTypes.ES,
-    name: 'ES',
+    name: 'ElasticSearch',
     dbType: DBTypes.ES,
     moduleId: 'bigdata',
     machineList: [
@@ -237,23 +237,9 @@ const bigdata: InfoType = {
       },
     ],
   },
-  [ClusterTypes.RIAK]: {
-    id: ClusterTypes.RIAK,
-    name: 'Riak',
-    dbType: DBTypes.RIAK,
-    moduleId: 'bigdata',
-    machineList: [],
-  },
-  [ClusterTypes.DORIS]: {
-    id: ClusterTypes.DORIS,
-    name: 'Doris',
-    dbType: DBTypes.DORIS,
-    moduleId: 'bigdata',
-    machineList: [],
-  },
 };
 
-const mongo: InfoType = {
+const mongodb: InfoType = {
   [ClusterTypes.MONGO_REPLICA_SET]: {
     id: ClusterTypes.MONGO_REPLICA_SET,
     name: t('Mongo副本集'),
@@ -323,7 +309,7 @@ export const clusterTypeInfos: RequiredInfoType = {
   ...spider,
   ...redis,
   ...bigdata,
-  ...mongo,
+  ...mongodb,
   ...sqlserver,
 } as RequiredInfoType;
 export type ClusterTypeInfos = keyof typeof clusterTypeInfos;

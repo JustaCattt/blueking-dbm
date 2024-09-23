@@ -15,7 +15,8 @@
   <BkTab
     v-model:active="active"
     class="pool-tab"
-    type="unborder-card">
+    type="unborder-card"
+    @change="handleChange">
     <BkTabPanel
       v-for="item in panels"
       :key="item.name"
@@ -23,7 +24,9 @@
       :name="item.name" />
   </BkTab>
   <div class="pool-content">
-    <Component :is="renderComponent" />
+    <Component
+      :is="renderComponent"
+      ref="comRef" />
   </div>
 </template>
 
@@ -49,6 +52,8 @@
     },
   ];
 
+  const comRef = ref();
+
   const active = useDebouncedRef((route.query.tab as string) || 'summary-view');
 
   const renderComponentMap = {
@@ -64,6 +69,13 @@
       active.value = (route.query.tab as string) || 'summary-view';
     },
   );
+
+  const handleChange = (value: string) => {
+    active.value = value;
+    if (comRef.value.clearSearch) {
+      comRef.value.clearSearch();
+    }
+  };
 </script>
 
 <style lang="less" scoped>

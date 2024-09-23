@@ -34,7 +34,6 @@
   import fieldConfig from './components/field-config';
   import FieldInput from './components/field-input/Index.vue';
   import FieldTag from './components/field-tag/Index.vue';
-  import { isValueEmpty } from './components/utils';
 
   interface Emits {
     (e: 'change', value: Record<string, any>): void;
@@ -58,20 +57,35 @@
 
   const renderCom = computed(() => comMap[renderStatus.value]);
 
+  // url 解析器
+  const urlParamsAnaly = (field: string, type?: string) => {
+    const value = urlSearchParams[field];
+    if (!value) {
+      return;
+    }
+    if (type === 'array') {
+      return value.split(',');
+    }
+    if (type === 'rang') {
+      return value.split('-');
+    }
+    if (type === 'number') {
+      return Number(value);
+    }
+    return value;
+  };
+
   // 解析 url 上面附带的查询参数
   Object.keys(urlSearchParams).forEach((fieldName) => {
     const config = fieldConfig[fieldName as keyof typeof fieldConfig];
     if (!config) {
       return;
     }
-    if (config.type === 'array') {
-      searchParams.value[fieldName] = urlSearchParams[fieldName].split(',');
-    } else if (config.type === 'rang') {
-      searchParams.value[fieldName] = urlSearchParams[fieldName].split('-');
-    } else if (config.type === 'number') {
-      searchParams.value[fieldName] = Number(urlSearchParams[fieldName]);
-    } else {
-      searchParams.value[fieldName] = urlSearchParams[fieldName];
+    searchParams.value[fieldName] = urlParamsAnaly(fieldName, config.type);
+    if (config.relatedFields) {
+      config.relatedFields.forEach((item) => {
+        searchParams.value[item.name] = urlParamsAnaly(item.name, item.type);
+      });
     }
   });
 
@@ -79,38 +93,25 @@
   const handleToggle = () => {
     renderStatus.value = renderStatus.value === 'input' ? 'tag' : 'input';
   };
+
   // 提交搜索
   const handleSubmit = () => {
-    const result = Object.keys(searchParams.value).reduce(
-      (result, key) => {
-        const value = searchParams.value[key];
-        const config = fieldConfig[key];
+    const params = Object.entries(fieldConfig).reduce<Record<string, any>>((acc, [fieldName, config]) => {
+      const obj = config.formatValue(searchParams.value[fieldName]);
+      let obj2 = {};
+      if (config.relatedFields) {
+        config.relatedFields.forEach((item) => {
+          obj2 = item.formatValue(searchParams.value[item.name]);
+        });
+      }
+      return {
+        ...acc,
+        ...obj,
+        ...obj2,
+      };
+    }, {});
 
-        if (isValueEmpty(value)) {
-          return result;
-        }
-
-        if (config.type === 'array' && value.length > 0) {
-          return {
-            ...result,
-            [key]: value.join(','),
-          };
-        }
-        if (config.type === 'rang' && value.length > 0) {
-          return {
-            ...result,
-            [key]: `${value[0]}-${value[1]}`,
-          };
-        }
-        return {
-          ...result,
-          [key]: value,
-        };
-      },
-      {} as Record<string, string>,
-    );
-
-    emits('change', result);
+    emits('change', params);
   };
 
   onMounted(() => {

@@ -112,6 +112,10 @@
   import SearchBox from './components/search-box/Index.vue';
   import useTableSetting from './hooks/useTableSetting';
 
+  interface Exposes {
+    clearSearch: () => void;
+  }
+
   const { t } = useI18n();
   const router = useRouter();
 
@@ -147,16 +151,16 @@
       render: ({ data }: {data: DbResourceModel}) => <HostAgentStatus data={data.agent_status} />,
     },
     {
-      label: t('专用业务'),
-      field: 'for_biz',
+      label: t('所属业务'),
+      field: 'for_biz_display',
       width: 170,
-      render: ({ data }: {data: DbResourceModel}) => data.for_biz.bk_biz_name || t('无限制'),
+      render: ({ data }: {data: DbResourceModel}) => data.for_biz_display || '--',
     },
     {
-      label: t('专用 DB'),
-      field: 'resource_type',
+      label: t('所属DB类型'),
+      field: 'resource_type_display',
       width: 150,
-      render: ({ data }: {data: DbResourceModel}) => data.resource_type || t('无限制'),
+      render: ({ data }: {data: DbResourceModel}) => data.resource_type_display || '--',
     },
     {
       label: t('机架'),
@@ -328,6 +332,10 @@
   const handleClearSearch = () => {
     searchBoxRef.value.clearValue();
   };
+
+  defineExpose<Exposes>({
+    clearSearch: handleClearSearch,
+  });
 </script>
 <style lang="less">
   .resource-pool-list-page {

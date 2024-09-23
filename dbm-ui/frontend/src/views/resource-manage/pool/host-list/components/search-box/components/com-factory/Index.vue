@@ -45,7 +45,7 @@
 
   import AgentStatus from './components/AgentStatus.vue';
   import BkCloudIds from './components/BkCloudIds.vue';
-  import City from './components/City.vue';
+  import CitySubzones from './components/CitySubzones.vue';
   import Cpu from './components/Cpu.vue';
   import DeviceClass from './components/DeviceClass.vue';
   import Disk from './components/Disk.vue';
@@ -57,7 +57,6 @@
   import OSType from './components/OSType.vue';
   import ResourceType from './components/ResourceType.vue';
   import SpecId from './components/SpecId.vue';
-  import SubzoneIds from './components/SubzoneIds.vue';
 
   interface Props {
     name: string;
@@ -85,7 +84,6 @@
     resource_type: ResourceType,
     hosts: Hosts,
     agent_status: AgentStatus,
-    city: City,
     device_class: DeviceClass,
     os_type: OSType,
     mount_point: MountPoint,
@@ -93,7 +91,7 @@
     mem: Mem,
     disk: Disk,
     disk_type: DiskType,
-    subzone_ids: SubzoneIds,
+    city: CitySubzones,
     bk_cloud_ids: BkCloudIds,
     spec_id: SpecId,
   };
@@ -106,9 +104,9 @@
 
   const renderCom = comMap[props.name as keyof typeof comMap];
 
-  const handleChange = (value: any) => {
+  const handleChange = (value: any, name?: string) => {
     errorMessage.value = '';
-    emits('change', props.name, value);
+    emits('change', name || props.name, value);
   };
 
   defineExpose<Expose>({

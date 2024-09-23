@@ -3,27 +3,29 @@
     class="search-box"
     form-type="vertical">
     <BkFormItem
-      :label="t('DB类型')"
+      :label="t('所属业务')"
       required>
-      <Db
-        v-model:model-value="modelValue"
-        @change="handleChangeDbType" />
-    </BkFormItem>
-    <BkFormItem :label="t('专业业务')">
       <Biz
         ref="bizRef"
+        @change="handleSearch" />
+    </BkFormItem>
+    <BkFormItem
+      :label="t('所属DB类型')"
+      required>
+      <Db
+        v-model="dbType"
         @change="handleChange" />
     </BkFormItem>
     <BkFormItem :label="t('地域 - 园区')">
       <Region
         ref="regionRef"
-        @change="handleChange" />
+        @change="handleSearch" />
     </BkFormItem>
     <BkFormItem :label="t('规格')">
       <Spec
         ref="specRef"
-        :db-type="modelValue"
-        @change="handleChange" />
+        :db-type="dbType"
+        @change="handleSearch" />
     </BkFormItem>
   </BkForm>
 </template>
@@ -35,22 +37,22 @@
   import { ClusterTypes, DBTypes, MachineTypes } from '@common/const';
 
   import Biz from './components/Biz.vue';
-  import Db from './components/Db.vue';
+  import Db, { type DbSelectValue } from './components/Db.vue';
   import Region from './components/Region.vue';
   import Spec from './components/Spec.vue';
 
   interface Emits {
     (e: 'search'): void;
-    (e: 'change', dbType: DBTypes): void;
+    (e: 'change', value: DbSelectValue): void;
   }
 
   interface Exposes {
     getValue: () => Promise<{
-      for_biz?: number;
+      for_biz: number;
       city?: string;
       sub_zones?: string[];
       spec_param: {
-        db_type: DBTypes;
+        db_type: DbSelectValue;
         machine_type?: MachineTypes;
         cluster_type?: ClusterTypes;
         spec_id_list?: number[];
@@ -59,8 +61,9 @@
   }
 
   const emits = defineEmits<Emits>();
-  const modelValue = defineModel<DBTypes>({
-    default: DBTypes.MYSQL,
+
+  const dbType = defineModel<DbSelectValue>('dbType', {
+    default: DBTypes.REDIS,
   });
 
   const { t } = useI18n();
@@ -69,19 +72,20 @@
   const regionRef = ref<InstanceType<typeof Region>>();
   const specRef = ref<InstanceType<typeof Spec>>();
 
-  const handleChangeDbType = (dbType: DBTypes) => {
-    specRef.value!.reset();
-    nextTick(() => {
-      emits('change', dbType);
-    });
-  };
-
-  const handleChange = () => {
+  const handleSearch = () => {
     emits('search');
   };
 
+  const handleChange = (value: DbSelectValue) => {
+    specRef.value!.reset();
+    emits('change', value);
+    nextTick(() => {
+      handleSearch();
+    });
+  };
+
   const filterEmptyValues = (obj: any): any =>
-    _.pickBy(obj, (value) => value !== '' && value !== 0 && (!_.isArray(value) || !_.isEmpty(value)));
+    _.pickBy(obj, (value) => value !== '' && (!_.isArray(value) || !_.isEmpty(value)));
 
   defineExpose<Exposes>({
     getValue() {

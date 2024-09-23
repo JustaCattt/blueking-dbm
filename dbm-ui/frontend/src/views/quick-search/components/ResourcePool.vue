@@ -160,7 +160,7 @@
       render: ({ data }: { data: DbResourceModel }) => <HostAgentStatus data={data.agent_status} />,
     },
     {
-      label: t('专用业务'),
+      label: t('所属业务'),
       field: 'for_biz',
       width: 100,
       filter: {
@@ -178,7 +178,7 @@
       render: ({ data }: { data: DbResourceModel }) => data.for_biz.bk_biz_id ? <bk-tag>{data.for_biz.bk_biz_name}</bk-tag> : t('无限制'),
     },
     {
-      label: t('专用DB'),
+      label: t('所属DB类型'),
       field: 'resource_type',
       filter: {
         list: Array.from(filterMap.value.resourceTypesSet).map(resourceTypeItem => ({

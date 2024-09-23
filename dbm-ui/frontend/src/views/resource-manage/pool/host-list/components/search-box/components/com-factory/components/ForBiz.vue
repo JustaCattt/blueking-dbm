@@ -15,16 +15,15 @@
   <BkSelect
     filterable
     :input-search="false"
-    :loading="isBizListLoading"
-    :model-value="defaultValue"
-    :placeholder="t('请选择专用业务')"
+    :model-value="localValue"
+    :placeholder="t('请选择所属业务')"
     show-selected-icon
     @change="handleChange">
     <BkOption
       v-for="bizItem in bizList"
       :key="bizItem.bk_biz_id"
       :label="bizItem.display_name"
-      :value="bizItem.bk_biz_id" />
+      :value="`${bizItem.bk_biz_id}`" />
     <template
       v-if="simple"
       #extension>
@@ -59,18 +58,50 @@
     (e: 'cancel'): void;
   }
 
-  withDefaults(defineProps<Props>(), {
+  const props = withDefaults(defineProps<Props>(), {
     defaultValue: 0,
     simple: false,
   });
+
   const emits = defineEmits<Emits>();
+
   defineOptions({
     inheritAttrs: false,
   });
 
   const { t } = useI18n();
 
-  const { data: bizList, loading: isBizListLoading } = useRequest(getBizs);
+  const localValue = ref('0');
+  const bizList = shallowRef<
+    {
+      bk_biz_id: number;
+      display_name: string;
+    }[]
+  >([]);
+
+  useRequest(getBizs, {
+    onSuccess(data) {
+      const cloneData = data.map((item) => ({
+        bk_biz_id: item.bk_biz_id,
+        display_name: item.display_name,
+      }));
+      cloneData.unshift({
+        bk_biz_id: 0,
+        display_name: t('公共资源池'),
+      });
+      bizList.value = cloneData;
+    },
+  });
+
+  watch(
+    () => props.defaultValue,
+    () => {
+      localValue.value = `${props.defaultValue}`;
+    },
+    {
+      immediate: true,
+    },
+  );
 
   const handleSubmit = () => {
     emits('submit');
@@ -79,7 +110,7 @@
     emits('cancel');
   };
 
-  const handleChange = (value: number) => {
-    emits('change', value);
+  const handleChange = (value: string) => {
+    emits('change', Number(value));
   };
 </script>

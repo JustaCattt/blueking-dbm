@@ -140,13 +140,13 @@
       render: ({ data }: {data: DbResourceModel}) => <HostAgentStatus data={data.agent_status} />,
     },
     {
-      label: t('专用业务'),
+      label: t('所属业务'),
       field: 'for_biz',
       width: 170,
       render: ({ data }: {data: DbResourceModel}) => data.for_biz.bk_biz_name || t('无限制'),
     },
     {
-      label: t('专用 DB'),
+      label: t('所属DB类型'),
       field: 'resource_type',
       width: 150,
       render: ({ data }: {data: DbResourceModel}) => data.resource_type || t('无限制'),

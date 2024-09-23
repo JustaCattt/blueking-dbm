@@ -15,9 +15,8 @@
   <BkSelect
     filterable
     :input-search="false"
-    :loading="isDbTypeListLoading"
     :model-value="defaultValue"
-    :placeholder="t('请选择专用 DB')"
+    :placeholder="t('请选择所属DB类型')"
     show-selected-icon
     @change="handleChange">
     <BkOption
@@ -60,17 +59,35 @@
   }
 
   withDefaults(defineProps<Props>(), {
-    defaultValue: '',
+    defaultValue: 'PUBLIC',
     simple: false,
   });
+
   const emits = defineEmits<Emits>();
+
   defineOptions({
     inheritAttrs: false,
   });
 
   const { t } = useI18n();
 
-  const { data: dbTypeList, loading: isDbTypeListLoading } = useRequest(fetchDbTypeList);
+  const dbTypeList = shallowRef<
+    {
+      id: string;
+      name: string;
+    }[]
+  >([]);
+
+  useRequest(fetchDbTypeList, {
+    onSuccess(data) {
+      const cloneData = data;
+      cloneData.unshift({
+        id: 'PUBLIC',
+        name: t('通用'),
+      });
+      dbTypeList.value = cloneData;
+    },
+  });
 
   const handleSubmit = () => {
     emits('submit');

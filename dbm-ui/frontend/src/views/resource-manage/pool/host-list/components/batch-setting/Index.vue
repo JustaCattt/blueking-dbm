@@ -18,14 +18,13 @@
           form-type="vertical"
           :model="formData">
           <DbFormItem
-            :label="t('专用业务')"
+            :label="t('所属业务')"
             property="for_biz">
             <div class="com-input">
               <BkSelect
                 v-model="formData.for_biz"
                 :disabled="formData.set_empty_biz"
-                filterable
-                :loading="isBizListLoading">
+                filterable>
                 <BkOption
                   v-for="bizItem in bizList"
                   :key="bizItem.bk_biz_id"
@@ -41,14 +40,13 @@
             </div>
           </DbFormItem>
           <DbFormItem
-            :label="t('专用 DB')"
+            :label="t('所属DB类型')"
             property="resource_type">
             <div class="com-input">
               <BkSelect
                 v-model="formData.resource_type"
                 :disabled="formData.set_empty_resource_type"
-                filterable
-                :loading="isDbTypeListLoading">
+                filterable>
                 <BkOption
                   v-for="item in dbTypeList"
                   :key="item.id"
@@ -117,7 +115,7 @@
   const { t } = useI18n();
 
   const genDefaultData = () => ({
-    for_biz: 0,
+    for_biz: '',
     rack_id: '',
     resource_type: '',
     storage_spec: [] as IStorageSpecItem[],
@@ -127,6 +125,18 @@
 
   const formRef = ref();
   const isSubmiting = ref(false);
+  const bizList = shallowRef<
+    {
+      bk_biz_id: string;
+      display_name: string;
+    }[]
+  >([]);
+  const dbTypeList = shallowRef<
+    {
+      id: string;
+      name: string;
+    }[]
+  >([]);
   const formData = reactive(genDefaultData());
 
   const isSubmitDisabled = computed(
@@ -140,12 +150,33 @@
       ),
   );
 
-  const { data: bizList, loading: isBizListLoading } = useRequest(getBizs);
+  useRequest(getBizs, {
+    onSuccess(data) {
+      const cloneData = data.map((item) => ({
+        bk_biz_id: `${item.bk_biz_id}`,
+        display_name: item.display_name,
+      }));
+      cloneData.unshift({
+        bk_biz_id: '0',
+        display_name: t('公共资源池'),
+      });
+      bizList.value = cloneData;
+    },
+  });
 
-  const { data: dbTypeList, loading: isDbTypeListLoading } = useRequest(fetchDbTypeList);
+  useRequest(fetchDbTypeList, {
+    onSuccess(data) {
+      const cloneData = data;
+      cloneData.unshift({
+        id: 'PUBLIC',
+        name: t('通用'),
+      });
+      dbTypeList.value = cloneData;
+    },
+  });
 
   const handleEmptyBizChange = () => {
-    formData.for_biz = 0;
+    formData.for_biz = '0';
   };
 
   const handleEmptyResourceTypeChange = () => {
@@ -169,7 +200,7 @@
         );
         return updateResource({
           bk_host_ids: props.data.map((item) => ~~item),
-          for_biz: formData.set_empty_biz ? 0 : formData.for_biz,
+          for_biz: formData.set_empty_biz ? 0 : Number(formData.for_biz),
           rack_id: formData.rack_id,
           resource_type: formData.set_empty_resource_type ? '' : formData.resource_type,
           set_empty_biz: formData.set_empty_biz,

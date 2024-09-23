@@ -37,12 +37,12 @@ export default function () {
         field: 'agent_status',
       },
       {
-        label: t('专用业务'),
+        label: t('所属业务'),
         field: 'for_biz',
         disabled: true,
       },
       {
-        label: t('专用 DB'),
+        label: t('所属DB类型'),
         field: 'resource_type',
         disabled: true,
       },

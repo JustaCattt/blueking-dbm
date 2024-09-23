@@ -37,6 +37,11 @@
     </div>
     <div class="row">
       <ComFactory
+        :ref="(el: any) => initInputRefCallback(el, 'city')"
+        :model="localValueMemo"
+        name="city"
+        @change="handleChange" />
+      <ComFactory
         :ref="(el: any) => initInputRefCallback(el, 'spec_id')"
         :model="localValueMemo"
         name="spec_id"
@@ -45,11 +50,6 @@
         :ref="(el: any) => initInputRefCallback(el, 'device_class')"
         :model="localValueMemo"
         name="device_class"
-        @change="handleChange" />
-      <ComFactory
-        :ref="(el: any) => initInputRefCallback(el, 'city')"
-        :model="localValueMemo"
-        name="city"
         @change="handleChange" />
     </div>
     <KeepAlive>
@@ -81,11 +81,6 @@
             :ref="(el: any) => initInputRefCallback(el, 'disk_type')"
             :model="localValueMemo"
             name="disk_type"
-            @change="handleChange" />
-          <ComFactory
-            :ref="(el: any) => initInputRefCallback(el, 'subzone_ids')"
-            :model="localValueMemo"
-            name="subzone_ids"
             @change="handleChange" />
           <ComFactory
             :ref="(el: any) => initInputRefCallback(el, 'os_type')"

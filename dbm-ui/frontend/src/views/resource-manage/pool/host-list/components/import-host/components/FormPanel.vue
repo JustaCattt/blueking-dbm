@@ -94,14 +94,13 @@
         form-type="vertical"
         :model="formData">
         <BkFormItem
-          label="专用业务"
+          label="所属业务"
           property="for_biz">
           <div class="com-input">
             <BkSelect
               v-model="formData.for_biz"
               :disabled="isSetEmptyBiz"
-              filterable
-              :loading="isBizListLoading">
+              filterable>
               <BkOption
                 v-for="bizItem in bizList"
                 :key="bizItem.bk_biz_id"
@@ -117,14 +116,13 @@
           </div>
         </BkFormItem>
         <BkFormItem
-          label="专用 DB"
+          label="所属DB类型"
           property="resource_type">
           <div class="com-input">
             <BkSelect
               v-model="formData.resource_type"
               :disabled="isSetEmptyResourceType"
-              filterable
-              :loading="isDbTypeListLoading">
+              filterable>
               <BkOption
                 v-for="item in dbTypeList"
                 :key="item.id"
@@ -177,22 +175,57 @@
   const isSetEmptyBiz = ref(false);
   const isSetEmptyResourceType = ref(false);
   const formData = reactive({
-    for_biz: 0,
+    for_biz: '',
     resource_type: '',
   });
+  const bizList = shallowRef<
+    {
+      bk_biz_id: string;
+      display_name: string;
+    }[]
+  >([]);
+  const dbTypeList = shallowRef<
+    {
+      id: string;
+      name: string;
+    }[]
+  >([]);
 
-  const { data: bizList, loading: isBizListLoading } = useRequest(getBizs);
+  useRequest(getBizs, {
+    onSuccess(data) {
+      const cloneData = data.map((item) => ({
+        bk_biz_id: `${item.bk_biz_id}`,
+        display_name: item.display_name,
+      }));
+      cloneData.unshift({
+        bk_biz_id: '0',
+        display_name: t('公共资源池'),
+      });
+      bizList.value = cloneData;
+    },
+  });
 
-  const { data: dbTypeList, loading: isDbTypeListLoading } = useRequest(fetchDbTypeList);
+  useRequest(fetchDbTypeList, {
+    onSuccess(data) {
+      const cloneData = data;
+      cloneData.unshift({
+        id: 'PUBLIC',
+        name: t('通用'),
+      });
+      dbTypeList.value = cloneData;
+    },
+  });
 
   const handleShowHostAction = () => {
     isShowHostActionPop.value = true;
   };
+
   // 清空所有主机
   const handleRemoveAll = () => {
     emits('update:hostList', []);
     isShowHostActionPop.value = false;
   };
+
   // 清空所有异常主机
   const handleRemoveAbnormal = () => {
     const result = props.hostList.reduce(
@@ -207,6 +240,7 @@
     emits('update:hostList', result);
     isShowHostActionPop.value = false;
   };
+
   // 复制所有主机 IP
   const handleCopyAll = () => {
     const ipList = props.hostList.map((item) => item.ip);
@@ -218,6 +252,7 @@
 
     copy(ipList.join('\n'));
   };
+
   // 复制所有异常主机 IP
   const handleCopyAbnormal = () => {
     const ipList = props.hostList.reduce((result, item) => {
@@ -236,10 +271,12 @@
 
     copy(ipList.join('\n'));
   };
+
   // 复制单个指定主机 IP
   const handleCopy = (hostItem: ImportHostModel) => {
     copy(hostItem.ip);
   };
+
   // 删除单个主机
   const handleRemove = (hostItem: ImportHostModel) => {
     const hostListResult = props.hostList.reduce((result, item) => {
@@ -253,7 +290,7 @@
   };
 
   const handleEmptyBizChange = () => {
-    formData.for_biz = 0;
+    formData.for_biz = '0';
   };
 
   const handleEmptyResourceTypeChange = () => {
@@ -263,7 +300,7 @@
   defineExpose<Expose>({
     getValue() {
       return formRef.value.validate().then(() => ({
-        for_biz: isSetEmptyBiz.value ? 0 : formData.for_biz,
+        for_biz: isSetEmptyBiz.value ? 0 : Number(formData.for_biz),
         resource_type: isSetEmptyResourceType.value ? '' : formData.resource_type,
       }));
     },

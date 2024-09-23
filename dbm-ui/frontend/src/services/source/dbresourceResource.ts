@@ -205,7 +205,8 @@ export function getSummaryList(params: {
     spec_id_list?: number[];
   };
 }) {
-  return http
-    .post<SummaryModel[]>(`${path}/resource_summary/`, params)
-    .then((data) => data.map((item) => new SummaryModel(item)));
+  return http.post<SummaryModel[]>(`${path}/resource_summary/`, params).then((data) => ({
+    count: data.length || 0,
+    results: data.map((item) => new SummaryModel(item)),
+  }));
 }

@@ -11,7 +11,11 @@
  * the specific language governing permissions and limitations under the License.
  */
 
+import { DBTypeInfos, DBTypes } from '@common/const';
+
 import { bytePretty } from '@utils';
+
+import { t } from '@locales/index';
 
 export default class DbResource {
   agent_status: number;
@@ -100,5 +104,19 @@ export default class DbResource {
 
   get isAbnormal() {
     return this.agent_status === 0;
+  }
+
+  get for_biz_display() {
+    if (this.for_biz.bk_biz_id === 0 || !this.for_biz.bk_biz_name) {
+      return t('公共资源池');
+    }
+    return this.for_biz.bk_biz_name;
+  }
+
+  get resource_type_display() {
+    if (!this.resource_type || this.resource_type === 'PUBLIC') {
+      return t('通用');
+    }
+    return DBTypeInfos[this.resource_type as DBTypes].name;
   }
 }

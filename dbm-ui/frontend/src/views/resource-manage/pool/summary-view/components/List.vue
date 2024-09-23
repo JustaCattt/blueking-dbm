@@ -5,57 +5,62 @@
     :title="t('分布情况')">
     <SearchBox
       ref="searchRef"
-      v-model:model-value="currentDbType"
+      v-model="dbType"
       @change="handleChangeDbType"
       @search="fetchListData" />
     <div class="opearte-row">
       <DimensionSelect
-        v-model:model-value="currentDimension"
+        v-model="dimension"
         @change="handleChangeDimension" />
       <Export
         :data="tableData"
-        :dimension="currentDimension" />
+        :dimension="dimension" />
     </div>
-    <BkLoading :loading="loading">
+    <BkLoading
+      ref="loadingRef"
+      :loading="loading">
       <BkTable
         class="summary-view-table"
         :data="tableData"
-        :height="275"
-        show-overflow-tooltip>
-        <BkTableColumn
-          :label="t('专用业务')"
-          prop="for_biz_name"
-          :width="150" />
+        :pagination="pagination"
+        remote-pagination
+        show-overflow-tooltip
+        @page-limit-change="handeChangeLimit"
+        @page-value-change="handleChangePage">
         <BkTableColumn
           :label="t('地域')"
           prop="city"
           :width="150" />
-        <BkTableColumn
-          v-if="isSpec"
-          :label="t('规格类型')"
-          prop="spec_type_display" />
-        <BkTableColumn
-          v-if="isSpec"
-          :label="t('规格')"
-          prop="spec_name" />
-        <BkTableColumn
-          v-if="!isSpec"
-          :label="t('机型（硬盘）')"
-          prop="device_display" />
-        <BkTableColumn
-          v-if="!isSpec"
-          :label="t('CPU 内存')"
-          prop="cpu_mem_summary" />
+        <template v-if="isSpec">
+          <BkTableColumn
+            :label="t('规格类型')"
+            prop="spec_type_display" />
+          <BkTableColumn
+            :label="t('规格')"
+            prop="spec_name" />
+        </template>
+        <template v-else>
+          <BkTableColumn
+            :label="t('机型（硬盘）')"
+            prop="device_display" />
+          <BkTableColumn
+            :label="t('CPU 内存')"
+            prop="cpu_mem_summary" />
+        </template>
         <BkTableColumn
           :label="t('园区分布（台）')"
           prop="sub_zone_detail">
           <template #default="{ row }">
             <span
-              v-for="(value, key, index) in row.sub_zone_detail"
-              :key="key">
-              <span>{{ key }} : </span>
-              <span class="cell-num">{{ value }}</span>
-              <span>{{ index === Object.keys(row.sub_zone_detail).length - 1 ? ' ;' : ' , ' }}</span>
+              v-for="(item, subzoneId, index) in row.sub_zone_detail"
+              :key="subzoneId">
+              <span>{{ item.name }} : </span>
+              <span
+                class="cell-num"
+                @click="handleClick(row, subzoneId)">
+                {{ item.count }}
+              </span>
+              <span>{{ index === Object.keys(row.sub_zone_detail).length - 1 ? '' : ' , ' }}</span>
             </span>
           </template>
         </BkTableColumn>
@@ -65,7 +70,7 @@
           :width="100">
           <template #default="{ row }">
             <span
-              class="cell-num cursor-pointer"
+              class="cell-num"
               :class="{
                 'cell-num--zero': row.count === 0,
               }"
@@ -87,52 +92,82 @@
   import type SummaryModel from '@services/model/db-resource/summary';
   import { getSummaryList } from '@services/source/dbresourceResource';
 
+  import { useDefaultPagination } from '@hooks';
+
   import { DBTypes } from '@common/const';
 
   import DimensionSelect from './DimensionSelect.vue';
   import Export from './Export.vue';
+  import type { DbSelectValue } from './search-box/components/Db.vue';
   import SearchBox from './search-box/Index.vue';
 
   const { t } = useI18n();
   const router = useRouter();
 
   const searchRef = ref<InstanceType<typeof SearchBox>>();
-  const currentDbType = ref(DBTypes.MYSQL);
-  const currentDimension = ref<'spec' | 'device_class'>('spec');
-  const isSpec = computed(() => currentDimension.value === 'spec');
+  const loadingRef = ref();
+  const dbType = ref<DbSelectValue>(DBTypes.REDIS);
+  const dimension = ref<'spec' | 'device_class'>('spec');
+  const pagination = ref(useDefaultPagination());
+  const isAnomalies = ref(false);
+  const allTableData = shallowRef<SummaryModel[]>([]);
 
-  const {
-    run: fetchData,
-    data: tableData,
-    loading,
-  } = useRequest(getSummaryList, {
+  const isSpec = computed(() => dimension.value === 'spec');
+  const tableData = computed(() => {
+    const { current, limit } = pagination.value;
+    // 计算起始索引
+    const startIndex = (current - 1) * limit;
+    // 计算结束索引
+    const endIndex = startIndex + limit;
+    return allTableData.value.slice(startIndex, endIndex);
+  });
+
+  const { run: fetchData, loading } = useRequest(getSummaryList, {
     manual: true,
+    onSuccess(data) {
+      allTableData.value = data.results;
+      pagination.value.count = data.count;
+      isAnomalies.value = false;
+    },
+    onError() {
+      allTableData.value = [];
+      pagination.value.count = 0;
+      isAnomalies.value = true;
+    },
   });
 
   const fetchListData = async () => {
     const params = await searchRef.value?.getValue();
     fetchData({
-      group_by: currentDimension.value,
+      group_by: dimension.value,
       ...params,
     } as ServiceParameters<typeof getSummaryList>);
   };
 
-  const handleChangeDbType = (dbType: DBTypes) => {
-    currentDbType.value = dbType;
-    fetchListData();
+  const handleChangeDbType = (value: DbSelectValue) => {
+    dbType.value = value;
   };
 
   const handleChangeDimension = (value: string) => {
-    currentDimension.value = value as 'spec' | 'device_class';
+    dimension.value = value as 'spec' | 'device_class';
     fetchListData();
   };
 
-  const handleClick = (row: SummaryModel) => {
+  const handleChangePage = (value: number) => {
+    pagination.value.current = value;
+  };
+
+  const handeChangeLimit = (value: number) => {
+    pagination.value.limit = value;
+    handleChangePage(1);
+  };
+
+  const handleClick = (row: SummaryModel, subzoneId?: number) => {
     const params = {
       for_biz: row.dedicated_biz,
-      resource_type: currentDbType.value,
+      resource_type: dbType.value,
       city: row.city,
-      sub_zones: Object.keys(row.sub_zone_detail),
+      subzone_ids: subzoneId,
       spec_id: row.spec_id,
     };
     router.push({
@@ -162,18 +197,18 @@
     }
 
     .summary-view-table {
+      height: calc(100vh - 400px) !important;
+      max-height: none !important;
+
       :deep(.cell) {
         .cell-num {
           font-weight: bold;
           color: #3a84ff;
+          cursor: pointer;
         }
 
         .cell-num--zero {
           color: #000;
-        }
-
-        .cursor-pointer {
-          cursor: pointer;
         }
       }
     }

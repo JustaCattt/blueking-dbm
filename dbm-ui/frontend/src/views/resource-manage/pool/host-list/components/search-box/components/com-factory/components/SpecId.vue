@@ -20,7 +20,7 @@
         filterable
         :input-search="false"
         style="width: 150px"
-        @change="handleCluserChange">
+        @change="handleClusterChange">
         <BkOption
           v-for="item in Object.values(clusterTypeInfos)"
           :key="item.id"
@@ -69,7 +69,7 @@
   import { type ClusterTypeInfoItem, clusterTypeInfos, ClusterTypes } from '@common/const';
 
   interface Props {
-    defaultValue?: number;
+    defaultValue?: number | string;
   }
   interface Emits {
     (e: 'change', value: Props['defaultValue']): void;
@@ -121,7 +121,7 @@
       } else if (!currentCluster.value && !currentMachine.value && defaultValue.value) {
         // 通过规格ID获取规格详情
         fetchResourceSpecDetail({
-          spec_id: defaultValue.value,
+          spec_id: defaultValue.value as number,
         });
       }
     },
@@ -146,7 +146,7 @@
     },
   );
 
-  const handleCluserChange = (value: ClusterTypes) => {
+  const handleClusterChange = (value: ClusterTypes) => {
     clusterMachineList.value = clusterTypeInfos[value]?.machineList || [];
     currentMachine.value = '';
     defaultValue.value = '';
@@ -161,7 +161,6 @@
     reset() {
       rerenderKey.value = Date.now();
       (currentCluster.value = ''), (currentMachine.value = '');
-
       clusterMachineList.value = [];
     },
   });

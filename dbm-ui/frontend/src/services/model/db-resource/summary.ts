@@ -25,7 +25,13 @@ export default class Summary {
   disk_summary?: string;
   cpu_mem_summary?: string;
   count: number;
-  sub_zone_detail: Record<string, number>;
+  sub_zone_detail: Record<
+    number,
+    {
+      name: string;
+      count: number;
+    }
+  >;
 
   constructor(payload = {} as Summary) {
     this.dedicated_biz = payload.dedicated_biz;

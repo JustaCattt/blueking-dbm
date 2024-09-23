@@ -44,12 +44,14 @@
 <script setup lang="ts">
   import { useRequest } from 'vue-request';
 
-  import { type ClusterTypeInfoItem, clusterTypeInfos, ClusterTypes, DBTypes, MachineTypes } from '@common/const';
+  import { type ClusterTypeInfoItem, clusterTypeInfos, ClusterTypes, MachineTypes } from '@common/const';
+
+  import type { DbSelectValue } from './Db.vue';
 
   import { getResourceSpecList } from '@/services/source/dbresourceSpec';
 
   interface Props {
-    dbType: DBTypes;
+    dbType: DbSelectValue;
   }
 
   interface Emits {
@@ -59,7 +61,7 @@
   interface Exposes {
     getValue: () => {
       spec_param: {
-        db_type: DBTypes;
+        db_type: DbSelectValue;
         machine_type: MachineTypes;
         cluster_type: ClusterTypes;
         spec_id_list: number[];
@@ -69,7 +71,7 @@
   }
 
   const props = withDefaults(defineProps<Props>(), {
-    dbType: DBTypes.MYSQL,
+    dbType: 'PUBLIC',
   });
 
   const emits = defineEmits<Emits>();
@@ -125,7 +127,7 @@
   defineExpose<Exposes>({
     getValue: () => ({
       spec_param: {
-        db_type: props.dbType as DBTypes,
+        db_type: props.dbType as DbSelectValue,
         machine_type: currentMachine.value as MachineTypes,
         cluster_type: currentCluster.value as ClusterTypes,
         spec_id_list: currentSpecIdList.value as number[],
