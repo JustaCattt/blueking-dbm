@@ -242,7 +242,6 @@
       // 所有主机规格相同时则默认填充此规格。各主机规格不同时默认值留空。
       if (!modelValue.value && isSame && currentSpecId && !props.disabledCurrentSpec) {
         modelValue.value = currentSpecId;
-        console.log(currentSpecId, 'currentSpecId');
       }
 
       // 如果 modelValue 被设置为 字符串 时，若在规格列表中匹配到对应规格则选中（用于批量录入）
