@@ -228,7 +228,7 @@
   // 初始化
   watch(
     () => [modelValue.value, props.currentSpecIdList],
-    (newValue, oldValue) => {
+    () => {
       if (props.selectable && modelValue.value && typeof modelValue.value !== 'string') {
         const isExist = sortedSpecList.value.some((item) => item.spec_id === modelValue.value);
         if (!isExist) {
@@ -236,15 +236,13 @@
           return;
         }
       }
-      if (oldValue && _.isEqual(newValue[1], oldValue[1])) {
-        return;
-      }
       const currentSpecIdList = _.uniq(props.currentSpecIdList);
       const isSame = currentSpecIdList.length === 1;
       const [currentSpecId] = currentSpecIdList;
       // 所有主机规格相同时则默认填充此规格。各主机规格不同时默认值留空。
       if (!modelValue.value && isSame && currentSpecId && !props.disabledCurrentSpec) {
         modelValue.value = currentSpecId;
+        console.log(currentSpecId, 'currentSpecId');
       }
 
       // 如果 modelValue 被设置为 字符串 时，若在规格列表中匹配到对应规格则选中（用于批量录入）
