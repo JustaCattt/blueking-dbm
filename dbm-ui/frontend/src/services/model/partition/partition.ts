@@ -39,8 +39,8 @@ export default class Partition {
   extra_partition: number;
   id: number;
   immute_domain: string;
+  partition_column: string;
   partition_column_type: string;
-  partition_columns: string;
   partition_time_interval: number;
   partition_type: number;
   permission: {
@@ -62,6 +62,7 @@ export default class Partition {
   tblike: string;
   ticket_id: number;
   ticket_status: string;
+  time_zone: string;
   update_time: string;
   updator: string;
 
@@ -79,12 +80,13 @@ export default class Partition {
     this.id = payload.id;
     this.immute_domain = payload.immute_domain;
     this.partition_column_type = payload.partition_column_type;
-    this.partition_columns = payload.partition_columns;
+    this.partition_column = payload.partition_column;
     this.partition_time_interval = payload.partition_time_interval;
     this.partition_type = payload.partition_type;
     this.permission = payload.permission || {};
     this.phase = payload.phase;
     this.port = payload.port;
+    this.time_zone = payload.time_zone;
     this.reserved_partition = payload.reserved_partition;
     this.status = payload.status;
     this.tblike = payload.tblike;

@@ -256,6 +256,7 @@
         trigger: 'blur',
         validator: (value: string) =>
           verifyPartitionField({
+            bk_biz_id: window.PROJECT_CONFIG.BIZ_ID,
             cluster_id: formData.cluster_id,
             dblikes: formData.dblikes,
             partition_column: value,
