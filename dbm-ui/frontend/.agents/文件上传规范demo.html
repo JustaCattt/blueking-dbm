@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DBM 文件上传规范 · 交互 Demo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+    background: #f5f7fa;
+    color: #313238;
+    min-height: 100vh;
+    padding-bottom: 60px;
+  }
+
+  /* === 顶部 === */
+  .top-nav {
+    height: 52px;
+    background: #0E1525;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .top-nav .crumb { color: rgba(255,255,255,.5); margin-left: 16px; font-weight: 400; font-size: 13px; }
+
+  /* === 主体 === */
+  .demo-wrap { max-width: 1280px; margin: 24px auto; padding: 0 24px; }
+  .demo-header { margin-bottom: 16px; }
+  .demo-title { font-size: 18px; font-weight: 500; color: #313238; margin-bottom: 6px; }
+  .demo-sub { font-size: 12px; color: #979BA5; line-height: 1.7; max-width: 920px; }
+
+  .demo-grid { display: grid; grid-template-columns: 1fr 360px; gap: 16px; align-items: flex-start; }
+
+  .panel {
+    background: #fff; border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+  }
+  .panel-head {
+    padding: 12px 20px; border-bottom: 1px solid #f0f1f5;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 14px; font-weight: 500;
+  }
+  .panel-body { padding: 20px; }
+
+  /* === 表单 === */
+  .form-row { display: flex; align-items: center; margin-bottom: 16px; }
+  .form-row.al-top { align-items: flex-start; }
+  .form-label { width: 96px; font-size: 13px; color: #63656e; text-align: right; padding-right: 12px; flex-shrink: 0; }
+  .form-label.req::before { content: '*'; color: #EA3636; margin-right: 4px; }
+  .form-label.al-top { padding-top: 9px; }
+  .form-input {
+    flex: 1; height: 32px; padding: 0 10px;
+    border: 1px solid #c4c6cc; border-radius: 2px;
+    font-size: 13px; color: #313238; outline: none;
+  }
+  .form-input:focus { border-color: #3A84FF; }
+  .form-input:disabled { background: #fafbfd; color: #979ba5; cursor: not-allowed; }
+
+  /* === Alert === */
+  .alert-warning {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 8px 12px; background: #FFF8ED; border: 1px solid #FFE8C3;
+    border-radius: 2px; font-size: 12px; color: #63656E; line-height: 1.6;
+    margin-bottom: 16px;
+  }
+  .alert-warning svg { flex-shrink: 0; margin-top: 1px; }
+
+  /* === 文件子表 === */
+  .file-table {
+    width: 100%; border-collapse: separate; border-spacing: 0;
+    border: 1px solid #f0f1f5; border-radius: 2px; overflow: hidden;
+  }
+  .file-table thead th {
+    background: #fafbfd; padding: 8px 12px; text-align: left;
+    font-weight: 500; color: #313238; font-size: 12px;
+    border-bottom: 1px solid #f0f1f5;
+  }
+  .file-table tbody td {
+    padding: 10px 12px; border-bottom: 1px solid #f0f1f5;
+    font-size: 13px; vertical-align: top;
+  }
+  .file-table tbody tr:last-child td { border-bottom: none; }
+  .file-table tbody tr:hover td { background: #fafbfd; }
+
+  /* === 文件单元格 === */
+  .file-cell { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+  .file-icon {
+    flex-shrink: 0; width: 32px; height: 32px; border-radius: 3px;
+    background: #207245; display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 9px; font-weight: 700;
+  }
+  .file-icon.win { background: #1A4F8B; }
+  .file-icon.fail { background: #FEECEC; }
+  .file-info-stack { flex: 1; min-width: 0; }
+  .file-name {
+    font-size: 13px; color: #313238; line-height: 1.4;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .file-sub {
+    margin-top: 4px; font-size: 12px; color: #979BA5; line-height: 1.4;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .file-sub .state-tag { display: inline-flex; align-items: center; gap: 3px; }
+  .file-sub .state-tag.staged { color: #2DCB56; }
+  .file-sub .state-tag.failed { color: #EA3636; }
+  .file-sub .state-tag.uploading { color: #3A84FF; }
+
+  /* === 进度条（4px，紧贴文件名下方） === */
+  .progress {
+    height: 4px; background: #E1ECFF; border-radius: 2px;
+    overflow: hidden; margin-top: 6px;
+  }
+  .progress-bar {
+    height: 100%; background: #3A84FF; border-radius: 2px;
+    transition: width .2s linear;
+  }
+
+  /* === 操作列 === */
+  .op-cell { white-space: nowrap; text-align: right; }
+  .op-link { color: #3A84FF; cursor: pointer; font-size: 13px; padding: 0 2px; }
+  .op-link.danger { color: #EA3636; }
+  .op-link:hover { opacity: .75; }
+  .op-sep { color: #dcdee5; padding: 0 4px; }
+
+  /* === 上传按钮 + 按钮下方重名提示 === */
+  .upload-row {
+    display: flex; flex-direction: column; gap: 4px; margin-top: 8px;
+  }
+  .add-row {
+    padding: 6px 12px; cursor: pointer;
+    color: #3A84FF; font-size: 13px;
+    border: 1px dashed #c4c6cc; border-radius: 2px; text-align: center;
+  }
+  .add-row:hover { border-color: #3A84FF; background: #F0F8FF; }
+  .upload-inline-tip {
+    display: flex; align-items: flex-start; gap: 4px;
+    color: #EA3636; font-size: 12px; line-height: 1.5;
+    padding: 2px 4px;
+    animation: tipFadeIn .25s ease;
+  }
+  .upload-inline-tip svg { margin-top: 3px; }
+  .upload-inline-tip-msg { flex: 1; }
+  @keyframes tipFadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* === 表单底部 === */
+  .form-foot {
+    padding: 12px 20px; border-top: 1px solid #f0f1f5;
+    display: flex; justify-content: flex-end; gap: 8px;
+  }
+  .btn {
+    height: 32px; padding: 0 16px; border-radius: 2px;
+    border: 1px solid; font-size: 13px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-primary { background: #3A84FF; border-color: #3A84FF; color: #fff; }
+  .btn-primary:hover { background: #2B6FDB; }
+  .btn-default { background: #fff; border-color: #c4c6cc; color: #63656e; }
+  .btn-default:hover { color: #3A84FF; border-color: #3A84FF; }
+  .btn-disabled, .btn:disabled {
+    background: #fafbfd !important; border-color: #dcdee5 !important;
+    color: #c4c6cc !important; cursor: not-allowed;
+  }
+
+  /* === 自定义 tooltip === */
+  .tip-host { position: relative; }
+  .tip-host[data-tip]:not([data-tip=""]):hover::after {
+    content: attr(data-tip); position: absolute;
+    bottom: calc(100% + 6px); right: 0;
+    background: #313238; color: #fff;
+    padding: 4px 10px; border-radius: 2px;
+    font-size: 12px; white-space: nowrap;
+    pointer-events: none;
+  }
+  .tip-host[data-tip]:not([data-tip=""]):hover::before {
+    content: ''; position: absolute;
+    bottom: calc(100% + 1px); right: 16px;
+    border: 5px solid transparent; border-top-color: #313238;
+    pointer-events: none;
+  }
+
+  /* === 提交中按钮的三点 loading === */
+  .btn-loading { pointer-events: none; }
+  .dots-anim { display: inline-flex; gap: 3px; margin-left: 4px; }
+  .dots-anim span {
+    width: 4px; height: 4px; border-radius: 50%; background: #fff;
+    animation: dotBounce 1.2s infinite ease-in-out;
+  }
+  .dots-anim span:nth-child(2) { animation-delay: .2s; }
+  .dots-anim span:nth-child(3) { animation-delay: .4s; }
+  @keyframes dotBounce {
+    0%, 60%, 100% { opacity: .3; transform: translateY(0); }
+    30% { opacity: 1; transform: translateY(-3px); }
+  }
+
+  /* === 事件日志 === */
+  .log-list {
+    max-height: 520px; overflow-y: auto;
+    padding: 4px 0;
+  }
+  .log-list::-webkit-scrollbar { width: 6px; }
+  .log-list::-webkit-scrollbar-thumb { background: #dcdee5; border-radius: 3px; }
+  .log-empty {
+    padding: 24px 16px; text-align: center;
+    color: #C4C6CC; font-size: 12px;
+  }
+  .log-item {
+    padding: 6px 16px; font-size: 12px; line-height: 1.6;
+    border-bottom: 1px dashed #f0f1f5; display: flex; gap: 6px; align-items: flex-start;
+  }
+  .log-item:last-child { border-bottom: none; }
+  .log-time { color: #C4C6CC; font-family: Consolas, Monaco, monospace; flex-shrink: 0; }
+  .log-tag {
+    display: inline-block; padding: 0 6px; border-radius: 2px;
+    font-size: 11px; line-height: 18px; flex-shrink: 0; font-weight: 500;
+  }
+  .log-tag.front { background: #E1ECFF; color: #3A84FF; }
+  .log-tag.back { background: #E5F6EA; color: #2DCB56; }
+  .log-tag.warn { background: #FFF3E1; color: #FF9C01; }
+  .log-msg { color: #63656e; word-break: break-all; }
+  .log-clear { font-size: 12px; color: #979BA5; cursor: pointer; font-weight: 400; }
+  .log-clear:hover { color: #3A84FF; }
+
+  /* === 底部 demo 控制条 === */
+  .demo-bar {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+    background: #313238; color: #fff;
+    padding: 10px 20px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    box-shadow: 0 -2px 8px rgba(0,0,0,.2);
+  }
+  .demo-bar-label { color: rgba(255,255,255,.55); font-size: 12px; margin-right: 8px; }
+  .demo-btn {
+    background: rgba(255,255,255,.1); color: #fff;
+    border: 1px solid rgba(255,255,255,.15);
+    padding: 5px 12px; border-radius: 2px; font-size: 12px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .demo-btn:hover { background: rgba(255,255,255,.2); }
+  .demo-btn.warn { background: rgba(255,156,1,.18); border-color: rgba(255,156,1,.4); color: #ffb95a; }
+  .demo-btn.warn:hover { background: rgba(255,156,1,.3); }
+  .demo-btn.warn.armed {
+    background: #FF9C01; color: #fff; border-color: #FF9C01;
+    box-shadow: 0 0 0 2px rgba(255,156,1,.3);
+  }
+  .demo-switch {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: #fff; font-size: 12px; cursor: pointer;
+    padding-left: 8px; border-left: 1px solid rgba(255,255,255,.15); margin-left: 4px;
+  }
+  .demo-switch input { cursor: pointer; }
+
+  /* === Toast === */
+  .toast {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    background: #313238; color: #fff;
+    padding: 8px 16px; border-radius: 2px; font-size: 13px;
+    z-index: 1000; opacity: 0;
+    transition: opacity .25s, transform .25s;
+    pointer-events: none;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.success { background: #2DCB56; }
+  .toast.error { background: #EA3636; }
+  .toast.warning { background: #FF9C01; }
+
+  /* === 规范条目角标（在事件日志右侧显示） === */
+  .legend {
+    margin-top: 16px; padding: 12px 16px;
+    background: #fafbfd; border-radius: 4px;
+    font-size: 12px; color: #63656e; line-height: 1.7;
+  }
+  .legend-title { color: #313238; font-weight: 500; margin-bottom: 6px; font-size: 13px; }
+  .legend-item { display: flex; gap: 6px; }
+  .legend-bullet { color: #3A84FF; }
+</style>
+</head>
+<body>
+
+<div class="top-nav">
+  DBM · 文件上传规范 · 交互 Demo
+  <span class="crumb">／ 验证 staging 暂存方案的所有状态与操作</span>
+</div>
+
+<div class="demo-wrap">
+  <div class="demo-header">
+    <div class="demo-title">「添加版本包」表单 · 介质上传演示</div>
+    <div class="demo-sub">
+      演示文件上传规范（§3）的全部要点：一步式上传入口（无空占位行）、行内 3 态切换（上传中 / 上传成功 / 失败）、3 个操作（删除 / 替换 / 重试）、4-6px 行内进度条、提交按钮置灰策略。
+      右侧"事件日志"实时显示前端 / 后端的职责划分；底部"Demo 控制"可主动模拟网络中断、staging 过期、下次中途失败等边界场景。
+    </div>
+  </div>
+
+  <div class="demo-grid">
+    <!-- ==== 左：表单 ==== -->
+    <div class="panel">
+      <div class="panel-head">
+        <span>添加版本包（模拟侧滑表单）</span>
+        <span style="font-size:12px;color:#979BA5;font-weight:400;">staging 暂存 + commit</span>
+      </div>
+      <div class="panel-body">
+
+        <div class="alert-warning">
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="#FF9C01"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2.5a1 1 0 110 2 1 1 0 010-2zM9 11H7V7h2v4z"/></svg>
+          <span>选择文件后立即上传到 staging 区，文件不进入正式存储；点击「提交」后由后端在事务内 commit 到正式区</span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-label req">版本名</div>
+          <input class="form-input" value="MySQL_TXSQL_5.7.44" />
+        </div>
+
+        <div class="form-row al-top">
+          <div class="form-label req al-top">版本文件</div>
+          <div style="flex:1;">
+            <table class="file-table">
+              <thead>
+                <tr>
+                  <th style="width:62%;">文件</th>
+                  <th style="width:14%;">大小</th>
+                  <th style="width:24%;text-align:right;">操作</th>
+                </tr>
+              </thead>
+              <tbody id="fileTbody"></tbody>
+            </table>
+            <div class="upload-row">
+              <div class="add-row" id="uploadBtn">
+                <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" style="vertical-align:middle;margin-right:4px;"><path d="M14 4l-2-2H7L5.5 3.5 2 3.5C1.4 3.5 1 4 1 4.5v8c0 .5.4 1 1 1h12c.6 0 1-.5 1-1v-8c0-.5-.4-1-1-1z"/></svg>
+                点击上传文件 <span style="color:#979BA5;font-weight:400;font-size:12px;margin-left:4px;">支持多选</span>
+              </div>
+              <span class="upload-inline-tip" id="uploadTip" style="display:none;">
+                <svg viewBox="0 0 14 14" width="13" height="13" fill="#EA3636" style="flex-shrink:0;"><path d="M7 1a6 6 0 100 12A6 6 0 007 1zm-.7 3h1.4v4H6.3V4zm0 5h1.4v1.4H6.3V9z"/></svg>
+                <span class="upload-inline-tip-msg" id="uploadTipMsg"></span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="form-foot">
+        <button class="btn btn-default" id="cancelBtn">取消</button>
+        <button class="btn tip-host" id="submitBtn" data-tip="">提交</button>
+      </div>
+    </div>
+
+    <!-- ==== 右：事件日志 + 图例 ==== -->
+    <div>
+      <div class="panel">
+        <div class="panel-head">
+          <span>事件日志</span>
+          <span class="log-clear" onclick="clearLog()">清空</span>
+        </div>
+        <div class="log-list" id="logList"></div>
+      </div>
+      <div class="legend">
+        <div class="legend-title">规范要点对照</div>
+        <div class="legend-item"><span class="legend-bullet">·</span><span><strong>§3.1</strong> 一步式入口（点击上传 = 新建行 + 立即开始）；行内 3 态：上传中 / 上传成功 / 失败，全在单行内切换（"上传成功"对应内部 staging 状态）</span></div>
+        <div class="legend-item"><span class="legend-bullet">·</span><span><strong>§3.2</strong> 进度条 4px，紧贴文件名下方，百分比同步</span></div>
+        <div class="legend-item"><span class="legend-bullet">·</span><span><strong>§3.3</strong> 操作仅 3 个：删除（全态）/ 替换（上传成功）/ 重试（失败）</span></div>
+        <div class="legend-item"><span class="legend-bullet">·</span><span><strong>§3.4</strong> 任意行上传中→提交置灰；存在失败行→置灰</span></div>
+        <div class="legend-item"><span class="legend-bullet">·</span><span><strong>§4 前端</strong> 业务侧自定义重名规则的校验，选择即拦截（按钮下方红字 4-5s 自动消失），不入子表占位行</span></div>
+        <div class="legend-item"><span class="legend-bullet">·</span><span><strong>§5.3</strong> staging 过期：commit 时检测后阻止提交</span></div>
+        <div class="legend-item"><span class="legend-bullet">·</span><span><strong>§5.5</strong> 重试默认从头；启用断点续传则从中断进度继续</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==== 底部 demo 控制条 ==== -->
+<div class="demo-bar">
+  <span class="demo-bar-label">Demo 控制：</span>
+  <button class="demo-btn" onclick="uploadMultiFiles(3)">📁 模拟多选 3 个文件（演示批量）</button>
+  <button class="demo-btn warn" onclick="uploadDuplicateFile()">🔁 模拟选重名文件（演示拦截）</button>
+  <button class="demo-btn warn" id="armFailBtn" onclick="toggleNextFail()">✗ 下次上传中途失败</button>
+  <button class="demo-btn warn" onclick="simulateNetCut()">🌐 模拟网络中断（所有 uploading→failed）</button>
+  <button class="demo-btn warn" onclick="simulateStagingExpire()">⏰ 模拟 staging 24h 过期（所有 staged→failed）</button>
+  <button class="demo-btn" onclick="resetDemo()">↻ 重置 Demo</button>
+  <label class="demo-switch">
+    <input type="checkbox" id="resumeSwitch" />
+    启用断点续传（重试从中断进度继续）
+  </label>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================================
+ * 文件上传规范交互 Demo
+ * 状态机：点击上传按钮 → 新建行进入 uploading →（staged | failed）→ uploading（重试 / 替换）
+ * ========================================================================= */
+
+const MOCK_FILES = [
+  { name: 'mysql-5.7.44-linux-x86_64-tlinux-3.2.tar.gz', size: 472.5 * 1024 * 1024, kind: 'linux' },
+  { name: 'mysql-5.7.44-linux-x86_64-debug.tar.gz',      size: 510   * 1024 * 1024, kind: 'linux' },
+  { name: 'mysql-5.7.44-windows-x64.zip',                size: 386   * 1024 * 1024, kind: 'win'   },
+  { name: 'mysql-5.7.44-source.tar.gz',                  size: 89    * 1024 * 1024, kind: 'linux' },
+  { name: 'mysql-5.7.44-linux-arm64.tar.gz',             size: 432   * 1024 * 1024, kind: 'linux' },
+  { name: 'mysql-5.7.44-linux-x86_64-centos7.tar.gz',    size: 458   * 1024 * 1024, kind: 'linux' },
+];
+
+let nextId = 1;
+let mockIdx = 0;
+let nextFail = false;
+let rows = [];
+let isSubmitting = false;
+
+const $ = (id) => document.getElementById(id);
+
+/* ---------- 工具 ---------- */
+function fmtSize(bytes) {
+  if (bytes < 1024) return bytes.toFixed(0) + ' B';
+  if (bytes < 1024 * 1024) return (bytes/1024).toFixed(1) + ' KB';
+  if (bytes < 1024 * 1024 * 1024) return (bytes/1024/1024).toFixed(1) + ' MB';
+  return (bytes/1024/1024/1024).toFixed(2) + ' GB';
+}
+
+function nowTime() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function log(side, msg) {
+  const box = $('logList');
+  if (box.querySelector('.log-empty')) box.innerHTML = '';
+  const tagMap = { front: ['front', '前端'], back: ['back', '后端'], warn: ['warn', '系统'] };
+  const [cls, label] = tagMap[side] || tagMap.front;
+  const div = document.createElement('div');
+  div.className = 'log-item';
+  div.innerHTML = `<span class="log-time">${nowTime()}</span><span class="log-tag ${cls}">${label}</span><span class="log-msg">${msg}</span>`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function clearLog() {
+  $('logList').innerHTML = '<div class="log-empty">暂无事件</div>';
+}
+
+function showToast(msg, type = '') {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.className = 'toast ' + type, 2400);
+}
+
+/* ---------- 行操作 ---------- */
+function nextMockFile() {
+  const f = MOCK_FILES[mockIdx % MOCK_FILES.length];
+  mockIdx++;
+  return f;
+}
+
+/* 重名校验（按文件名，不区分大小写）：返回是否重名 */
+function isDuplicate(name) {
+  const lower = name.toLowerCase();
+  return rows.some(r => r.file && r.file.name.toLowerCase() === lower);
+}
+
+/* 上传按钮右侧 inline 红字提示 */
+function showDuplicateWarning(names) {
+  const tip = $('uploadTip');
+  const msg = $('uploadTipMsg');
+  if (!tip || !msg) return;
+  if (names.length === 1) {
+    msg.textContent = `已存在同名文件「${names[0]}」，如需覆盖请用「替换」操作`;
+  } else {
+    msg.textContent = `已忽略 ${names.length} 个同名文件：${names.map(n => `「${n}」`).join('、')}`;
+  }
+  tip.style.display = 'inline-flex';
+  clearTimeout(tip._timer);
+  tip._timer = setTimeout(() => { tip.style.display = 'none'; }, 4500);
+}
+
+function clearDuplicateWarning() {
+  const tip = $('uploadTip');
+  if (tip) {
+    tip.style.display = 'none';
+    clearTimeout(tip._timer);
+  }
+}
+
+/* 主按钮：模拟单文件选择 + 上传（一步式入口） */
+function uploadOneFile() {
+  if (isSubmitting) return;
+  clearDuplicateWarning();
+  const f = nextMockFile();
+  if (isDuplicate(f.name)) {
+    log('front', `⚠ 拦截：${f.name} 已在子表中，未入子表（按钮下方红字提示）`);
+    showDuplicateWarning([f.name]);
+    return;
+  }
+  log('front', `选择文件「${f.name}」（${fmtSize(f.size)}）`);
+  const r = { id: nextId++, state: 'uploading', file: null, progress: 0, errMsg: null, timer: null, willFail: false };
+  rows.push(r);
+  startUpload(r, f, 0);
+}
+
+/* 模拟原生 multiple 多选：一次新增 N 行各自独立上传 */
+function uploadMultiFiles(n) {
+  if (isSubmitting) return;
+  clearDuplicateWarning();
+  const picked = [];
+  for (let i = 0; i < n; i++) picked.push(nextMockFile());
+  const accepted = [];
+  const rejected = [];
+  picked.forEach(f => { (isDuplicate(f.name) ? rejected : accepted).push(f); });
+  if (rejected.length) {
+    log('front', `⚠ 多选中拦截 ${rejected.length} 个重名文件：${rejected.map(f => f.name).join('、')}`);
+    showDuplicateWarning(rejected.map(f => f.name));
+  }
+  if (accepted.length) {
+    log('front', `多选 ${accepted.length} 个文件：${accepted.map(f => f.name).join('、')}`);
+    accepted.forEach(f => {
+      const r = { id: nextId++, state: 'uploading', file: null, progress: 0, errMsg: null, timer: null, willFail: false };
+      rows.push(r);
+      startUpload(r, f, 0);
+    });
+  }
+}
+
+/* Demo 强制：故意选一个已经在子表里的文件 */
+function uploadDuplicateFile() {
+  if (isSubmitting) return;
+  clearDuplicateWarning();
+  const existing = rows.find(r => r.file);
+  if (!existing) {
+    showToast('当前子表为空，请先上传至少 1 个文件再演示重名拦截', 'warning');
+    return;
+  }
+  log('front', `用户选择文件「${existing.file.name}」（demo 强制重名）`);
+  log('front', `⚠ 拦截：${existing.file.name} 已在子表中，未入子表（按钮下方红字提示）`);
+  showDuplicateWarning([existing.file.name]);
+}
+
+function startUpload(r, f, fromProgress) {
+  r.file = f;
+  r.state = 'uploading';
+  r.progress = fromProgress;
+  r.errMsg = null;
+  r.willFail = nextFail;
+  if (nextFail) toggleNextFail(false);
+  log('front', `→ POST /staging：${f.name}${fromProgress > 0 ? ` （从 ${Math.floor(fromProgress)}% 续传）` : ''}`);
+  if (r.timer) clearInterval(r.timer);
+  r.timer = setInterval(() => {
+    if (r.state !== 'uploading') return;
+    r.progress += Math.random() * 7 + 3;
+    if (r.willFail && r.progress > 60) {
+      clearInterval(r.timer); r.timer = null;
+      r.state = 'failed';
+      r.errMsg = '上传失败，请重试';
+      log('back', `staging 上传中断：${f.name}（模拟）`);
+      r.willFail = false;
+      render();
+      return;
+    }
+    if (r.progress >= 100) {
+      r.progress = 100;
+      r.state = 'staged';
+      clearInterval(r.timer); r.timer = null;
+      log('back', `staging 暂存完成：${f.name} → temp_id_${r.id}`);
+    }
+    render();
+  }, 220);
+  render();
+}
+
+function deleteRow(id) {
+  if (isSubmitting) return;
+  const r = rows.find(x => x.id === id);
+  if (!r) return;
+  if (r.timer) clearInterval(r.timer);
+  if (r.state === 'uploading') {
+    log('front', `中断上传 + 移除整行：${r.file.name}`);
+    log('back', `已停止接收 staging 流：${r.file.name}`);
+  } else if (r.state === 'staged') {
+    log('front', `→ DELETE /staging/temp_id_${r.id}：${r.file.name}`);
+    log('back', `staging 文件已删除：${r.file.name}`);
+  } else if (r.state === 'failed') {
+    log('front', `移除失败行：${r.file?.name || '空'}`);
+  }
+  rows = rows.filter(x => x.id !== id);
+  render();
+}
+
+function replaceFile(id) {
+  if (isSubmitting) return;
+  const r = rows.find(x => x.id === id);
+  if (!r) return;
+  log('front', `→ DELETE /staging/temp_id_${r.id}（替换前清理旧文件）：${r.file.name}`);
+  log('back', `旧 staging 文件已删除`);
+  const f = nextMockFile();
+  log('front', `选择新文件「${f.name}」`);
+  startUpload(r, f, 0);
+}
+
+function retryRow(id) {
+  if (isSubmitting) return;
+  const r = rows.find(x => x.id === id);
+  if (!r) return;
+  const resume = $('resumeSwitch').checked;
+  log('front', `用户点击「重试」：${r.file.name}（${resume ? '断点续传，从 ' + Math.floor(r.progress) + '% 继续' : '不开启续传，从 0% 重传'}）`);
+  startUpload(r, r.file, resume ? r.progress : 0);
+}
+
+/* ---------- Demo 控制 ---------- */
+function toggleNextFail(force) {
+  nextFail = (force === undefined) ? !nextFail : !!force;
+  $('armFailBtn').classList.toggle('armed', nextFail);
+  if (nextFail) showToast('已武装：下次上传将在中途失败', 'warning');
+}
+
+function simulateNetCut() {
+  if (isSubmitting) return;
+  let count = 0;
+  rows.forEach(r => {
+    if (r.state === 'uploading') {
+      if (r.timer) clearInterval(r.timer);
+      r.state = 'failed';
+      r.errMsg = '上传失败，请重试';
+      count++;
+    }
+  });
+  if (count) {
+    log('warn', `检测到网络中断，${count} 个上传任务切到失败态（前端不推断原因，统一文案）`);
+    render();
+    showToast(`${count} 个上传中断`, 'error');
+  } else {
+    showToast('当前没有正在上传的文件', 'warning');
+  }
+}
+
+function simulateStagingExpire() {
+  if (isSubmitting) return;
+  let count = 0;
+  rows.forEach(r => {
+    if (r.state === 'staged') {
+      r.state = 'failed';
+      r.errMsg = '该文件已过期，请重新上传';
+      count++;
+    }
+  });
+  if (count) {
+    log('back', `兜底任务：${count} 个 staging 文件超过 24h 已物理清理`);
+    render();
+    showToast(`${count} 个 staging 文件已过期`, 'warning');
+  } else {
+    showToast('当前没有 staged 文件', 'warning');
+  }
+}
+
+function resetDemo() {
+  rows.forEach(r => { if (r.timer) clearInterval(r.timer); });
+  rows = [];
+  nextId = 1; mockIdx = 0; nextFail = false; isSubmitting = false;
+  $('armFailBtn').classList.remove('armed');
+  $('resumeSwitch').checked = false;
+  $('logList').innerHTML = '<div class="log-empty">暂无事件</div>';
+  $('submitBtn').innerHTML = '提交';
+  clearDuplicateWarning();
+  bootstrap();
+}
+
+/* ---------- 提交 / 取消 ---------- */
+function submit() {
+  if (isSubmitting) return;
+  isSubmitting = true;
+  const btn = $('submitBtn');
+  btn.disabled = true;
+  btn.classList.add('btn-loading');
+  btn.innerHTML = '提交中<span class="dots-anim"><span></span><span></span><span></span></span>';
+  log('front', `→ POST /commit：携带 ${rows.filter(r=>r.state==='staged').length} 个 staging temp_id`);
+  log('back', '开启事务');
+  setTimeout(() => {
+    rows.forEach(r => {
+      if (r.state === 'staged') log('back', `commit：staging/${r.file.name} → 正式区`);
+    });
+    log('back', '业务元数据已落库');
+    log('back', '事务提交成功');
+    showToast('提交成功，文件已入正式区', 'success');
+    isSubmitting = false;
+    rows = [];
+    nextId = 1;
+    bootstrap();
+  }, 1600);
+}
+
+function cancel() {
+  if (isSubmitting) return;
+  const stagedOrUploading = rows.filter(r => r.state === 'staged' || r.state === 'uploading');
+  rows.forEach(r => { if (r.timer) clearInterval(r.timer); });
+  if (stagedOrUploading.length) {
+    log('front', `用户取消，→ DELETE /staging/batch（${stagedOrUploading.length} 个文件）`);
+    log('back', `staging 区已清理 ${stagedOrUploading.length} 个文件`);
+    showToast('已取消，staging 文件已清理', 'success');
+  } else {
+    showToast('已取消', '');
+  }
+  rows = [];
+  nextId = 1;
+  bootstrap();
+}
+
+/* ---------- 渲染 ---------- */
+function render() {
+  const tbody = $('fileTbody');
+  if (rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:#C4C6CC;padding:24px;">暂无文件，点击下方「点击上传文件」开始</td></tr>`;
+  } else {
+    tbody.innerHTML = rows.map(renderRow).join('');
+  }
+  updateSubmit();
+}
+
+function renderRow(r) {
+  const iconClass = r.state === 'failed' ? 'fail' : (r.file.kind === 'win' ? 'win' : '');
+  const iconText = r.state === 'failed'
+    ? '<svg viewBox="0 0 14 14" width="14" height="14" fill="#EA3636"><path d="M7 1a6 6 0 100 12A6 6 0 007 1zm-.7 3h1.4v4H6.3V4zm0 5h1.4v1.4H6.3V9z"/></svg>'
+    : (r.file.kind === 'win' ? 'WIN' : 'TAR');
+
+  let bottomRow = '';
+  if (r.state === 'uploading') {
+    bottomRow = `
+      <div class="progress"><div class="progress-bar" style="width:${Math.min(100, r.progress).toFixed(0)}%"></div></div>
+      <div class="file-sub">
+        <span class="state-tag uploading">
+          <svg viewBox="0 0 12 12" width="10" height="10" fill="#3A84FF"><circle cx="6" cy="6" r="6"/></svg>
+          上传中
+        </span>
+        <span>${r.progress.toFixed(0)}%</span>
+        <span style="color:#C4C6CC;">·</span>
+        <span>${fmtSize(r.file.size * r.progress / 100)} / ${fmtSize(r.file.size)}</span>
+      </div>
+    `;
+  } else if (r.state === 'staged') {
+    bottomRow = `
+      <div class="file-sub">
+        <span class="state-tag staged">
+          <svg viewBox="0 0 12 12" width="12" height="12" fill="none"><circle cx="6" cy="6" r="6" fill="#2DCB56"/><path d="M3.5 6l2 2 3-3.5" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          上传成功
+        </span>
+      </div>
+    `;
+  } else if (r.state === 'failed') {
+    bottomRow = `
+      <div class="file-sub">
+        <span class="state-tag failed">
+          <svg viewBox="0 0 12 12" width="12" height="12" fill="none"><circle cx="6" cy="6" r="6" fill="#EA3636"/><path d="M4 4l4 4M8 4l-4 4" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/></svg>
+          ${r.errMsg}
+        </span>
+      </div>
+    `;
+  }
+
+  let opCell = '';
+  if (r.state === 'uploading') {
+    opCell = `<span class="op-link danger" onclick="deleteRow(${r.id})">删除</span>`;
+  } else if (r.state === 'staged') {
+    opCell = `<span class="op-link" onclick="replaceFile(${r.id})">替换</span><span class="op-sep">|</span><span class="op-link danger" onclick="deleteRow(${r.id})">删除</span>`;
+  } else if (r.state === 'failed') {
+    opCell = `<span class="op-link" onclick="retryRow(${r.id})">重试</span><span class="op-sep">|</span><span class="op-link danger" onclick="deleteRow(${r.id})">删除</span>`;
+  }
+
+  const iconHTML = r.state === 'failed'
+    ? `<div class="file-icon fail">${iconText}</div>`
+    : `<div class="file-icon ${iconClass}">${iconText}</div>`;
+
+  return `
+    <tr data-id="${r.id}">
+      <td>
+        <div class="file-cell">
+          ${iconHTML}
+          <div class="file-info-stack">
+            <div class="file-name" title="${r.file.name}">${r.file.name}</div>
+            ${bottomRow}
+          </div>
+        </div>
+      </td>
+      <td style="white-space:nowrap;color:#63656e;">${fmtSize(r.file.size)}</td>
+      <td class="op-cell">${opCell}</td>
+    </tr>
+  `;
+}
+
+function updateSubmit() {
+  const btn = $('submitBtn');
+  if (isSubmitting) return;
+  let tip = '';
+  const hasUploading = rows.some(r => r.state === 'uploading');
+  const hasFailed = rows.some(r => r.state === 'failed');
+  const hasStaged = rows.some(r => r.state === 'staged');
+  const allEmpty = !hasUploading && !hasFailed && !hasStaged;
+
+  if (allEmpty) tip = '请至少上传 1 个文件';
+  else if (hasUploading) tip = '请等待文件上传完成';
+  else if (hasFailed) tip = '存在失败文件，请重试或删除';
+
+  btn.dataset.tip = tip;
+  if (tip) {
+    btn.disabled = true;
+    btn.className = 'btn btn-disabled tip-host';
+  } else {
+    btn.disabled = false;
+    btn.className = 'btn btn-primary tip-host';
+  }
+  btn.innerHTML = '提交';
+}
+
+/* ---------- 启动 ---------- */
+function bootstrap() {
+  rows.push({ id: nextId++, state: 'staged', file: MOCK_FILES[0], progress: 100 });
+  mockIdx = Math.max(mockIdx, 1);
+  const r2 = { id: nextId++, state: 'uploading', file: MOCK_FILES[1], progress: 32, willFail: false };
+  rows.push(r2);
+  mockIdx = Math.max(mockIdx, 2);
+  r2.timer = setInterval(() => {
+    if (r2.state !== 'uploading') return;
+    r2.progress += Math.random() * 5 + 2;
+    if (r2.progress >= 100) {
+      r2.progress = 100; r2.state = 'staged';
+      clearInterval(r2.timer); r2.timer = null;
+      log('back', `staging 暂存完成：${r2.file.name} → temp_id_${r2.id}`);
+    }
+    render();
+  }, 280);
+  rows.push({ id: nextId++, state: 'failed', file: MOCK_FILES[2], progress: 65, errMsg: '上传失败，请重试' });
+  mockIdx = Math.max(mockIdx, 3);
+  log('warn', 'Demo 已初始化：3 行各占一态（上传成功 / 上传中 / 失败）');
+  log('back', `staging 暂存完成：${MOCK_FILES[0].name} → temp_id_1`);
+  render();
+}
+
+$('uploadBtn').onclick = uploadOneFile;
+$('submitBtn').onclick = submit;
+$('cancelBtn').onclick = cancel;
+
+clearLog();
+bootstrap();
+</script>
+
+</body>
+</html>
