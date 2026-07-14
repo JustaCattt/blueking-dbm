@@ -55,13 +55,10 @@
 
   interface Props {
     cluster: {
+      cluster_type: ClusterTypes;
       id: number;
       master_domain: string;
     };
-    selected: {
-      id: number;
-      master_domain: string;
-    }[];
   }
 
   const props = defineProps<Props>();
@@ -110,9 +107,9 @@
       validator: (value: string) => !value || domainRegex.test(value),
     },
     {
-      message: t('目标集群重复'),
-      trigger: 'change',
-      validator: (value: string) => !value || props.selected.filter((item) => item.master_domain === value).length < 2,
+      message: t('不能选择源集群'),
+      trigger: 'blur',
+      validator: (value: string) => !value || modelValue.value.id !== props.cluster.id,
     },
     {
       message: t('目标集群不存在'),
@@ -124,13 +121,9 @@
   const { loading, run: queryCluster } = useRequest(filterClusters, {
     manual: true,
     onSuccess: (data) => {
-      if (data.length) {
-        const [currentCluster] = data;
-        modelValue.value = {
-          cluster_type: currentCluster.cluster_type,
-          id: currentCluster.id,
-          master_domain: currentCluster.master_domain,
-        };
+      const [currentCluster] = data;
+      if (currentCluster) {
+        modelValue.value = currentCluster;
       }
     },
   });
@@ -143,6 +136,10 @@
   };
 
   const handleShowSelector = () => {
+    selectedClusters.value = {
+      [ClusterTypes.SQLSERVER_HA]: [],
+      [ClusterTypes.SQLSERVER_SINGLE]: [],
+    };
     showSelector.value = true;
   };
 
@@ -158,16 +155,12 @@
     selectedClusters.value = selected;
     const [currentCluster] = [...selected[ClusterTypes.SQLSERVER_HA], ...selected[ClusterTypes.SQLSERVER_SINGLE]];
     if (currentCluster) {
-      modelValue.value = {
-        cluster_type: currentCluster.cluster_type,
-        id: currentCluster.id,
-        master_domain: currentCluster.master_domain,
-      };
+      modelValue.value = currentCluster;
     }
   };
 
   watch(
-    () => modelValue.value.master_domain,
+    modelValue,
     () => {
       if (!modelValue.value.id && modelValue.value.master_domain) {
         queryCluster({

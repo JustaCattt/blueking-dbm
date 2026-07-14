@@ -5,13 +5,15 @@
     class="backup-db-tags">
     <BkTag
       v-for="name in visibleList"
-      :key="name">
+      :key="name"
+      :theme="theme">
       {{ name }}
     </BkTag>
     <BkTag
       v-if="overflowCount > 0"
       key="more"
-      ref="moreRef">
+      ref="moreRef"
+      :theme="theme">
       +{{ overflowCount }}
     </BkTag>
     <div style="display: none">
@@ -20,7 +22,8 @@
         class="backup-db-tippy-panel">
         <BkTag
           v-for="name in overflowList"
-          :key="name">
+          :key="name"
+          :theme="theme">
           {{ name }}
         </BkTag>
       </div>
@@ -35,6 +38,7 @@
 
   const props = defineProps<{
     list: string[];
+    theme?: '' | 'danger' | 'success' | 'warning' | 'info' | undefined;
   }>();
 
   const MAX_VISIBLE = 2;

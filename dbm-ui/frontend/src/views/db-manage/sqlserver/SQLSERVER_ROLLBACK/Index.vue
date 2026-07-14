@@ -81,8 +81,7 @@
             @batch-edit="handleBatchEdit" />
           <TargetClusterColumn
             v-model="item.targetCluster"
-            :cluster="item.cluster"
-            :selected="selectedTargetClusters" />
+            :cluster="item.cluster" />
           <FinalDbColumn
             v-model="item.renameInfos"
             v-model:db-ignore-name="item.databasesIgnore"
@@ -91,7 +90,7 @@
             :is-local="false"
             :restore-backup-file="item.backupRecord"
             :restore-time="item.backupTime"
-            :target-cluster-id="item.targetCluster?.id || 0" />
+            :target-cluster="item.targetCluster" />
           <OperationColumn
             :create-row-method="createTableRow"
             :table-data="formData.tableData" />
@@ -278,10 +277,6 @@
   const selected = computed(() => formData.tableData.filter((item) => item.cluster.id).map((item) => item.cluster));
   const selectedMap = computed(() => Object.fromEntries(selected.value.map((cur) => [cur.master_domain, true])));
 
-  const selectedTargetClusters = computed(() =>
-    formData.tableData.filter((item) => item.targetCluster.id).map((item) => item.targetCluster),
-  );
-
   useTicketDetail<Sqlserver.Rollback>(TicketTypes.SQLSERVER_ROLLBACK, {
     onSuccess(ticketDetail) {
       const { details } = ticketDetail;
@@ -393,7 +388,7 @@
         details: {
           infos: formData.tableData.map((item) => ({
             db_list: item.databases,
-            dst_cluster: item.cluster.id,
+            dst_cluster: item.targetCluster.id,
             ignore_db_list: item.databasesIgnore,
             rename_infos: item.renameInfos,
             restore_backup_file: item.backupRecord!,

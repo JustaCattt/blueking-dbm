@@ -72,7 +72,9 @@
         </div>
         <div class="content-label">{{ t('备份排除库 ：') }}</div>
         <div class="content-value">
-          <BackupDbTags :list="backupRecord.excluded_db_list" />
+          <BackupDbTags
+            :list="backupRecord.excluded_db_list"
+            theme="warning" />
         </div>
         <div class="content-label">{{ t('数据库大小 ：') }}</div>
         <div class="content-value">{{ bytePretty((backupRecord.backup_db_size_kb ?? 0) * 1024) }}</div>

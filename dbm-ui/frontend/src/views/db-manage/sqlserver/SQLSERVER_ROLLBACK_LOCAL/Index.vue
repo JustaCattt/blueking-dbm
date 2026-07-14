@@ -86,7 +86,7 @@
             is-local
             :restore-backup-file="item.backupRecord"
             :restore-time="item.backupTime"
-            :target-cluster-id="item.cluster?.id || 0" />
+            :target-cluster="item.cluster" />
           <OperationColumn
             v-model:table-data="formData.tableData"
             :create-row-method="createTableRow" />

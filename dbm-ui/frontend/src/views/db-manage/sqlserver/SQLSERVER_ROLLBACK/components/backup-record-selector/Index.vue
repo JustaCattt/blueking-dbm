@@ -92,7 +92,9 @@
           :label="t('备份排除库')"
           :width="260">
           <template #default="{ row }: { row: SqlserverBackupLogModel }">
-            <BackupDbTags :list="row.excluded_db_list" />
+            <BackupDbTags
+              :list="row.excluded_db_list"
+              theme="warning" />
           </template>
         </BkTableColumn>
         <BkTableColumn

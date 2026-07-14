@@ -61,7 +61,9 @@
             </div>
             <div class="content-label">{{ t('备份排除库 ：') }}</div>
             <div class="content-value">
-              <BackupDbTags :list="data.restore_backup_file.excluded_db_list" />
+              <BackupDbTags
+                :list="data.restore_backup_file.excluded_db_list"
+                theme="warning" />
             </div>
             <div class="content-label">{{ t('数据库大小 ：') }}</div>
             <div class="content-value">{{ bytePretty((data.restore_backup_file.backup_db_size_kb ?? 0) * 1024) }}</div>
@@ -112,13 +114,14 @@
       :title="t('恢复后库名')"
       :width="300">
       <template #default="{ row: data }: { row: RowData }">
-        <div class="rename-block">
+        <span v-if="!data.rename_infos.length"> -- </span>
+        <div
+          v-else
+          class="rename-block">
           <template
             v-for="item in data.rename_infos"
             :key="item.db_name">
-            <div
-              v-if="!item.old_db_name"
-              class="rename-item">
+            <div class="rename-item">
               <template v-if="item.target_db_name && item.target_db_name !== item.db_name">
                 {{ item.db_name }} ➜ <span class="new-name">{{ item.target_db_name }}</span>
               </template>
@@ -127,23 +130,22 @@
               </template>
             </div>
           </template>
-          <span v-if="!data.rename_infos.some((item) => !item.old_db_name)">--</span>
         </div>
       </template>
     </TicketInfoTableColumn>
     <TicketInfoTableColumn
       col-key="rename_db_name"
       :title="t('已有库新名')"
-      :width="300">
+      :width="200">
       <template #default="{ row: data }: { row: RowData }">
         <div class="rename-block">
           <template
             v-for="item in data.rename_infos"
-            :key="item.old_db_name || item.db_name">
+            :key="item.db_name">
             <div
               v-if="item.rename_db_name"
               class="rename-item">
-              {{ item.old_db_name || item.db_name }} ➜ <span class="new-name">{{ item.rename_db_name }}</span>
+              {{ item.db_name }} ➜ <span class="new-name">{{ item.rename_db_name }}</span>
             </div>
           </template>
           <span v-if="!data.rename_infos.some((item) => item.rename_db_name)">--</span>
@@ -188,15 +190,11 @@
     grid-template-columns: 0fr 1fr;
     font-family: MicrosoftYaHei, sans-serif;
     line-height: 24px;
-    background: #fafbfd;
-    border: 1px solid #eaebf0;
-    border-radius: 4px;
     padding: 8px 10px;
 
     .content-label {
       width: 80px;
       text-align: right;
-      color: #979ba5;
       white-space: nowrap;
     }
 

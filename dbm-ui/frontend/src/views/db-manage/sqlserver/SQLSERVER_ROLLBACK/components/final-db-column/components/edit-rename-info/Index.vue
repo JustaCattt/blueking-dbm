@@ -1,136 +1,135 @@
+<!--
+ * TencentBlueKing is pleased to support the open source community by making 蓝鲸智云-DB管理系统(BlueKing-BK-DBM) available.
+ *
+ * Copyright (C) 2017-2023 THL A29 Limited, a Tencent company. All rights reserved.
+ *
+ * Licensed under the MIT License (the "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License athttps://opensource.org/licenses/MIT
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for
+ * the specific language governing permissions and limitations under the License.
+-->
+
 <template>
-  <div>
+  <DbSideslider
+    v-model:is-show="isShow"
+    :confirm-handler="handleSubmit"
+    :confirm-text="t('保存')"
+    :width="900">
+    <template #header>
+      <span>{{ t('恢复后库名') }}</span>
+      <BkTag class="ml-8">{{ data.srcCluster.master_domain }}</BkTag>
+    </template>
     <div class="edit-name-box">
-      <RenderClusterDb
-        :cluster-id="clusterId"
-        :db-ignore-name="localDbIgnoreName"
-        :db-name="localDbName"
-        @change="handleClusterDbChange" />
+      <ClusterDb
+        v-model="localValue"
+        :data="data" />
       <div style="margin-top: 24px; margin-bottom: 16px; font-size: 12px">
         <span style="font-weight: bold; color: #313238">{{ t('库名映射') }}</span>
         <I18nT
           keypath="（共 n 个）"
           style="color: #63656e">
-          {{ localRenameInfoList.length }}
+          {{ localValue.renameInfoList.length }}
         </I18nT>
         <ImportBtn
+          v-model="localValue"
           class="ml-12"
-          :cluster-id="clusterId"
-          :db-ignore-name="localDbIgnoreName"
-          :db-name="localDbName"
-          @change="handleImportChange" />
+          :data="data" />
         <ExportBtn
+          v-model="localValue"
           class="ml-12"
-          :cluster-id="clusterId"
-          :data="localRenameInfoList" />
+          :data="data" />
       </div>
-      <RenderRenameList
-        :key="updateRefreshKey"
-        ref="dbListRef"
-        v-model="localRenameInfoList"
-        :db-ignore-name="localDbIgnoreName"
-        :db-name="localDbName"
-        :target-cluster-id="targetClusterId" />
+      <RenameList
+        ref="renameListRef"
+        v-model="localValue"
+        :data="data" />
     </div>
-  </div>
+  </DbSideslider>
 </template>
-<script setup lang="tsx">
+<script setup lang="ts">
+  import _ from 'lodash';
   import { useI18n } from 'vue-i18n';
 
-  import RenderClusterDb from './components/ClusterDb.vue';
+  import { messageError } from '@utils';
+
+  import ClusterDb from './components/ClusterDb.vue';
   import ExportBtn from './components/ExportBtn.vue';
   import ImportBtn from './components/ImportBtn.vue';
-  import RenderRenameList from './components/RenameList.vue';
+  import RenameList from './components/RenameList.vue';
 
-  export interface IValue {
+  export type IValue = {
     db_name: string;
     rename_db_name: string;
     target_db_name: string;
-  }
+  };
 
   interface Props {
-    clusterId: number;
-    dbIgnoreName: string[];
-    dbName: string[];
-    renameInfoList: IValue[];
-    targetClusterId: number;
+    data: {
+      backupDbList?: string[];
+      dbIgnoreName: string[];
+      dbName: string[];
+      renameInfoList: IValue[];
+      srcCluster: {
+        id: number;
+        master_domain: string;
+      };
+      targetCluster: {
+        id: number;
+        master_domain: string;
+      };
+    };
   }
 
-  interface Expose {
-    submit: () => Promise<{
-      dbIgnoreName: Props['dbIgnoreName'];
-      dbName: Props['dbName'];
-      renameInfoList: IValue[];
-    }>;
-  }
+  type Emits = (e: 'submit', data: Pick<Props['data'], 'dbIgnoreName' | 'dbName' | 'renameInfoList'>) => void;
 
   const props = defineProps<Props>();
 
+  const emits = defineEmits<Emits>();
+
+  const isShow = defineModel<boolean>('isShow', {
+    required: true,
+  });
+
   const { t } = useI18n();
 
-  const dbListRef = ref<InstanceType<typeof RenderRenameList>>();
+  const renameListRef = useTemplateRef<InstanceType<typeof RenameList>>('renameListRef');
+  const localValue = ref<{
+    dbIgnoreName: string[];
+    dbName: string[];
+    renameInfoList: IValue[];
+  }>({
+    dbIgnoreName: [],
+    dbName: [],
+    renameInfoList: [],
+  });
 
-  const localDbName = ref(props.dbName);
-  const localDbIgnoreName = ref(props.dbIgnoreName);
-  const localRenameInfoList = ref<IValue[]>([]);
-  const updateRefreshKey = ref(0);
-
-  let isInnerChange = false;
-
-  watch(
-    () => [props.clusterId, props.dbName, props.dbIgnoreName, props.renameInfoList],
-    () => {
-      if (isInnerChange) {
-        isInnerChange = false;
-        return;
+  const handleSubmit = async () => {
+    try {
+      const renameValid = await renameListRef.value?.validate();
+      if (!renameValid) {
+        throw new Error();
       }
-
-      localDbName.value = props.dbName;
-      localDbIgnoreName.value = props.dbIgnoreName;
-      // 使用上一次编辑的值
-      localRenameInfoList.value = [...props.renameInfoList];
-      updateRefreshKey.value = Date.now();
-    },
-    {
-      immediate: true,
-    },
-  );
-
-  const handleClusterDbChange = (payload: { dbIgnoreName: string[]; dbName: string[]; renameInfoList: IValue[] }) => {
-    localDbName.value = payload.dbName;
-    localDbIgnoreName.value = payload.dbIgnoreName;
-    localRenameInfoList.value = payload.renameInfoList;
-    updateRefreshKey.value = Date.now();
+      emits('submit', localValue.value);
+    } catch {
+      messageError(t('请修改冲突的 DB 名'));
+      return Promise.reject();
+    }
   };
 
-  const handleImportChange = (value: IValue[]) => {
-    localRenameInfoList.value = value;
-    updateRefreshKey.value = Date.now();
-  };
-
-  defineExpose<Expose>({
-    submit() {
-      isInnerChange = true;
-      return dbListRef.value!.getValue().then(() => ({
-        dbIgnoreName: localDbIgnoreName.value,
-        dbName: localDbName.value,
-        renameInfoList: localRenameInfoList.value,
-      }));
-    },
+  watch(isShow, () => {
+    if (isShow.value) {
+      localValue.value = {
+        dbIgnoreName: _.cloneDeep(props.data.dbIgnoreName),
+        dbName: _.cloneDeep(props.data.dbName),
+        renameInfoList: _.cloneDeep(props.data.renameInfoList),
+      };
+    }
   });
 </script>
 <style lang="less" scoped>
   .edit-name-box {
     padding: 20px 24px;
-
-    :deep(.bk-vxe-table) {
-      .vxe-cell {
-        padding: 0 !important;
-      }
-
-      .bk-form-content {
-        margin-left: 0 !important;
-      }
-    }
   }
 </style>
