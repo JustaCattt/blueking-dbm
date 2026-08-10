@@ -172,7 +172,7 @@
     if (mergedOptions.value.basePath) {
       return {
         beforeUpload: (async (file: File) => {
-          const filePath = `${mergedOptions.value.basePath}/${file.name}`;
+          const filePath = `/staging/${mergedOptions.value.basePath}/${file.name}`;
           const url = await createBkrepoUploadUrl(filePath);
           uploadUrlMap.set((file as unknown as { uid: number }).uid, url);
           return true;
@@ -246,9 +246,7 @@
   const isUploading = computed(() => fileList.value.some((f) => f.status === UploadStatus.UPLOADING));
 
   const dragListeners = computed(() =>
-    mergedOptions.value.draggable
-      ? { dragleave: handleDragleave, dragover: handleDragover, drop: handleDrop }
-      : {},
+    mergedOptions.value.draggable ? { dragleave: handleDragleave, dragover: handleDragover, drop: handleDrop } : {},
   );
 
   const handleClick = () => {
