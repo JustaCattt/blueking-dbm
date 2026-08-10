@@ -172,7 +172,7 @@
     if (mergedOptions.value.basePath) {
       return {
         beforeUpload: (async (file: File) => {
-          const filePath = `/staging/${mergedOptions.value.basePath}/${file.name}`;
+          const filePath = `/staging${mergedOptions.value.basePath}/${file.name}`;
           const url = await createBkrepoUploadUrl(filePath);
           uploadUrlMap.set((file as unknown as { uid: number }).uid, url);
           return true;
