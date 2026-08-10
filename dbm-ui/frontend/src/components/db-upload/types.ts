@@ -70,7 +70,7 @@ export type UploadMode = 'bkrepo' | 'custom';
 export interface DbUploadOptions {
   /** 接受的文件类型 */
   accept?: string;
-  /** bkrepo 模式：上传目录前缀（如 /mysql/pkg/1.0），组件自动拼接 /<file.name> */
+  /** bkrepo 模式：上传目录前缀（如 /staging/mysql/pkg/1.0），组件自动拼接 /<file.name> */
   basePath?: string;
   /** 是否禁用 */
   disabled?: boolean;
