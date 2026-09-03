@@ -8,7 +8,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for
- * the specific governing permissions and limitations under the License.
+ * the specific language governing permissions and limitations under the License.
 -->
 
 <template>
@@ -19,16 +19,16 @@
     </BkTag>
   </div>
   <TicketInfoTable
-    :data="ticketDetails.details.infos"
-    row-key="source_cluster">
+    :data="tableData"
+    row-key="task_name">
     <TicketInfoTableColumn
       col-key="source_cluster"
       fixed="left"
-      :get-copy-value="(row: RowData) => ticketDetails.details.clusters[row.source_cluster].immute_domain"
+      :get-copy-value="(row: RowData) => getClusterDomain(row.source_cluster)"
       :min-width="240"
       :title="t('源集群')">
       <template #default="{ row }: { row: RowData }">
-        {{ ticketDetails.details.clusters[row.source_cluster].immute_domain }}
+        {{ getClusterDomain(row.source_cluster) }}
       </template>
     </TicketInfoTableColumn>
     <TicketInfoTableColumn
@@ -49,15 +49,34 @@
       :min-width="240"
       :title="t('目标集群')">
       <template #default="{ row }: { row: RowData }">
-        {{ ticketDetails.details.clusters[row.target_cluster].immute_domain }}
+        {{ getClusterDomain(row.target_cluster) }}
       </template>
     </TicketInfoTableColumn>
     <TicketInfoTableColumn
       col-key="resource_spec"
-      :min-width="180"
+      :min-width="160"
       :title="t('DTS 规格')">
       <template #default="{ row }: { row: RowData }">
-        {{ row.resource_spec.spec_id || '--' }}
+        {{ row.spec_name || '--' }}
+      </template>
+    </TicketInfoTableColumn>
+    <TicketInfoTableColumn
+      col-key="label_names"
+      :min-width="140"
+      :title="t('资源标签')">
+      <template #default="{ row }: { row: RowData }">
+        <template v-if="row.label_names.length">
+          <DbTag
+            v-for="item in row.label_names"
+            :key="item">
+            {{ item }}
+          </DbTag>
+        </template>
+        <DbTag
+          v-else
+          theme="success">
+          {{ t('通用无标签') }}
+        </DbTag>
       </template>
     </TicketInfoTableColumn>
   </TicketInfoTable>
@@ -69,11 +88,21 @@
 
   import { TicketTypes } from '@common/const';
 
+  interface RowData {
+    db_mapping: {
+      source_db: string;
+      target_db: string;
+    }[];
+    label_names: string[];
+    source_cluster: number;
+    spec_name: string;
+    target_cluster: number;
+    task_name: string;
+  }
+
   interface Props {
     ticketDetails: TicketModel<Mysql.DtsDataMigrateRename>;
   }
-
-  type RowData = Props['ticketDetails']['details']['infos'][number];
 
   defineOptions({
     name: TicketTypes.MYSQL_DTS_DATA_MIGRATE_RENAME,
@@ -86,11 +115,31 @@
 
   const conflictHandleTextMap = {
     error: t('报错并停止'),
-    keep: t('保留旧数据'),
-    overwrite: t('覆盖旧数据'),
+    ignore: t('保留旧数据'),
+    replace: t('覆盖旧数据'),
   } as const;
 
-  const conflictHandleText = computed(
-    () => conflictHandleTextMap[props.ticketDetails.details.conflict_handle] || t('报错并停止'),
+  const conflictHandleText = computed(() => {
+    const { on_duplicate: onDuplicate } = props.ticketDetails.details.task || {};
+    return (onDuplicate && conflictHandleTextMap[onDuplicate]) || t('报错并停止');
+  });
+
+  // 详情可能未注入 clusters，兜底显示 --
+  const getClusterDomain = (clusterId: number) =>
+    props.ticketDetails.details.clusters?.[clusterId]?.immute_domain || '--';
+
+  // 从 infos[].migrate.one_to_one 提取行数据
+  const tableData = computed<RowData[]>(() =>
+    props.ticketDetails.details.infos.map((item) => ({
+      db_mapping: (item.migrate.one_to_one.source.sync_scope.table_routes || []).map((route) => ({
+        source_db: route.source_db,
+        target_db: route.target_db,
+      })),
+      label_names: item.resource_spec?.master?.label_names || [],
+      source_cluster: item.migrate.one_to_one.source.cluster_id,
+      spec_name: item.resource_spec?.master?.spec_name || '',
+      target_cluster: item.migrate.one_to_one.target.cluster_id,
+      task_name: item.migrate.one_to_one.task_name || '',
+    })),
   );
 </script>

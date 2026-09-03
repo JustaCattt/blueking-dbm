@@ -5,17 +5,53 @@ import type { DetailBase, DetailClusters } from '../common';
  */
 
 export interface DtsDataMigrateRename extends DetailBase {
-  clusters: DetailClusters;
-  conflict_handle: 'overwrite' | 'keep' | 'error';
+  clusters?: DetailClusters;
   infos: {
-    db_mapping: {
-      source_db: string;
-      target_db: string;
-    }[];
-    resource_spec: {
-      spec_id: number;
+    dts_resource: {
+      deploy: {
+        cluster_name: string;
+        deploy_path: string;
+        master_ha: boolean;
+      };
+      mode: string | null;
     };
-    source_cluster: number;
-    target_cluster: number;
+    migrate: {
+      one_to_one: {
+        source: {
+          cluster_id: number;
+          sync_scope: {
+            table_routes: {
+              source_db: string;
+              target_db: string;
+            }[];
+          };
+        };
+        target: {
+          cluster_id: number;
+          target_spider?: string | null;
+        };
+        task_name: string;
+      };
+      topology: 'one_to_one';
+    };
+    resource_spec: {
+      master: {
+        count: number;
+        label_names?: string[];
+        labels?: string[];
+        spec_id: number;
+        spec_name?: string;
+      };
+      worker: {
+        count: number;
+        label_names?: string[];
+        labels?: string[];
+        spec_id: number;
+        spec_name?: string;
+      };
+    };
   }[];
+  task: {
+    on_duplicate: 'error' | 'replace' | 'ignore';
+  };
 }

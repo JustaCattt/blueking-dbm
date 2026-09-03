@@ -42,15 +42,9 @@
             required>
             <EditableBlock
               v-model="item.db_mapping_text"
-              :placeholder="t('请设置库映射')" />
-            <template #headAppend>
-              <span
-                v-bk-tooltips="t('编辑库映射')"
-                class="batch-edit-btn"
-                @click="handleOpenMapping(item, index)">
-                <DbIcon type="edit" />
-              </span>
-            </template>
+              :placeholder="t('请设置库映射')"
+              style="cursor: pointer"
+              @click="handleOpenMapping(item)" />
           </EditableColumn>
           <TargetClusterColumn
             v-model="item.target_cluster"
@@ -61,6 +55,7 @@
             v-model="item.spec_id"
             :cluster-type="DBTypes.MYSQL"
             :current-spec-id-list="getSpecIdList(item.source_cluster)"
+            field="spec_id"
             :machine-type="MachineTypes.MYSQL_BACKEND"
             required
             selectable
@@ -99,6 +94,11 @@
       <DbMappingSideslider
         v-model:is-show="showMappingSlider"
         :data="currentEditingRow?.db_mapping || []"
+        :source-cluster="{
+          id: currentEditingRow?.source_cluster.id || 0,
+          master_domain: currentEditingRow?.source_cluster.master_domain || '',
+        }"
+        :target-domain="currentEditingRow?.target_cluster.master_domain || ''"
         @confirm="handleMappingConfirm" />
       <template #action>
         <BkButton
@@ -152,6 +152,7 @@
 
   interface RowData {
     db_mapping: DbMapping[];
+    db_mapping_domain: string;
     db_mapping_text: string;
     labels: ComponentProps<typeof ResourceTagColumn>['modelValue'];
     source_cluster: TendbhaModel;
@@ -175,7 +176,6 @@
   const currentBizId = window.PROJECT_CONFIG.BIZ_ID;
 
   const showMappingSlider = ref(false);
-  const currentEditingIndex = ref(-1);
   const currentEditingRow = ref<RowData>();
 
   const batchInputConfig = [
@@ -213,6 +213,7 @@
 
   const createTableRow = (data = {} as Partial<RowData>) => ({
     db_mapping: data.db_mapping || [],
+    db_mapping_domain: data.db_mapping_domain || '',
     db_mapping_text: data.db_mapping_text || '',
     labels: data.labels || [],
     source_cluster: Object.assign(
@@ -252,6 +253,26 @@
       .map((item) => ({ id: item.target_cluster.id, master_domain: item.target_cluster.master_domain })),
   );
 
+  // 后端枚举值映射：前端 → 后端
+  const conflictHandleToBackend = (value: 'overwrite' | 'keep' | 'error') => {
+    const map: Record<string, 'error' | 'replace' | 'ignore'> = {
+      error: 'error',
+      keep: 'ignore',
+      overwrite: 'replace',
+    };
+    return map[value];
+  };
+
+  // 后端枚举值映射：后端 → 前端
+  const conflictHandleFromBackend = (value: 'error' | 'replace' | 'ignore') => {
+    const map: Record<string, 'overwrite' | 'keep' | 'error'> = {
+      error: 'error',
+      ignore: 'keep',
+      replace: 'overwrite',
+    };
+    return map[value] || 'error';
+  };
+
   const getSpecIdList = (cluster: TendbhaModel) => {
     if (!cluster || !cluster.id) {
       return [];
@@ -260,25 +281,29 @@
     return instances.map((item) => item.spec_config.id);
   };
 
+  // 仅当源集群真正变化时才清空库映射，避免回填/批量录入后域名解析成功把映射误清掉
   const handleSourceClusterChange = (row: RowData) => {
-    Object.assign(row, {
-      db_mapping: [],
-      db_mapping_text: '',
-    });
+    if (row.db_mapping_domain !== row.source_cluster.master_domain) {
+      Object.assign(row, {
+        db_mapping: [],
+        db_mapping_text: '',
+      });
+    }
+    Object.assign(row, { db_mapping_domain: row.source_cluster.master_domain });
   };
 
-  const handleOpenMapping = (row: RowData, index: number) => {
+  const handleOpenMapping = (row: RowData) => {
     if (!row.source_cluster.id) {
       return;
     }
     currentEditingRow.value = row;
-    currentEditingIndex.value = index;
     showMappingSlider.value = true;
   };
 
   const handleMappingConfirm = (mapping: DbMapping[]) => {
     if (currentEditingRow.value) {
       currentEditingRow.value.db_mapping = mapping;
+      currentEditingRow.value.db_mapping_domain = currentEditingRow.value.source_cluster.master_domain;
       currentEditingRow.value.db_mapping_text = mapping
         .map((item) => `${item.source_db} → ${item.target_db}`)
         .join(', ');
@@ -288,30 +313,74 @@
   useTicketDetail<Mysql.DtsDataMigrateRename>(TicketTypes.MYSQL_DTS_DATA_MIGRATE_RENAME, {
     onSuccess(ticketDetail) {
       const { details } = ticketDetail;
-      const { clusters, infos } = details;
+      const { clusters } = details;
+      // 新协议：infos[] 每行含 migrate.one_to_one + resource_spec；详情可能未注入 clusters
+      const tableData = details.infos.map((item) => {
+        const dbMapping = (item.migrate.one_to_one.source.sync_scope.table_routes || []).map((route) => ({
+          source_db: route.source_db,
+          target_db: route.target_db,
+        }));
+        const sourceDomain = clusters?.[item.migrate.one_to_one.source.cluster_id]?.immute_domain || '';
+        return createTableRow({
+          db_mapping: dbMapping,
+          db_mapping_domain: sourceDomain,
+          db_mapping_text: dbMapping.map((m) => `${m.source_db} → ${m.target_db}`).join(', '),
+          source_cluster: {
+            master_domain: sourceDomain,
+          } as TendbhaModel,
+          spec_id: item.resource_spec?.master?.spec_id || 0,
+          target_cluster: {
+            master_domain: clusters?.[item.migrate.one_to_one.target.cluster_id]?.immute_domain || '',
+          } as RowData['target_cluster'],
+        });
+      });
       Object.assign(formData, {
-        conflictHandle: details.conflict_handle,
+        conflictHandle: conflictHandleFromBackend(details.task?.on_duplicate || 'error'),
         payload: createTicketPayload(ticketDetail),
-        tableData: infos.map((item) =>
-          createTableRow({
-            db_mapping: item.db_mapping,
-            db_mapping_text: item.db_mapping.map((m) => `${m.source_db} → ${m.target_db}`).join(', '),
-            source_cluster: {
-              master_domain: clusters[item.source_cluster].immute_domain || '',
-            } as TendbhaModel,
-            spec_id: item.resource_spec.spec_id,
-            target_cluster: {
-              master_domain: clusters[item.target_cluster].immute_domain || '',
-            },
-          }),
-        ),
+        tableData: tableData.length ? tableData : [createTableRow()],
       });
     },
   });
 
-  const { loading: isSubmitting, run: createTicketRun } = useCreateTicket<Mysql.DtsDataMigrateRename>(
-    TicketTypes.MYSQL_DTS_DATA_MIGRATE_RENAME,
-  );
+  const { loading: isSubmitting, run: createTicketRun } = useCreateTicket<{
+    infos: {
+      dts_resource: {
+        deploy: Record<string, never>;
+      };
+      migrate: {
+        one_to_one: {
+          source: {
+            cluster_id: number;
+            sync_scope: {
+              table_routes: {
+                source_db: string;
+                target_db: string;
+              }[];
+            };
+          };
+          target: {
+            cluster_id: number;
+          };
+        };
+        topology: 'one_to_one';
+      };
+      resource_spec: {
+        master: {
+          count: number;
+          label: string[];
+          spec_id: number;
+        };
+        worker: {
+          count: number;
+          label: string[];
+          spec_id: number;
+        };
+      };
+    }[];
+    task: {
+      on_duplicate: 'error' | 'replace' | 'ignore';
+    };
+  }>(TicketTypes.MYSQL_DTS_DATA_MIGRATE_RENAME);
 
   const handleSubmit = async () => {
     const result = await tableRef.value!.validate();
@@ -320,15 +389,43 @@
     }
     createTicketRun({
       details: {
-        conflict_handle: formData.conflictHandle,
         infos: formData.tableData.map((item) => ({
-          db_mapping: item.db_mapping,
-          resource_spec: {
-            spec_id: item.spec_id,
+          dts_resource: {
+            deploy: {},
           },
-          source_cluster: item.source_cluster.id,
-          target_cluster: item.target_cluster.id,
+          migrate: {
+            one_to_one: {
+              source: {
+                cluster_id: item.source_cluster.id,
+                sync_scope: {
+                  table_routes: item.db_mapping.map((m) => ({
+                    source_db: m.source_db,
+                    target_db: m.target_db,
+                  })),
+                },
+              },
+              target: {
+                cluster_id: item.target_cluster.id,
+              },
+            },
+            topology: 'one_to_one' as const,
+          },
+          resource_spec: {
+            master: {
+              count: 1,
+              label: item.labels.map((label) => label.value),
+              spec_id: item.spec_id,
+            },
+            worker: {
+              count: 1,
+              label: item.labels.map((label) => label.value),
+              spec_id: item.spec_id,
+            },
+          },
         })),
+        task: {
+          on_duplicate: conflictHandleToBackend(formData.conflictHandle),
+        },
       },
       ...formData.payload,
     });
@@ -341,7 +438,13 @@
 
   const handleBatchEditSourceCluster = (list: TendbhaModel[]) => {
     const dataList = list.reduce<RowData[]>((acc, cluster) => {
-      acc.push(createTableRow({ source_cluster: cluster }));
+      acc.push(
+        createTableRow({
+          source_cluster: {
+            master_domain: cluster.master_domain,
+          } as TendbhaModel,
+        }),
+      );
       return acc;
     }, []);
     formData.tableData = [...(formData.tableData[0].source_cluster.id ? formData.tableData : []), ...dataList];
@@ -369,13 +472,14 @@
       }
       return createTableRow({
         db_mapping: dbMapping,
+        db_mapping_domain: item.source_master_domain || '',
         db_mapping_text: dbMapping.map((m) => `${m.source_db} → ${m.target_db}`).join(', '),
         source_cluster: {
           master_domain: item.source_master_domain,
         } as TendbhaModel,
         target_cluster: {
           master_domain: item.target_master_domain,
-        },
+        } as RowData['target_cluster'],
       });
     });
     if (isClear) {

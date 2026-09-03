@@ -69,6 +69,7 @@
             v-model="item.spec_id"
             :cluster-type="DBTypes.MYSQL"
             :current-spec-id-list="getSpecIdList(item.source_cluster)"
+            field="spec_id"
             :machine-type="MachineTypes.MYSQL_BACKEND"
             required
             selectable
@@ -252,6 +253,26 @@
       .map((item) => ({ id: item.target_cluster.id, master_domain: item.target_cluster.master_domain })),
   );
 
+  // 后端枚举值映射：前端 → 后端
+  const conflictHandleToBackend = (value: 'overwrite' | 'keep' | 'error') => {
+    const map: Record<string, 'error' | 'replace' | 'ignore'> = {
+      error: 'error',
+      keep: 'ignore',
+      overwrite: 'replace',
+    };
+    return map[value];
+  };
+
+  // 后端枚举值映射：后端 → 前端
+  const conflictHandleFromBackend = (value: 'error' | 'replace' | 'ignore') => {
+    const map: Record<string, 'overwrite' | 'keep' | 'error'> = {
+      error: 'error',
+      ignore: 'keep',
+      replace: 'overwrite',
+    };
+    return map[value] || 'error';
+  };
+
   const getSpecIdList = (cluster: TendbhaModel) => {
     if (!cluster || !cluster.id) {
       return [];
@@ -263,32 +284,70 @@
   useTicketDetail<Mysql.DtsDataMigrate>(TicketTypes.MYSQL_DTS_DATA_MIGRATE, {
     onSuccess(ticketDetail) {
       const { details } = ticketDetail;
-      const { clusters, infos } = details;
+      const { clusters } = details;
+      // 新协议：infos[] 每行含 migrate.one_to_one + resource_spec；详情可能未注入 clusters
+      const tableData = details.infos.map((item) =>
+        createTableRow({
+          ignore_db_list: item.migrate.one_to_one.source.sync_scope.ignore_dbs || [],
+          ignore_table_list: item.migrate.one_to_one.source.sync_scope.ignore_tables || [],
+          source_cluster: {
+            master_domain: clusters?.[item.migrate.one_to_one.source.cluster_id]?.immute_domain || '',
+          } as TendbhaModel,
+          source_db_list: item.migrate.one_to_one.source.sync_scope.do_dbs || [],
+          source_table_list: item.migrate.one_to_one.source.sync_scope.do_tables || [],
+          spec_id: item.resource_spec?.master?.spec_id || 0,
+          target_cluster: {
+            master_domain: clusters?.[item.migrate.one_to_one.target.cluster_id]?.immute_domain || '',
+          } as RowData['target_cluster'],
+        }),
+      );
       Object.assign(formData, {
-        conflictHandle: details.conflict_handle,
+        conflictHandle: conflictHandleFromBackend(details.task?.on_duplicate || 'error'),
         payload: createTicketPayload(ticketDetail),
-        tableData: infos.map((item) =>
-          createTableRow({
-            ignore_db_list: item.ignore_db_list,
-            ignore_table_list: item.ignore_table_list,
-            source_cluster: {
-              master_domain: clusters[item.source_cluster].immute_domain || '',
-            } as TendbhaModel,
-            source_db_list: item.source_db_list,
-            source_table_list: item.source_table_list,
-            spec_id: item.resource_spec.spec_id,
-            target_cluster: {
-              master_domain: clusters[item.target_cluster].immute_domain || '',
-            },
-          }),
-        ),
+        tableData: tableData.length ? tableData : [createTableRow()],
       });
     },
   });
 
-  const { loading: isSubmitting, run: createTicketRun } = useCreateTicket<Mysql.DtsDataMigrate>(
-    TicketTypes.MYSQL_DTS_DATA_MIGRATE,
-  );
+  const { loading: isSubmitting, run: createTicketRun } = useCreateTicket<{
+    infos: {
+      dts_resource: {
+        deploy: Record<string, never>;
+      };
+      migrate: {
+        one_to_one: {
+          source: {
+            cluster_id: number;
+            sync_scope: {
+              do_dbs: string[];
+              do_tables: string[];
+              ignore_dbs: string[];
+              ignore_tables: string[];
+            };
+          };
+          target: {
+            cluster_id: number;
+          };
+        };
+        topology: 'one_to_one';
+      };
+      resource_spec: {
+        master: {
+          count: number;
+          label: string[];
+          spec_id: number;
+        };
+        worker: {
+          count: number;
+          label: string[];
+          spec_id: number;
+        };
+      };
+    }[];
+    task: {
+      on_duplicate: 'error' | 'replace' | 'ignore';
+    };
+  }>(TicketTypes.MYSQL_DTS_DATA_MIGRATE);
 
   const handleSubmit = async () => {
     const result = await tableRef.value!.validate();
@@ -297,18 +356,43 @@
     }
     createTicketRun({
       details: {
-        conflict_handle: formData.conflictHandle,
         infos: formData.tableData.map((item) => ({
-          ignore_db_list: item.ignore_db_list,
-          ignore_table_list: item.ignore_table_list,
-          resource_spec: {
-            spec_id: item.spec_id,
+          dts_resource: {
+            deploy: {},
           },
-          source_cluster: item.source_cluster.id,
-          source_db_list: item.source_db_list,
-          source_table_list: item.source_table_list,
-          target_cluster: item.target_cluster.id,
+          migrate: {
+            one_to_one: {
+              source: {
+                cluster_id: item.source_cluster.id,
+                sync_scope: {
+                  do_dbs: item.source_db_list,
+                  do_tables: item.source_table_list,
+                  ignore_dbs: item.ignore_db_list,
+                  ignore_tables: item.ignore_table_list,
+                },
+              },
+              target: {
+                cluster_id: item.target_cluster.id,
+              },
+            },
+            topology: 'one_to_one' as const,
+          },
+          resource_spec: {
+            master: {
+              count: 1,
+              label: item.labels.map((label) => label.value),
+              spec_id: item.spec_id,
+            },
+            worker: {
+              count: 1,
+              label: item.labels.map((label) => label.value),
+              spec_id: item.spec_id,
+            },
+          },
         })),
+        task: {
+          on_duplicate: conflictHandleToBackend(formData.conflictHandle),
+        },
       },
       ...formData.payload,
     });
@@ -321,7 +405,13 @@
 
   const handleBatchEditSourceCluster = (list: TendbhaModel[]) => {
     const dataList = list.reduce<RowData[]>((acc, cluster) => {
-      acc.push(createTableRow({ source_cluster: cluster }));
+      acc.push(
+        createTableRow({
+          source_cluster: {
+            master_domain: cluster.master_domain,
+          } as TendbhaModel,
+        }),
+      );
       return acc;
     }, []);
     formData.tableData = [...(formData.tableData[0].source_cluster.id ? formData.tableData : []), ...dataList];
@@ -347,7 +437,7 @@
         source_table_list: item.source_table_list ? item.source_table_list.split('\n') : [],
         target_cluster: {
           master_domain: item.target_master_domain,
-        },
+        } as RowData['target_cluster'],
       }),
     );
     if (isClear) {
