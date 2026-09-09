@@ -6677,6 +6677,6 @@
   "集群禁用态无法展示拓扑": "Topology is unavailable when the cluster is disabled",
   "高吞吐、大数据量场景": "High-throughput, large-data scenarios",
   "高性能": "High Performance",
-  "DTS 数据迁移": "DTS Data Migration",
+  "dts-worker 规格": "dts-worker spec",
   "这行勿动！新增翻译请在上一行添加！": ""
 }

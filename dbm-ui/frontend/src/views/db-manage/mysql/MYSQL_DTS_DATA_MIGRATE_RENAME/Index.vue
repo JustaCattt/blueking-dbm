@@ -63,6 +63,7 @@
             :cluster-type="DBTypes.MYSQL"
             :current-spec-id-list="getSpecIdList(item.source_cluster)"
             field="spec_id"
+            :label="t('dts-worker 规格')"
             :machine-type="MachineTypes.MYSQL_BACKEND"
             required
             selectable
