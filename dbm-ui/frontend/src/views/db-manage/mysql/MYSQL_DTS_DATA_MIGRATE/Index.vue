@@ -233,7 +233,7 @@
       data.source_cluster,
     ),
     source_db_list: data.source_db_list || [],
-    source_table_list: data.source_table_list || [],
+    source_table_list: data.source_table_list || ['*'],
     spec_id: data.spec_id || 0,
     target_cluster: Object.assign(
       {
