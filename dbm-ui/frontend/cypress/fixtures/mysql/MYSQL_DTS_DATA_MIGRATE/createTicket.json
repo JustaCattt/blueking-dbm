@@ -30,13 +30,13 @@
               "cluster_id": 1000293, //集群id
               "sync_scope": {
                 //库表同步范围
-                "do_dbs": [
+                "db_patterns": [
                   //源db
                   "test_db"
                 ],
                 "ignore_dbs": [], //忽略db
-                "do_tables": [], //源表
-                "ignore_tables": [] //忽略表
+                "ignore_tables": [], //忽略表
+                "table_patterns": [] //源表
               }
             },
             "target": {

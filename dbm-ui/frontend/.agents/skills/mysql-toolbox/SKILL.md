@@ -265,8 +265,7 @@ $env:NODE_OPTIONS="--max-old-space-size=8192"; npx vue-tsc -p tsconfig.check.jso
 - `cluster.id` → `cluster_id`
 - `ip` + `port` → `instance_address: '${ip}:${port}'`
 - `ip_source` 固定为 `'resource_pool'`（资源池场景）
-- 对象数组字段（`do_tables`/`ignore_tables` 等）：UI 层保持字符串列表编辑，提交时 `flatMap` 组装（`db 列表 × table 列表`
-  笛卡尔积），回填时 `.map((x) => x.table)` 还原
+- 对象数组字段（后端仍为 `{ db, table }[]` 协议的单据）：UI 层保持字符串列表编辑，提交时 `flatMap` 组装（`db 列表 × table 列表` 笛卡尔积），回填时 `.map((x) => x.table)` 还原；协议已是 `string[]`（如 DTS 的 `db_patterns`/`table_patterns`）则直接透传，不做转换
 - 单选枚举（冲突处理等）：radio 直接绑后端枚举值，不造前端枚举、不写双向映射函数
 - `resource_spec` 双字段：`labels` 传标签 id 字符串列表（`String(label.id)`），`label_names`
   传标签名列表（`label.value`），后端回显时按序对应

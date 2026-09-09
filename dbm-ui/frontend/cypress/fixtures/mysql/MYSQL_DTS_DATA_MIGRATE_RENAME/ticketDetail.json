@@ -34,10 +34,10 @@
               "source": {
                 "cluster_id": 1000293,
                 "sync_scope": {
-                  "do_dbs": [],
+                  "db_patterns": [],
                   "ignore_dbs": [],
-                  "do_tables": [],
                   "ignore_tables": [],
+                  "table_patterns": [],
                   "table_routes": [
                     {
                       "source_name": "",

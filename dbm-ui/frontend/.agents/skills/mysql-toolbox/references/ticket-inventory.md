@@ -10,7 +10,7 @@
 | `MYSQL_CLUSTER_STANDARDIZE` | 标准化 | A | - |
 | `MYSQL_DATA_MIGRATE` | DB 数据克隆 | A | `TargetClusterColumn`（多目标）、`DataSchemaGrantColumn` |
 | `MYSQL_DUMP_DATA` | 数据导出 | A | - |
-| `MYSQL_DTS_DATA_MIGRATE` | DTS 同名迁移 | F | `DtsMigrateWrapper`、`common.ts` 共享模块、`TargetClusterColumn`（单目标）、`checkNotExist` 库表校验、`do_tables` 笛卡尔积组装 |
+| `MYSQL_DTS_DATA_MIGRATE` | DTS 同名迁移 | F | `DtsMigrateWrapper`、`common.ts` 共享模块、`TargetClusterColumn`（单目标）、`checkNotExist` 库表校验、`sync_scope` 四字段 `string[]` 协议（`db_patterns`/`ignore_dbs`/`ignore_tables`/`table_patterns`） |
 | `MYSQL_DTS_DATA_MIGRATE_RENAME` | DTS 库改名迁移 | F | `DtsMigrateWrapper`、`common.ts` 共享模块、`TargetClusterColumn`（单目标）、`DbMappingSideslider`（源库下拉+批量录入）、库映射防误清 |
 | `MYSQL_FIXPOINT_EXIST_CLUSTER` | 构造（已有集群） | F | `FixpointWrapper`、`target-cluster-column`、多个子列组件 |
 | `MYSQL_FIXPOINT_NEW_CLUSTER` | 构造（新集群） | F | `FixpointWrapper` |

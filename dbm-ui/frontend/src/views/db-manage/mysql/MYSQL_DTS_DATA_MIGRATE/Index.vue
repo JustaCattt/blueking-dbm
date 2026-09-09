@@ -278,9 +278,7 @@
       const tableData = details.infos.map((item) =>
         createTableRow({
           ignore_db_list: item.migrate.one_to_one.source.sync_scope.ignore_dbs || [],
-          ignore_table_list: (item.migrate.one_to_one.source.sync_scope.ignore_tables || []).map(
-            (tableItem) => tableItem.table,
-          ),
+          ignore_table_list: item.migrate.one_to_one.source.sync_scope.ignore_tables || [],
           labels: (item.resource_spec?.master?.labels || []).map((labelId, index) => ({
             id: Number(labelId),
             value: item.resource_spec?.master?.label_names?.[index] || '',
@@ -288,10 +286,8 @@
           source_cluster: {
             master_domain: clusters?.[item.migrate.one_to_one.source.cluster_id]?.immute_domain || '',
           } as TendbhaModel,
-          source_db_list: item.migrate.one_to_one.source.sync_scope.do_dbs || [],
-          source_table_list: (item.migrate.one_to_one.source.sync_scope.do_tables || []).map(
-            (tableItem) => tableItem.table,
-          ),
+          source_db_list: item.migrate.one_to_one.source.sync_scope.db_patterns || [],
+          source_table_list: item.migrate.one_to_one.source.sync_scope.table_patterns || [],
           spec_id: item.resource_spec?.master?.spec_id || 0,
           target_cluster: {
             master_domain: clusters?.[item.migrate.one_to_one.target.cluster_id]?.immute_domain || '',
@@ -316,10 +312,10 @@
           source: {
             cluster_id: number;
             sync_scope: {
-              do_dbs: string[];
-              do_tables: { db: string; table: string }[];
+              db_patterns: string[];
               ignore_dbs: string[];
-              ignore_tables: { db: string; table: string }[];
+              ignore_tables: string[];
+              table_patterns: string[];
             };
           };
           target: {
@@ -364,16 +360,10 @@
               source: {
                 cluster_id: item.source_cluster.id,
                 sync_scope: {
-                  do_dbs: item.source_db_list,
-                  do_tables: item.source_db_list.flatMap((db) =>
-                    item.source_table_list.map((table) => ({ db, table })),
-                  ),
+                  db_patterns: item.source_db_list,
                   ignore_dbs: item.ignore_db_list,
-                  ignore_tables: item.ignore_table_list.flatMap((table) =>
-                    item.ignore_db_list.length > 0
-                      ? item.ignore_db_list.map((db) => ({ db, table }))
-                      : item.source_db_list.map((db) => ({ db, table })),
-                  ),
+                  ignore_tables: item.ignore_table_list,
+                  table_patterns: item.source_table_list,
                 },
               },
               target: {

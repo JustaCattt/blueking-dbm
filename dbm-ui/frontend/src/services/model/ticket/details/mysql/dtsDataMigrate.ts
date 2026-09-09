@@ -20,10 +20,10 @@ export interface DtsDataMigrate extends DetailBase {
         source: {
           cluster_id: number;
           sync_scope: {
-            do_dbs: string[];
-            do_tables: { db: string; table: string }[];
+            db_patterns: string[];
             ignore_dbs: string[];
-            ignore_tables: { db: string; table: string }[];
+            ignore_tables: string[];
+            table_patterns: string[];
           };
         };
         target: {

@@ -22,7 +22,7 @@ const handleSourceClusterChange = (row: RowData) => {
 
 ### 3. 对象数组字段的边界转换
 
-后端字段若是 `{ db: string; table: string }[]` 这类对象数组（如 `do_tables`、`ignore_tables`），UI 层列组件（`DbNameColumn`/`TableNameColumn` 的 `modelValue` 是 `string[]`）不要直接改列组件类型，在提单/回填边界做转换：
+后端字段若是 `{ db: string; table: string }[]` 这类对象数组，UI 层列组件（`DbNameColumn`/`TableNameColumn` 的 `modelValue` 是 `string[]`）不要直接改列组件类型，在提单/回填边界做转换：
 
 ```typescript
 // 回填：对象数组 → 字符串列表
@@ -31,6 +31,8 @@ source_table_list: (sync_scope.do_tables || []).map((tableItem) => tableItem.tab
 // 提交：字符串列表 × DB 列表 → 对象数组（flatMap 笛卡尔积组装）
 do_tables: item.source_db_list.flatMap((db) => item.source_table_list.map((table) => ({ db, table }))),
 ```
+
+注意：`MYSQL_DTS_DATA_MIGRATE` 的 `sync_scope` 协议已从 `do_dbs`/`do_tables`（对象数组）调整为 `db_patterns`/`table_patterns`/`ignore_dbs`/`ignore_tables`（全 `string[]`），四字段与 UI 层字符串列表直接对应，无需边界转换。上述对象数组模式仅在后端仍是 `{ db, table }[]` 协议的单据中适用。
 
 ## 批量录入（BatchInput）六条约定
 

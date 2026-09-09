@@ -208,16 +208,12 @@
     const { details } = props.ticketDetails;
     return details.infos.map((item) => ({
       ignore_db_list: item.migrate.one_to_one.source.sync_scope.ignore_dbs || [],
-      ignore_table_list: (item.migrate.one_to_one.source.sync_scope.ignore_tables || []).map(
-        (tableItem) => tableItem.table,
-      ),
+      ignore_table_list: item.migrate.one_to_one.source.sync_scope.ignore_tables || [],
       label_names: item.resource_spec?.master?.label_names || [],
       source_cluster: item.migrate.one_to_one.source.cluster_id,
       source_cluster_domain: details.clusters?.[item.migrate.one_to_one.source.cluster_id]?.immute_domain || '--',
-      source_db_list: item.migrate.one_to_one.source.sync_scope.do_dbs || [],
-      source_table_list: (item.migrate.one_to_one.source.sync_scope.do_tables || []).map(
-        (tableItem) => tableItem.table,
-      ),
+      source_db_list: item.migrate.one_to_one.source.sync_scope.db_patterns || [],
+      source_table_list: item.migrate.one_to_one.source.sync_scope.table_patterns || [],
       spec_name: details.specs?.[item.resource_spec?.master?.spec_id]?.name || '',
       target_cluster: item.migrate.one_to_one.target.cluster_id,
       target_cluster_domain: details.clusters?.[item.migrate.one_to_one.target.cluster_id]?.immute_domain || '--',
