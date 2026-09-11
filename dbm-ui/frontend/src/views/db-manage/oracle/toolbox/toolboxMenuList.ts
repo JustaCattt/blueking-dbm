@@ -29,4 +29,18 @@ export const toolboxMenuList = [
     id: 'sql',
     name: t('SQL任务'),
   },
+  {
+    children: [
+      {
+        dbConsoleValue: 'oracle.toolbox.addSlave',
+        desc: t('为所选上游实例新增 1 个从库'),
+        id: TicketTypes.ORACLE_ADD_SLAVE,
+        name: t('添加从库'),
+        parentId: 'capacity',
+      },
+    ],
+    icon: 'db-icon-mysql',
+    id: 'capacity',
+    name: t('容量管理'),
+  },
 ];
