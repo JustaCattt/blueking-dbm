@@ -87,7 +87,8 @@
 <script setup lang="tsx">
   import { useI18n } from 'vue-i18n';
 
-  import TicketModel from '@services/model/ticket/ticket';
+  import type TicketModel from '@services/model/ticket/ticket';
+  import type { Oracle } from '@services/model/ticket/ticket';
 
   import { TicketTypes } from '@common/const';
 
@@ -96,7 +97,7 @@
   type IRowData = Props['ticketDetails']['details']['infos'][number];
 
   interface Props {
-    ticketDetails: TicketModel<any>;
+    ticketDetails: TicketModel<Oracle.oracleAddSlave>;
   }
 
   defineOptions({

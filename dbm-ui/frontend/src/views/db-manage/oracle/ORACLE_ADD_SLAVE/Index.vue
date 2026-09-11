@@ -116,6 +116,8 @@
   import { reactive, useTemplateRef } from 'vue';
   import { useI18n } from 'vue-i18n';
 
+  import type { Oracle } from '@services/model/ticket/ticket';
+
   import { useCreateTicket, useTicketDetail } from '@hooks';
 
   import { DBTypes, TicketTypes } from '@common/const';
@@ -151,29 +153,6 @@
     }[];
     specId: number;
     upstreamInstance: UpstreamInstance;
-  }
-
-  interface SubmitDetails {
-    // 前端拼接：Oracle-{实例版本号}
-    db_version: string;
-    flow_type: TicketTypes.ORACLE_ADD_SLAVE | TicketTypes.ORACLE_ADD_SLAVE_VIA_CASCADING;
-    infos: {
-      cluster_id: number;
-      old_master?: HostInfo;
-      old_node: HostInfo;
-      replace_flag: boolean;
-      resource_spec: {
-        oracle: {
-          count: number;
-          label_names: string[];
-          labels: string[];
-          spec_id: number;
-        };
-      };
-    }[];
-    ip_source: string;
-    // 上游类型：single 单节点 / master 主库 / slave 从库，供单据详情区分
-    upstream_type: UpstreamMode;
   }
 
   defineOptions({ name: TicketTypes.ORACLE_ADD_SLAVE });
@@ -220,17 +199,6 @@
     formData.tableData.filter((item) => item.upstreamInstance.instance_address).map((item) => item.upstreamInstance),
   );
 
-  // 主库卡片按行推导：推导出正常从库（级联新增）提交 VIA_CASCADING，否则 ORACLE_ADD_SLAVE；单节点/从库固定 ORACLE_ADD_SLAVE
-  const submitTicketType = computed(() => {
-    if (formData.mode !== 'master') {
-      return TicketTypes.ORACLE_ADD_SLAVE;
-    }
-    const hasCascading = formData.tableData.some(
-      (item) => item.upstreamInstance.instance_address && item.copySource.node,
-    );
-    return hasCascading ? TicketTypes.ORACLE_ADD_SLAVE_VIA_CASCADING : TicketTypes.ORACLE_ADD_SLAVE;
-  });
-
   // AvailableResourceColumn 参数
   const getAvailableResourceParams = (item: RowData) => ({
     for_bizs: [currentBizId, 0],
@@ -241,13 +209,49 @@
 
   const isApplying = ref(false);
 
-  // 回填：两个 ticket_type 都支持
-  [TicketTypes.ORACLE_ADD_SLAVE, TicketTypes.ORACLE_ADD_SLAVE_VIA_CASCADING].forEach((ticketType) => {
-    useTicketDetail(ticketType, {
-      onSuccess(ticketDetail) {
-        applyTicketDetail(ticketDetail);
-      },
-    });
+  // 回填：ticket_type 恒为 ORACLE_ADD_SLAVE，上游类型靠 details.upstream_type 区分
+  useTicketDetail<Oracle.oracleAddSlave>(TicketTypes.ORACLE_ADD_SLAVE, {
+    onSuccess(ticketDetail) {
+      isApplying.value = true;
+      const { details } = ticketDetail;
+      const { clusters, infos } = details;
+      // 回填上游类型：直接取协议 upstream_type，存量单据无该字段时回退 single
+      Object.assign(formData, {
+        mode: ['master', 'single', 'slave'].includes(details.upstream_type) ? details.upstream_type : 'single',
+        payload: createTicketPayload(ticketDetail),
+        tableData: infos.map((item: any) =>
+          createTableRow({
+            copySource: {
+              // 级联场景：old_master 为主库（复制源），old_node 为正常从库（上游实例）
+              address: formatAddress(item.old_master),
+              master: item.old_master ? buildHostInfo(item.old_master) : null,
+              node: item.old_master ? buildHostInfo(item.old_node) : null,
+              role: item.old_master ? 'primary' : '',
+            },
+            resourceTags: (item.resource_spec?.oracle?.labels || []).map((labelId: number, index: number) => ({
+              id: Number(labelId),
+              value: item.resource_spec?.oracle?.label_names?.[index] || '',
+            })),
+            specId: item.resource_spec?.oracle?.spec_id || 0,
+            upstreamInstance: createUpstreamInstance({
+              bk_biz_id: item.old_node?.bk_biz_id || window.PROJECT_CONFIG.BIZ_ID,
+              bk_cloud_id: item.old_node?.bk_cloud_id || 0,
+              bk_host_id: item.old_node?.bk_host_id || 0,
+              cluster_id: item.cluster_id,
+              instance_address: formatAddress(item.old_node),
+              ip: item.old_node?.ip || '',
+              master_domain: clusters?.[item.cluster_id]?.immute_domain || '',
+              port: item.old_node?.port || 0,
+              role: '',
+              version: (details.db_version || '').replace(/^Oracle-/, ''),
+            }),
+          }),
+        ),
+      });
+      nextTick(() => {
+        isApplying.value = false;
+      });
+    },
   });
 
   // 兼容无 port 的存量单据：有 port 拼接 ip:port，否则仅展示 ip
@@ -258,60 +262,29 @@
     return host.port ? `${host.ip}:${host.port}` : host.ip;
   };
 
-  const applyTicketDetail = (ticketDetail: any) => {
-    isApplying.value = true;
-    const { details } = ticketDetail;
-    const { clusters, infos } = details;
-    // 回填上游类型：直接取协议 upstream_type，存量单据无该字段时回退 single
-    Object.assign(formData, {
-      mode: ['master', 'single', 'slave'].includes(details.upstream_type)
-        ? details.upstream_type
-        : 'single',
-      payload: createTicketPayload(ticketDetail),
-      tableData: infos.map((item: any) =>
-        createTableRow({
-          copySource: {
-            // 级联场景：old_master 为主库（复制源），old_node 为正常从库（上游实例）
-            address: formatAddress(item.old_master),
-            master: item.old_master ? buildHostInfo(item.old_master) : null,
-            node: item.old_master ? buildHostInfo(item.old_node) : null,
-            role: item.old_master ? 'primary' : '',
-          },
-          resourceTags: (item.resource_spec?.oracle?.labels || []).map((labelId: number, index: number) => ({
-            id: Number(labelId),
-            value: item.resource_spec?.oracle?.label_names?.[index] || '',
-          })),
-          specId: item.resource_spec?.oracle?.spec_id || 0,
-          upstreamInstance: createUpstreamInstance({
-            bk_biz_id: item.old_node?.bk_biz_id || window.PROJECT_CONFIG.BIZ_ID,
-            bk_cloud_id: item.old_node?.bk_cloud_id || 0,
-            bk_host_id: item.old_node?.bk_host_id || 0,
-            cluster_id: item.cluster_id,
-            instance_address: formatAddress(item.old_node),
-            ip: item.old_node?.ip || '',
-            master_domain: clusters?.[item.cluster_id]?.immute_domain || '',
-            port: item.old_node?.port || 0,
-            role: '',
-            version: (details.db_version || '').replace(/^Oracle-/, ''),
-          }),
-        }),
-      ),
-    });
-    nextTick(() => {
-      isApplying.value = false;
-    });
-  };
-
-  // 两个 ticket_type 的提交 hook
-  const { loading: isSubmittingAddSlave, run: runAddSlave } = useCreateTicket<SubmitDetails>(
-    TicketTypes.ORACLE_ADD_SLAVE,
-  );
-
-  const { loading: isSubmittingViaCascading, run: runViaCascading } = useCreateTicket<SubmitDetails>(
-    TicketTypes.ORACLE_ADD_SLAVE_VIA_CASCADING,
-  );
-
-  const isSubmitting = computed(() => isSubmittingAddSlave.value || isSubmittingViaCascading.value);
+  const { loading: isSubmitting, run: runCreateTicket } = useCreateTicket<{
+    // 前端拼接：Oracle-{实例版本号}
+    db_version: string;
+    flow_type: string;
+    infos: {
+      cluster_id: number;
+      // 级联场景：old_node 为正常从库，old_master 为主库
+      old_master?: HostInfo;
+      old_node: HostInfo;
+      replace_flag: boolean;
+      resource_spec: {
+        oracle: {
+          count: number;
+          label_names: string[];
+          labels: string[];
+          spec_id: number;
+        };
+      };
+    }[];
+    ip_source: string;
+    // 上游类型：single 单节点 / master 主库 / slave 从库，供单据详情区分
+    upstream_type: UpstreamMode;
+  }>(TicketTypes.ORACLE_ADD_SLAVE);
 
   // 切换上游类型：重置表格并重新渲染，回填场景跳过
   watch(
@@ -336,51 +309,37 @@
     formData.tableData = [...keep, ...rows];
   };
 
-  // 主库卡片按行推导：推导出正常从库（级联新增）提交 VIA_CASCADING 并传 old_master，否则 ORACLE_ADD_SLAVE；单节点/从库固定 ORACLE_ADD_SLAVE
-  const buildSubmitDetails = (): SubmitDetails => {
-    const infos = formData.tableData.map((item) => {
-      const info: SubmitDetails['infos'][number] = {
-        cluster_id: item.upstreamInstance.cluster_id,
-        old_node: buildHostInfo(item.upstreamInstance),
-        replace_flag: false,
-        resource_spec: {
-          oracle: {
-            count: 1,
-            label_names: item.resourceTags.map((tag) => tag.value),
-            labels: item.resourceTags.map((tag) => String(tag.id)),
-            spec_id: item.specId,
-          },
-        },
-      };
-      // 级联场景：old_node 为正常从库，old_master 为主库
-      if (item.copySource.node) {
-        info.old_node = buildHostInfo(item.copySource.node);
-        info.old_master = buildHostInfo(item.upstreamInstance);
-      }
-      return info;
-    });
-    return {
-      // 后端要求前端拼接版本号：Oracle-{实例版本号}
-      db_version: `Oracle-${formData.tableData[0]?.upstreamInstance.version || ''}`,
-      flow_type: submitTicketType.value,
-      infos,
-      ip_source: 'resource_pool',
-      // 上游类型：与卡片选择一致，单据详情据此区分
-      upstream_type: formData.mode,
-    };
-  };
-
   const handleSubmit = () => {
     tableRef.value!.validate().then(() => {
-      const payload = {
-        details: buildSubmitDetails(),
+      runCreateTicket({
+        details: {
+          // 后端要求前端拼接版本号：Oracle-{实例版本号}
+          db_version: `Oracle-${formData.tableData[0]?.upstreamInstance.version || ''}`,
+          flow_type: TicketTypes.ORACLE_ADD_SLAVE,
+          infos: formData.tableData.map((item) => {
+            // 级联场景：old_node 为正常从库，old_master 为主库；其余场景上游实例即 old_node
+            const { node } = item.copySource;
+            return {
+              cluster_id: item.upstreamInstance.cluster_id,
+              old_master: node ? buildHostInfo(item.upstreamInstance) : undefined,
+              old_node: node ? buildHostInfo(node) : buildHostInfo(item.upstreamInstance),
+              replace_flag: false,
+              resource_spec: {
+                oracle: {
+                  count: 1,
+                  label_names: item.resourceTags.map((tag) => tag.value),
+                  labels: item.resourceTags.map((tag) => String(tag.id)),
+                  spec_id: item.specId,
+                },
+              },
+            };
+          }),
+          ip_source: 'resource_pool',
+          // 上游类型：与卡片选择一致，单据详情据此区分
+          upstream_type: formData.mode,
+        },
         ...formData.payload,
-      };
-      if (submitTicketType.value === TicketTypes.ORACLE_ADD_SLAVE_VIA_CASCADING) {
-        runViaCascading(payload);
-      } else {
-        runAddSlave(payload);
-      }
+      });
     });
   };
 
