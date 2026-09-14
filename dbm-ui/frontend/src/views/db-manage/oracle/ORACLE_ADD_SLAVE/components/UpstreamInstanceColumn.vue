@@ -35,7 +35,7 @@
   <InstanceSelector
     v-model="selectedInstances"
     v-model:is-show="showSelector"
-    :cluster-types="clusterTypesByDBType[DBTypes.ORACLE]"
+    :cluster-types="clusterTypes"
     :data-source-map="dataSourceMap"
     @change="handleSelectorChange" />
 </template>
@@ -49,7 +49,7 @@
   import { getOracleHaInstanceList } from '@services/source/oracleHaCluster';
   import { getOracleSingleInstanceList } from '@services/source/oracleSingleCluster';
 
-  import { ClusterTypes, clusterTypesByDBType, DBTypes } from '@common/const';
+  import { ClusterTypes, DBTypes } from '@common/const';
   import { ipPort } from '@common/regex';
 
   import InstanceSelector from '@components/instance-selector-new/Index.vue';
@@ -76,8 +76,9 @@
 
   const { t } = useI18n();
 
-  // 根据 mode 决定角色过滤与实例校验的候选集群类型
-  const clusterTypes = computed(() =>
+  // 根据 mode 决定选择器与实例校验的候选集群类型，标注精确联合类型供 InstanceSelector 泛型推断
+  type OracleClusterType = typeof ClusterTypes.ORACLE_PRIMARY_STANDBY | typeof ClusterTypes.ORACLE_SINGLE_NONE;
+  const clusterTypes = computed<OracleClusterType[]>(() =>
     props.mode === 'single' ? [ClusterTypes.ORACLE_SINGLE_NONE] : [ClusterTypes.ORACLE_PRIMARY_STANDBY],
   );
 
