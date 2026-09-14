@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oracle 整机替换</title>
+<style>
+:root {
+  /* Brand */
+  --ui-primary: #3a84ff;
+  --ui-primary-hover: #5594fa;
+  --ui-primary-active: #2c77f4;
+  --ui-primary-light: #e1ecff;
+
+  /* Functional */
+  --ui-success: #2dcb56;
+  --ui-success-hover: #45e35f;
+  --ui-success-active: #1ab943;
+  --ui-success-light: #f2fff4;
+  --ui-warning: #ff9c01;
+  --ui-warning-hover: #ffb848;
+  --ui-warning-active: #eb9000;
+  --ui-warning-light: #fff4e2;
+  --ui-danger: #ea3636;
+  --ui-danger-hover: #ff5656;
+  --ui-danger-active: #db2626;
+  --ui-danger-light: #ffeded;
+  --ui-info: #63656e;
+  --ui-info-light: #f5f6fa;
+
+  /* Text */
+  --ui-text-primary: #313238;
+  --ui-text-secondary: #63656e;
+  --ui-text-placeholder: #979ba5;
+  --ui-text-disabled: #c4c6cc;
+  --ui-text-anti: #ffffff;
+  --ui-text-link: #3a84ff;
+
+  /* Background & surface */
+  --ui-bg: #ffffff;
+  --ui-bg-page: #fafbfd;
+  --ui-bg-subtle: #f9fafd;
+  --ui-bg-hover: #f5f7fa;
+  --ui-bg-active: #f0f1f5;
+  --ui-bg-component: #eaebf0;
+  --ui-mask: rgba(0, 0, 0, 0.6);
+
+  /* Border */
+  --ui-border: #dcdee5;
+  --ui-border-light: #eaebf0;
+
+  /* Radius */
+  --ui-radius-sm: 2px;
+  --ui-radius-md: 3px;
+  --ui-radius-lg: 4px;
+  --ui-radius-round: 999px;
+  --ui-radius-circle: 50%;
+
+  /* Spacing (4px grid) */
+  --ui-space-1: 4px;
+  --ui-space-2: 8px;
+  --ui-space-3: 12px;
+  --ui-space-4: 16px;
+  --ui-space-5: 20px;
+  --ui-space-6: 24px;
+  --ui-space-8: 32px;
+
+  /* Control height */
+  --ui-control-sm: 26px;
+  --ui-control-md: 32px;
+  --ui-control-lg: 40px;
+
+  /* Button min-width (fixed width when label ≤ 2 chars) */
+  --ui-btn-width-sm: 48px;
+  --ui-btn-width-md: 64px;
+  --ui-btn-width-lg: 80px;
+
+  /* Typography */
+  --ui-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --ui-font-sm: 12px;
+  --ui-font-md: 14px;
+  --ui-font-lg: 16px;
+  --ui-font-title: 18px;
+  --ui-font-heading: 20px;
+  --ui-line-sm: 16px;
+  --ui-line-md: 20px;
+  --ui-line-lg: 22px;
+  --ui-font-weight-medium: 500;
+  --ui-font-weight-bold: 600;
+
+  /* Elevation */
+  --ui-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --ui-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.05);
+  --ui-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12),
+    0 8px 16px rgba(0, 0, 0, 0.06);
+
+  /* Motion */
+  --ui-ease: cubic-bezier(0.38, 0, 0.24, 1);
+  --ui-duration: 0.2s;
+
+  /* Shell（派生） */
+  --ui-shell-top: color-mix(in srgb, var(--ui-text-primary) 92%, black);
+  --ui-shell-side: color-mix(in srgb, var(--ui-text-primary) 88%, black);
+  --ui-shell-text: color-mix(in srgb, var(--ui-text-anti) 72%, transparent);
+  --ui-shell-text-active: var(--ui-text-anti);
+  --proto-bar-h: 36px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  font-family: var(--ui-font-family);
+  background: var(--ui-bg-page);
+  height: 100vh;
+  overflow: hidden;
+  color: var(--ui-text-primary);
+}
+
+/* ========== 原型演示条（落地时整块删除） ========== */
+.proto-bar {
+  height: var(--proto-bar-h);
+  background: var(--ui-warning-light);
+  border-bottom: 1px dashed var(--ui-warning);
+  display: flex; align-items: center; gap: var(--ui-space-3);
+  padding: 0 var(--ui-space-5);
+  font-size: var(--ui-font-sm);
+  color: var(--ui-text-secondary);
+}
+.proto-bar__tag {
+  padding: 1px var(--ui-space-2);
+  border-radius: var(--ui-radius-sm);
+  background: var(--ui-warning);
+  color: var(--ui-text-anti);
+}
+.proto-bar__views { display: flex; gap: var(--ui-space-1); }
+.proto-bar__btn {
+  border: 1px solid var(--ui-border); background: var(--ui-bg);
+  height: var(--ui-control-sm); padding: 0 var(--ui-space-3);
+  border-radius: var(--ui-radius-md); cursor: pointer;
+  font-size: var(--ui-font-sm); color: var(--ui-text-secondary);
+}
+.proto-bar__btn.is-active { border-color: var(--ui-primary); color: var(--ui-primary); background: var(--ui-primary-light); }
+
+/* ========== 骨架 ========== */
+.app-shell__top {
+  height: 52px; background: var(--ui-shell-top);
+  display: flex; align-items: center; padding: 0 var(--ui-space-5);
+  color: var(--ui-shell-text-active); flex-shrink: 0; z-index: 100;
+}
+.app-shell__logo {
+  display: flex; align-items: center; gap: var(--ui-space-2);
+  font-size: var(--ui-font-md); font-weight: var(--ui-font-weight-bold);
+  margin-right: var(--ui-space-8);
+}
+.app-shell__logo svg { color: var(--ui-primary); }
+.app-shell__tabs { display: flex; flex: 1; }
+.app-shell__tab {
+  padding: 0 var(--ui-space-5); height: 52px; line-height: 52px;
+  font-size: var(--ui-font-md); color: var(--ui-shell-text);
+  cursor: pointer; position: relative;
+}
+.app-shell__tab:hover { color: var(--ui-shell-text-active); }
+.app-shell__tab.is-active { color: var(--ui-shell-text-active); background: color-mix(in srgb, var(--ui-primary) 20%, transparent); }
+.app-shell__tab.is-active::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+  height: 2px; background: var(--ui-primary);
+}
+.app-shell__right { display: flex; align-items: center; gap: var(--ui-space-4); }
+.app-shell__user { font-size: var(--ui-font-md); color: var(--ui-shell-text); }
+.app-shell__body { display: flex; height: calc(100vh - 52px - var(--proto-bar-h)); }
+.app-shell__side {
+  width: 220px; background: var(--ui-shell-side); color: var(--ui-shell-text);
+  overflow-y: auto; flex-shrink: 0; padding-bottom: var(--ui-space-5);
+}
+.app-shell__biz {
+  height: 44px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 var(--ui-space-5); font-size: var(--ui-font-md);
+  color: var(--ui-shell-text-active);
+  background: color-mix(in srgb, var(--ui-text-anti) 8%, transparent);
+}
+.app-shell__nav-group { padding-top: var(--ui-space-3); }
+.app-shell__nav-label {
+  padding: var(--ui-space-2) var(--ui-space-5);
+  font-size: var(--ui-font-sm);
+  color: color-mix(in srgb, var(--ui-text-anti) 45%, transparent);
+}
+.app-shell__nav-item {
+  padding: 0 var(--ui-space-5); height: 36px; line-height: 36px;
+  font-size: var(--ui-font-md); cursor: pointer; position: relative;
+}
+.app-shell__nav-item:hover { color: var(--ui-shell-text-active); background: color-mix(in srgb, var(--ui-text-anti) 6%, transparent); }
+.app-shell__nav-item.is-active { color: var(--ui-shell-text-active); background: color-mix(in srgb, var(--ui-primary) 15%, transparent); }
+.app-shell__nav-item.is-active::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--ui-primary);
+}
+.app-shell__main { flex: 1; background: var(--ui-bg-page); overflow-y: auto; display: flex; flex-direction: column; }
+
+/* ========== ui-button（bk-frontend-design html/button） ========== */
+.ui-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--ui-space-1);
+  min-width: var(--ui-btn-width-md); height: var(--ui-control-md);
+  padding: 0 var(--ui-space-4); font-size: var(--ui-font-md); white-space: nowrap;
+  border: 1px solid transparent; border-radius: var(--ui-radius-md);
+  background: var(--ui-primary); color: var(--ui-text-anti); cursor: pointer;
+  transition: background var(--ui-duration) var(--ui-ease),
+    border-color var(--ui-duration) var(--ui-ease), color var(--ui-duration) var(--ui-ease);
+}
+.ui-button:hover { background: var(--ui-primary-hover); }
+.ui-button:active { background: var(--ui-primary-active); }
+.ui-button--default { background: var(--ui-bg); border-color: var(--ui-border); color: var(--ui-text-primary); }
+.ui-button--default:hover { border-color: var(--ui-primary); color: var(--ui-primary); background: var(--ui-bg); }
+.ui-button--default:active { border-color: var(--ui-primary-active); color: var(--ui-primary-active); }
+.ui-button.is-text {
+  background: none; border-color: transparent; color: var(--ui-text-link);
+  min-width: auto; padding: 0 var(--ui-space-1);
+}
+.ui-button.is-text:hover { background: none; color: var(--ui-primary-hover); }
+.ui-button.is-disabled, .ui-button[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+/* ========== ui-input（html/input） ========== */
+.ui-input { display: inline-flex; width: 220px; }
+.ui-input__inner {
+  width: 100%; height: var(--ui-control-md); padding: 0 var(--ui-space-3);
+  font-size: var(--ui-font-md); color: var(--ui-text-primary); background: var(--ui-bg);
+  border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md);
+  outline: none; box-sizing: border-box;
+  transition: border-color var(--ui-duration) var(--ui-ease);
+}
+.ui-input__inner::placeholder { color: var(--ui-text-placeholder); }
+.ui-input__inner:focus { border-color: var(--ui-primary); }
+.ui-input__textarea { height: auto; padding: 5px 11px; line-height: 1.5; resize: vertical; font-family: inherit; }
+
+/* ========== ui-select（html/select + multiple） ========== */
+.ui-select { position: relative; width: 100%; font-size: var(--ui-font-md); }
+.ui-select__control {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 var(--ui-space-3); height: var(--ui-control-md);
+  border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md);
+  background: var(--ui-bg); cursor: pointer;
+}
+.ui-select__placeholder { color: var(--ui-text-placeholder); }
+.ui-select__value { color: var(--ui-text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ui-select__arrow {
+  width: 0; height: 0; flex-shrink: 0; margin-left: var(--ui-space-2);
+  border-left: 4px solid transparent; border-right: 4px solid transparent;
+  border-top: 5px solid var(--ui-text-placeholder);
+  transition: transform var(--ui-duration) var(--ui-ease);
+}
+.ui-select.is-open .ui-select__arrow { transform: rotate(180deg); }
+.ui-select__menu {
+  position: absolute; z-index: 10; width: 100%; margin: var(--ui-space-1) 0 0;
+  padding: var(--ui-space-1) 0; list-style: none; background: var(--ui-bg);
+  border: 1px solid var(--ui-border-light); border-radius: var(--ui-radius-md);
+  box-shadow: var(--ui-shadow-md); max-height: 240px; overflow-y: auto;
+}
+.ui-select__menu.is-floating { position: fixed; margin: 0; z-index: 6500; }
+.ui-select__option { padding: var(--ui-space-2) var(--ui-space-3); cursor: pointer; white-space: nowrap; }
+.ui-select__option:hover { background: var(--ui-bg-hover); }
+.ui-select__option.is-selected { color: var(--ui-primary); background: var(--ui-primary-light); }
+.ui-select__option.is-disabled { color: var(--ui-text-disabled); cursor: not-allowed; background: var(--ui-bg); }
+.ui-select[data-multiple] .ui-select__control { flex-wrap: wrap; justify-content: flex-start; height: auto; min-height: var(--ui-control-md); padding: 2px var(--ui-space-2); }
+.ui-select[data-multiple] .ui-select__arrow { margin-left: auto; }
+.ui-select__tags { display: inline-flex; flex-wrap: wrap; }
+.ui-select__tag {
+  display: inline-flex; align-items: center; gap: var(--ui-space-1);
+  padding: 1px var(--ui-space-2); margin: 2px; border-radius: var(--ui-radius-sm);
+  background: var(--ui-bg-component); font-size: var(--ui-font-sm); color: var(--ui-text-secondary);
+}
+.ui-select__tag.is-notag {
+  background: var(--ui-primary-light); color: var(--ui-primary); font-weight: var(--ui-font-weight-medium);
+}
+.ui-select__tag.is-notag::before {
+  content: ''; width: 4px; height: 4px; border-radius: var(--ui-radius-circle); background: var(--ui-primary);
+}
+.ui-select__tag-close { cursor: pointer; display: inline-flex; color: var(--ui-text-placeholder); }
+.ui-select__tag-close:hover { color: var(--ui-danger); }
+
+/* ========== ui-table（html/table + is-border） ========== */
+.ui-table { width: 100%; border-collapse: collapse; font-size: 13px; color: var(--ui-text-secondary); }
+.ui-table__cell { padding: var(--ui-space-2) var(--ui-space-3); text-align: left; border-bottom: 1px solid var(--ui-border-light); }
+.ui-table__header .ui-table__cell { font-weight: normal; color: var(--ui-text-primary); background: var(--ui-bg-subtle); white-space: nowrap; }
+.ui-table__row:hover .ui-table__cell { background: var(--ui-bg-hover); }
+.ui-table.is-border { border: 1px solid var(--ui-border); }
+.ui-table.is-border .ui-table__cell { border: 1px solid var(--ui-border); }
+
+/* ========== ui-checkbox（html/checkbox） ========== */
+.ui-checkbox { display: inline-flex; align-items: center; cursor: pointer; font-size: var(--ui-font-md); color: var(--ui-text-secondary); margin-right: var(--ui-space-4); }
+.ui-checkbox__native { position: absolute; opacity: 0; width: 0; height: 0; }
+.ui-checkbox__input { display: inline-flex; }
+.ui-checkbox__inner {
+  position: relative; width: 14px; height: 14px; border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-sm); background: var(--ui-bg); box-sizing: border-box;
+  transition: border-color var(--ui-duration) var(--ui-ease), background var(--ui-duration) var(--ui-ease);
+}
+.ui-checkbox__tick { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; stroke: var(--ui-text-anti); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
+.ui-checkbox:hover .ui-checkbox__inner { border-color: var(--ui-primary); }
+.ui-checkbox__native:checked ~ .ui-checkbox__input .ui-checkbox__inner { background: var(--ui-primary); border-color: var(--ui-primary); }
+.ui-checkbox__native:checked ~ .ui-checkbox__input .ui-checkbox__tick { opacity: 1; }
+.ui-checkbox__native:disabled ~ .ui-checkbox__input .ui-checkbox__inner { background: var(--ui-bg-active); border-color: var(--ui-border); }
+.ui-checkbox.is-disabled { cursor: not-allowed; color: var(--ui-text-disabled); }
+.ui-checkbox__label { padding-left: var(--ui-space-2); }
+
+/* ========== ui-dialog（html/dialog + footer） ========== */
+.ui-dialog {
+  width: 640px; max-width: 92vw; margin: 12vh auto auto; padding: 0; border: none;
+  background: var(--ui-bg); border-radius: var(--ui-radius-lg); box-shadow: var(--ui-shadow-lg);
+}
+.ui-dialog::backdrop { background: var(--ui-mask); }
+.ui-dialog__header { display: flex; align-items: center; justify-content: space-between; padding: var(--ui-space-4) var(--ui-space-5); }
+.ui-dialog__title { font-size: var(--ui-font-title); color: var(--ui-text-primary); }
+.ui-dialog__close { border: none; background: none; line-height: 1; color: var(--ui-text-placeholder); cursor: pointer; }
+.ui-dialog__close:hover { color: var(--ui-text-primary); }
+.ui-dialog__body { padding: 0 var(--ui-space-5) var(--ui-space-5); color: var(--ui-text-secondary); font-size: var(--ui-font-md); }
+.ui-dialog__footer { display: flex; justify-content: flex-end; gap: var(--ui-space-2); padding: var(--ui-space-3) var(--ui-space-5) var(--ui-space-5); }
+
+/* ========== 页面：提单页 ========== */
+.page-wrap { padding: var(--ui-space-4) var(--ui-space-6) 48px; }
+.page-header { display: flex; align-items: center; gap: var(--ui-space-2); margin-bottom: var(--ui-space-4); }
+.page-header h1 { font-size: var(--ui-font-title); font-weight: var(--ui-font-weight-medium); color: var(--ui-text-primary); }
+.tag-engine {
+  padding: 1px var(--ui-space-2); border-radius: var(--ui-radius-sm);
+  font-size: var(--ui-font-sm); background: var(--ui-danger-light); color: var(--ui-danger);
+}
+.form-card {
+  background: var(--ui-bg); border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-lg); padding: var(--ui-space-6);
+}
+.tool-hint {
+  padding: var(--ui-space-3) var(--ui-space-4); border-radius: var(--ui-radius-lg);
+  font-size: 13px; line-height: 1.6; margin-bottom: var(--ui-space-5);
+  color: var(--ui-text-secondary);
+}
+.tool-hint.severity-daily {
+  background: var(--ui-primary-light);
+  border: 1px solid color-mix(in srgb, var(--ui-primary) 35%, var(--ui-bg));
+  border-left: 3px solid var(--ui-primary);
+}
+.tool-hint strong { color: var(--ui-text-primary); }
+.toolbar-row { display: flex; align-items: center; margin-bottom: var(--ui-space-3); }
+.toolbar-left { display: flex; align-items: center; gap: var(--ui-space-2); }
+.tool-table-wrap { overflow-x: auto; }
+.tool-table { min-width: 1180px; }
+.req { color: var(--ui-danger); margin-right: 2px; }
+.th-action-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; margin-left: 6px; border: none; background: none;
+  border-radius: var(--ui-radius-sm); cursor: pointer; color: var(--ui-primary); vertical-align: middle;
+}
+.th-action-btn:hover { background: var(--ui-primary-light); }
+.col-host { width: 190px; }
+.col-role { width: 110px; }
+.col-status { width: 100px; }
+.col-cluster { width: 220px; }
+.col-cluster-type { width: 110px; }
+.col-spec { width: 200px; }
+.col-tags { width: 210px; }
+.col-res { width: 96px; }
+.col-op { width: 100px; }
+.cl-input-wrap { position: relative; display: flex; align-items: center; gap: var(--ui-space-1); }
+.cl-input {
+  width: 100%; height: 30px; padding: 0 var(--ui-space-2);
+  border: 1px solid transparent; border-radius: var(--ui-radius-sm);
+  background: transparent; outline: none;
+  font-family: Consolas, "Courier New", monospace; font-size: 13px; color: var(--ui-text-primary);
+  transition: border-color var(--ui-duration) var(--ui-ease), background var(--ui-duration) var(--ui-ease);
+}
+.cl-input:hover { border-color: var(--ui-border); background: var(--ui-bg-subtle); }
+.cl-input:focus { border-color: var(--ui-primary); background: var(--ui-bg); }
+.cl-input-wrap.has-error .cl-input { border-color: var(--ui-danger); background: var(--ui-danger-light); }
+.cl-error-icon {
+  display: none; flex-shrink: 0; width: 16px; height: 16px; color: var(--ui-danger); cursor: help;
+}
+.cl-input-wrap.has-error .cl-error-icon { display: inline-flex; }
+.reverse-empty { color: var(--ui-text-disabled); }
+.cell-status { font-size: 13px; color: var(--ui-text-primary); white-space: nowrap; }
+.cell-status::before {
+  content: ''; display: inline-block; width: 6px; height: 6px; margin-right: 6px;
+  border-radius: var(--ui-radius-circle); vertical-align: middle; background: var(--ui-text-disabled);
+}
+.cell-status.s-running::before { background: var(--ui-success); }
+.cell-status.s-unavailable::before { background: var(--ui-danger); }
+.cell-role { font-size: 13px; color: var(--ui-text-primary); }
+.link { color: var(--ui-text-link); cursor: pointer; background: none; border: none; font-size: 13px; padding: 0; }
+.link:hover { color: var(--ui-primary-hover); }
+.op-icons { display: inline-flex; gap: 10px; align-items: center; }
+.op-icons button { background: none; border: none; padding: 2px; cursor: pointer; color: var(--ui-text-secondary); line-height: 0; }
+.op-icons button:hover { color: var(--ui-primary); }
+.remark-area { margin-top: var(--ui-space-5); max-width: 720px; position: relative; }
+.remark-label { font-size: 13px; color: var(--ui-text-secondary); margin-bottom: 6px; }
+.remark-area .ui-input { width: 100%; }
+.char-count { position: absolute; right: var(--ui-space-2); bottom: 6px; font-size: var(--ui-font-sm); color: var(--ui-text-disabled); }
+.form-actions {
+  display: flex; gap: var(--ui-space-2); align-items: center; position: relative;
+  margin-top: var(--ui-space-5); padding-top: var(--ui-space-4);
+  border-top: 1px solid var(--ui-border-light);
+}
+
+/* Popconfirm */
+.popconfirm {
+  position: absolute; bottom: calc(100% + var(--ui-space-2)); left: 80px;
+  width: 280px; background: var(--ui-bg); border: 1px solid var(--ui-border-light);
+  border-radius: var(--ui-radius-lg); box-shadow: var(--ui-shadow-md);
+  padding: var(--ui-space-4); z-index: 200;
+}
+.popconfirm__title { font-size: var(--ui-font-md); color: var(--ui-text-primary); margin-bottom: var(--ui-space-2); }
+.popconfirm__body { font-size: var(--ui-font-sm); color: var(--ui-text-secondary); margin-bottom: var(--ui-space-3); }
+.popconfirm__footer { display: flex; justify-content: flex-end; gap: var(--ui-space-2); }
+
+/* Message */
+.ui-message {
+  position: fixed; top: 64px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: var(--ui-space-2);
+  padding: var(--ui-space-2) var(--ui-space-4); border-radius: var(--ui-radius-sm);
+  background: var(--ui-success-light); border: 1px solid color-mix(in srgb, var(--ui-success) 40%, var(--ui-bg));
+  color: var(--ui-text-primary); font-size: var(--ui-font-md); z-index: 7000; box-shadow: var(--ui-shadow-md);
+}
+
+/* 浮层 tooltip（表格 overflow 内不被裁剪） */
+.bk-tooltip-content {
+  position: fixed; z-index: 8000; max-width: 320px;
+  background: color-mix(in srgb, var(--ui-text-primary) 92%, black);
+  color: var(--ui-text-anti); font-size: var(--ui-font-sm); line-height: 1.5;
+  padding: var(--ui-space-2) var(--ui-space-3); border-radius: var(--ui-radius-sm);
+  box-shadow: var(--ui-shadow-sm); pointer-events: none;
+}
+
+/* 选择器弹窗 */
+.picker { display: flex; gap: var(--ui-space-4); height: 320px; }
+.picker__col { flex: 1; border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); display: flex; flex-direction: column; }
+.picker__head { padding: var(--ui-space-2) var(--ui-space-3); border-bottom: 1px solid var(--ui-border-light); font-size: var(--ui-font-sm); color: var(--ui-text-secondary); }
+.picker__list { flex: 1; overflow-y: auto; padding: var(--ui-space-2); }
+.picker__item { display: flex; align-items: center; gap: var(--ui-space-2); padding: 6px var(--ui-space-2); border-radius: var(--ui-radius-sm); }
+.picker__item:hover { background: var(--ui-bg-hover); }
+.picker__meta { font-size: var(--ui-font-sm); color: var(--ui-text-placeholder); margin-left: auto; }
+.picker__chosen { display: flex; align-items: center; justify-content: space-between; padding: 6px var(--ui-space-2); font-size: 13px; }
+.picker__empty { padding: var(--ui-space-5); text-align: center; color: var(--ui-text-disabled); font-size: var(--ui-font-sm); }
+
+/* 批量录入 */
+.batch-sample { background: var(--ui-bg-subtle); border: 1px solid var(--ui-border-light); border-radius: var(--ui-radius-md); padding: var(--ui-space-3); font-size: var(--ui-font-sm); color: var(--ui-text-secondary); margin-bottom: var(--ui-space-3); font-family: Consolas, "Courier New", monospace; }
+.batch-area .ui-input { width: 100%; margin-bottom: var(--ui-space-3); }
+
+/* 资源预览 */
+.res-summary { display: flex; gap: var(--ui-space-6); margin-bottom: var(--ui-space-3); font-size: 13px; }
+.res-summary b { color: var(--ui-text-primary); font-size: var(--ui-font-title); }
+
+/* ========== 页面：单据详情 ========== */
+.detail-header { display: flex; align-items: center; gap: var(--ui-space-2); margin-bottom: var(--ui-space-4); }
+.detail-header h1 { font-size: var(--ui-font-title); font-weight: var(--ui-font-weight-medium); color: var(--ui-text-primary); }
+.detail-card { background: var(--ui-bg); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-lg); margin-bottom: var(--ui-space-4); }
+.detail-card__head {
+  display: flex; align-items: center; gap: var(--ui-space-2);
+  padding: var(--ui-space-3) var(--ui-space-5); border-bottom: 1px solid var(--ui-border-light);
+  font-size: var(--ui-font-md); color: var(--ui-text-primary); cursor: pointer;
+}
+.detail-card__arrow { width: 0; height: 0; border-left: 5px solid var(--ui-text-placeholder); border-top: 4px solid transparent; border-bottom: 4px solid transparent; transition: transform var(--ui-duration) var(--ui-ease); }
+.detail-card.is-open .detail-card__arrow { transform: rotate(90deg); }
+.detail-card__body { padding: var(--ui-space-5); }
+.kv-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--ui-space-4) var(--ui-space-6); }
+.kv-item { display: flex; font-size: 13px; }
+.kv-key { color: var(--ui-text-placeholder); width: 84px; flex-shrink: 0; }
+.kv-val { color: var(--ui-text-primary); word-break: break-all; }
+.detail-remark { margin-top: var(--ui-space-4); }
+.detail-table { table-layout: fixed; }
+.detail-table .ui-table__cell { vertical-align: middle; }
+.detail-tag {
+  display: inline-block; padding: 1px var(--ui-space-2); margin: 2px 2px 2px 0;
+  border-radius: var(--ui-radius-sm); background: var(--ui-bg-component);
+  color: var(--ui-text-secondary); font-size: var(--ui-font-sm);
+}
+.detail-tag.is-notag { background: var(--ui-primary-light); color: var(--ui-primary); }
+.steps { display: flex; flex-direction: column; gap: var(--ui-space-4); }
+.step { display: flex; align-items: center; gap: var(--ui-space-3); font-size: 13px; }
+.step__dot { width: 8px; height: 8px; border-radius: var(--ui-radius-circle); background: var(--ui-text-disabled); }
+.step.is-current .step__dot { background: var(--ui-warning); }
+.step__label { color: var(--ui-text-primary); }
+.step__state { color: var(--ui-text-placeholder); }
+
+/* 本次原型要点（落地时整块删除） */
+.spec-btn {
+  position: fixed; right: var(--ui-space-5); bottom: var(--ui-space-5); z-index: 6000;
+  border: 1px solid var(--ui-border); background: var(--ui-bg); color: var(--ui-text-secondary);
+  border-radius: var(--ui-radius-round); padding: 6px var(--ui-space-4);
+  font-size: var(--ui-font-sm); cursor: pointer; box-shadow: var(--ui-shadow-sm);
+}
+.spec-popover {
+  position: fixed; right: var(--ui-space-5); bottom: 60px; z-index: 6000; width: 340px;
+  background: var(--ui-bg); border: 1px solid var(--ui-border-light);
+  border-radius: var(--ui-radius-lg); box-shadow: var(--ui-shadow-md);
+}
+.spec-popover__head { display: flex; align-items: center; justify-content: space-between; padding: var(--ui-space-3) var(--ui-space-4); border-bottom: 1px solid var(--ui-border-light); font-size: var(--ui-font-sm); color: var(--ui-text-secondary); }
+.spec-popover__close { border: none; background: none; cursor: pointer; color: var(--ui-text-placeholder); font-size: var(--ui-font-lg); line-height: 1; }
+.spec-popover__body { padding: var(--ui-space-3) var(--ui-space-4); font-size: var(--ui-font-sm); color: var(--ui-text-secondary); }
+.spec-popover__body ul { padding-left: var(--ui-space-4); }
+.spec-popover__body li { margin-bottom: 6px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<!-- 原型演示条：落地时整块删除 -->
+<div class="proto-bar">
+  <span class="proto-bar__tag">原型演示</span>
+  <span>查看页面</span>
+  <div class="proto-bar__views">
+    <button type="button" class="proto-bar__btn is-active" data-action="switch-view" data-view="form">提单页</button>
+    <button type="button" class="proto-bar__btn" data-action="switch-view" data-view="detail">单据详情</button>
+  </div>
+</div>
+
+<header class="app-shell__top">
+  <div class="app-shell__logo">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="2" y="3" width="20" height="5" rx="2.5" stroke="currentColor" stroke-width="1.5"/>
+      <rect x="2" y="9.5" width="20" height="5" rx="2.5" stroke="currentColor" stroke-width="1.5"/>
+      <rect x="2" y="16" width="20" height="5" rx="2.5" stroke="currentColor" stroke-width="1.5"/>
+    </svg>
+    数据库管理
+  </div>
+  <nav class="app-shell__tabs" aria-label="顶部导航">
+    <div class="app-shell__tab is-active">数据库管理</div>
+    <div class="app-shell__tab">可观测</div>
+    <div class="app-shell__tab">资源管理</div>
+    <div class="app-shell__tab">平台管理</div>
+  </nav>
+  <div class="app-shell__right">
+    <div class="ui-input"><input class="ui-input__inner" type="text" placeholder="搜索集群、实例、单据..." readonly></div>
+    <div class="app-shell__user">admin</div>
+  </div>
+</header>
+
+<div class="app-shell__body">
+  <aside class="app-shell__side">
+    <div class="app-shell__biz"><span>DBA (#3, dba)</span><span aria-hidden="true">▾</span></div>
+    <div class="app-shell__nav-group">
+      <div class="app-shell__nav-label">Oracle</div>
+      <div class="app-shell__nav-item">集群管理</div>
+      <div class="app-shell__nav-item">实例视图</div>
+      <div class="app-shell__nav-item is-active">整机替换</div>
+      <div class="app-shell__nav-item">添加从库</div>
+    </div>
+    <div class="app-shell__nav-group">
+      <div class="app-shell__nav-label">单据</div>
+      <div class="app-shell__nav-item">我的单据</div>
+      <div class="app-shell__nav-item">我的待办</div>
+    </div>
+  </aside>
+
+  <main class="app-shell__main">
+
+    <!-- ===== 提单页 ===== -->
+    <div class="page-wrap" id="view-form">
+      <div class="page-header">
+        <h1>整机替换</h1>
+        <span class="tag-engine">Oracle</span>
+      </div>
+
+      <div class="form-card">
+        <div class="tool-hint severity-daily" role="note">
+          <strong>整机替换</strong>：替换所选主机，支持单节点以及主从集群的从库。
+        </div>
+
+        <div class="toolbar-row">
+          <div class="toolbar-left">
+            <button type="button" class="ui-button ui-button--default" data-action="open-batch">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+                <rect x="2" y="2" width="12" height="3" rx="0.5"/>
+                <rect x="2" y="6.5" width="12" height="3" rx="0.5"/>
+                <rect x="2" y="11" width="12" height="3" rx="0.5"/>
+              </svg>
+              批量录入
+            </button>
+          </div>
+        </div>
+
+        <div class="tool-table-wrap">
+          <table class="ui-table is-border tool-table">
+            <thead class="ui-table__header">
+              <tr>
+                <th class="ui-table__cell col-host">
+                  <span class="req">*</span>主机
+                  <button type="button" class="th-action-btn" data-action="open-picker" data-hint="从单节点主机与从库所在主机中选择">
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+                      <path d="M2 4h9M2 8h9M2 12h9"/>
+                      <path d="M13.5 3.5l1.5 1.5-3 3-1.5-1.5z" fill="currentColor" stroke="none"/>
+                    </svg>
+                  </button>
+                </th>
+                <th class="ui-table__cell col-role">角色</th>
+                <th class="ui-table__cell col-status">状态</th>
+                <th class="ui-table__cell col-cluster">所属集群</th>
+                <th class="ui-table__cell col-cluster-type">集群类型</th>
+                <th class="ui-table__cell col-spec">
+                  <span class="req">*</span>目标规格
+                  <button type="button" class="th-action-btn" data-action="fill-spec" data-hint="批量填充全部行的目标规格">
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+                      <path d="M2 4h9M2 8h9M2 12h9"/>
+                      <path d="M13.5 3.5l1.5 1.5-3 3-1.5-1.5z" fill="currentColor" stroke="none"/>
+                    </svg>
+                  </button>
+                </th>
+                <th class="ui-table__cell col-tags">
+                  <span class="req">*</span>资源标签
+                  <button type="button" class="th-action-btn" data-action="fill-tags" data-hint="批量填充全部行的资源标签">
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+                      <path d="M2 4h9M2 8h9M2 12h9"/>
+                      <path d="M13.5 3.5l1.5 1.5-3 3-1.5-1.5z" fill="currentColor" stroke="none"/>
+                    </svg>
+                  </button>
+                </th>
+                <th class="ui-table__cell col-res">可用资源</th>
+                <th class="ui-table__cell col-op">操作</th>
+              </tr>
+            </thead>
+            <tbody id="tool-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="remark-area">
+          <div class="remark-label">备注</div>
+          <div class="ui-input">
+            <textarea class="ui-input__inner ui-input__textarea" id="remark" rows="2" maxlength="500" placeholder="提单原因、后续处理说明等（最多 500 字）"></textarea>
+          </div>
+          <span class="char-count" id="remark-count">0 / 500</span>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="ui-button" data-action="submit">提交</button>
+          <button type="button" class="ui-button ui-button--default" id="reset-btn" data-action="reset">重置</button>
+          <div class="popconfirm" id="reset-confirm" hidden>
+            <div class="popconfirm__title">确认重置？</div>
+            <div class="popconfirm__body">重置后当前录入的所有内容将清空。</div>
+            <div class="popconfirm__footer">
+              <button type="button" class="ui-button ui-button--default" data-action="reset-cancel">取消</button>
+              <button type="button" class="ui-button" data-action="reset-confirm">确认</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 单据详情 ===== -->
+    <div class="page-wrap" id="view-detail" hidden>
+      <div class="detail-header">
+        <h1>单据详情 - #1024312</h1>
+      </div>
+
+      <section class="detail-card is-open">
+        <div class="detail-card__head" data-action="toggle-card"><span class="detail-card__arrow"></span>基本信息</div>
+        <div class="detail-card__body">
+          <div class="kv-grid">
+            <div class="kv-item"><span class="kv-key">单据类型</span><span class="kv-val">Oracle 整机替换</span></div>
+            <div class="kv-item"><span class="kv-key">单号</span><span class="kv-val">1024312</span></div>
+            <div class="kv-item"><span class="kv-key">申请人</span><span class="kv-val">admin</span></div>
+            <div class="kv-item"><span class="kv-key">所属业务</span><span class="kv-val">DBA (#3, dba)</span></div>
+            <div class="kv-item"><span class="kv-key">提单时间</span><span class="kv-val">2026-09-07 15:20:11</span></div>
+            <div class="kv-item"><span class="kv-key">单据状态</span><span class="kv-val">待审批</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="detail-card is-open">
+        <div class="detail-card__head" data-action="toggle-card"><span class="detail-card__arrow"></span>需求信息</div>
+        <div class="detail-card__body">
+          <div class="tool-table-wrap">
+            <table class="ui-table is-border detail-table">
+              <thead class="ui-table__header">
+                <tr>
+                  <th class="ui-table__cell col-host">被替换主机</th>
+                  <th class="ui-table__cell col-role">角色</th>
+                  <th class="ui-table__cell col-cluster">所属集群</th>
+                  <th class="ui-table__cell col-cluster-type">集群类型</th>
+                  <th class="ui-table__cell col-spec">目标规格</th>
+                  <th class="ui-table__cell col-tags">资源标签</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="ui-table__row">
+                  <td class="ui-table__cell">10.1.20.31</td>
+                  <td class="ui-table__cell">primary</td>
+                  <td class="ui-table__cell">oracle.ora-order-01.dba.db</td>
+                  <td class="ui-table__cell">单节点</td>
+                  <td class="ui-table__cell">通用型 8核16G</td>
+                  <td class="ui-table__cell"><span class="detail-tag is-notag">通用无标签</span></td>
+                </tr>
+                <tr class="ui-table__row">
+                  <td class="ui-table__cell">10.1.20.46</td>
+                  <td class="ui-table__cell">standby</td>
+                  <td class="ui-table__cell">oracle.ora-pay.dba.db</td>
+                  <td class="ui-table__cell">主从集群</td>
+                  <td class="ui-table__cell">高IO型 16核64G</td>
+                  <td class="ui-table__cell"><span class="detail-tag">华南-核心</span><span class="detail-tag">Oracle 专用</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="kv-grid detail-remark">
+            <div class="kv-item"><span class="kv-key">备注</span><span class="kv-val">机房裁撤，替换旧批次主机</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="detail-card is-open">
+        <div class="detail-card__head" data-action="toggle-card"><span class="detail-card__arrow"></span>实施进度</div>
+        <div class="detail-card__body">
+          <div class="steps">
+            <div class="step is-current"><span class="step__dot"></span><span class="step__label">单据审批</span><span class="step__state">待处理</span></div>
+            <div class="step"><span class="step__dot"></span><span class="step__label">资源申请</span><span class="step__state">未开始</span></div>
+            <div class="step"><span class="step__dot"></span><span class="step__label">新机部署与数据同步</span><span class="step__state">未开始</span></div>
+            <div class="step"><span class="step__dot"></span><span class="step__label">切换与旧机回收</span><span class="step__state">未开始</span></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+  </main>
+</div>
+
+<!-- 主机选择器 -->
+<dialog class="ui-dialog" id="picker-dialog" aria-modal="true">
+  <header class="ui-dialog__header">
+    <span class="ui-dialog__title">选择主机</span>
+    <button class="ui-dialog__close" type="button" aria-label="关闭">
+      <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+  </header>
+  <div class="ui-dialog__body">
+    <div class="picker">
+      <div class="picker__col">
+        <div class="picker__head">候选主机（单节点主机、从库所在主机）</div>
+        <div class="picker__list" id="picker-list"></div>
+      </div>
+      <div class="picker__col">
+        <div class="picker__head">已选 <span id="picker-count">0</span></div>
+        <div class="picker__list" id="picker-chosen"><div class="picker__empty">请从左侧勾选主机</div></div>
+      </div>
+    </div>
+  </div>
+  <footer class="ui-dialog__footer">
+    <button class="ui-button ui-button--default" type="button" data-dialog-close>取消</button>
+    <button class="ui-button" type="button" data-action="picker-confirm">追加到表格</button>
+  </footer>
+</dialog>
+
+<!-- 批量录入 -->
+<dialog class="ui-dialog" id="batch-dialog" aria-modal="true">
+  <header class="ui-dialog__header">
+    <span class="ui-dialog__title">批量录入</span>
+    <button class="ui-dialog__close" type="button" aria-label="关闭">
+      <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+  </header>
+  <div class="ui-dialog__body batch-area">
+    <div class="batch-sample">主机<br>10.1.20.31<br>10.1.20.45</div>
+    <div class="ui-input">
+      <textarea class="ui-input__inner ui-input__textarea" id="batch-text" rows="6" placeholder="① 一行一台主机 IP&#10;② 支持空格、逗号、分号分隔&#10;③ 写入后按规则校验并标红"></textarea>
+    </div>
+    <label class="ui-checkbox">
+      <input class="ui-checkbox__native" type="checkbox" id="batch-override">
+      <span class="ui-checkbox__input"><span class="ui-checkbox__inner">
+        <svg class="ui-checkbox__tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.4 6.2 5 8.6 9.6 3.6"></path></svg>
+      </span></span>
+      <span class="ui-checkbox__label">覆盖表格已有数据</span>
+    </label>
+  </div>
+  <footer class="ui-dialog__footer">
+    <button class="ui-button ui-button--default" type="button" data-dialog-close>取消</button>
+    <button class="ui-button" type="button" data-action="batch-confirm">写入表格</button>
+  </footer>
+</dialog>
+
+<!-- 资源预览 -->
+<dialog class="ui-dialog" id="res-dialog" aria-modal="true">
+  <header class="ui-dialog__header">
+    <span class="ui-dialog__title">资源预览</span>
+    <button class="ui-dialog__close" type="button" aria-label="关闭">
+      <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+  </header>
+  <div class="ui-dialog__body">
+    <div class="res-summary">
+      <div>目标规格：<span id="res-spec">--</span></div>
+      <div>资源标签：<span id="res-tags">--</span></div>
+      <div>可用主机：<b id="res-count">12</b> 台</div>
+    </div>
+    <table class="ui-table is-border">
+      <thead class="ui-table__header">
+        <tr>
+          <th class="ui-table__cell">主机</th>
+          <th class="ui-table__cell">机型</th>
+          <th class="ui-table__cell">园区</th>
+          <th class="ui-table__cell">标签</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="ui-table__row"><td class="ui-table__cell">10.1.60.21</td><td class="ui-table__cell">SA5.4XLARGE64</td><td class="ui-table__cell">深圳-坪山 A</td><td class="ui-table__cell">华南-核心</td></tr>
+        <tr class="ui-table__row"><td class="ui-table__cell">10.1.60.22</td><td class="ui-table__cell">SA5.4XLARGE64</td><td class="ui-table__cell">深圳-坪山 B</td><td class="ui-table__cell">华南-核心</td></tr>
+        <tr class="ui-table__row"><td class="ui-table__cell">10.1.60.35</td><td class="ui-table__cell">SA5.4XLARGE64</td><td class="ui-table__cell">深圳-光明 A</td><td class="ui-table__cell">Oracle 专用</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <footer class="ui-dialog__footer">
+    <button class="ui-button ui-button--default" type="button" data-dialog-close>关闭</button>
+  </footer>
+</dialog>
+
+<!-- 本次原型要点：落地时整块删除 -->
+<button type="button" class="spec-btn" data-action="toggle-spec">本次原型要点</button>
+<div class="spec-popover" id="spec-popover" hidden>
+  <div class="spec-popover__head">仅原型注释，落地时整块移除
+    <button type="button" class="spec-popover__close" data-action="toggle-spec" aria-label="关闭">×</button>
+  </div>
+  <div class="spec-popover__body">
+    <ul>
+      <li>主键为主机 IP，一行只替换该主机上的实例</li>
+      <li>选择器只列单节点主机与从库所在主机，主库主机不出现</li>
+      <li>异常从库仍可选（用于替换坏从库）</li>
+      <li>手填主库 / 空主机 / 非 Oracle 主机：红框 + 「主机不包含任何从库实例」</li>
+      <li>重复判定键 = 主机：表格已录入的主机在选择器中禁选</li>
+      <li>目标规格默认当前规格；资源标签「通用无标签」与具体标签互斥</li>
+      <li>数据源由执行 flow 决策，提单页与详情均不展示</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const HOSTS = {
+    '10.1.20.31': { role: 'primary', kind: 'single', status: '运行中', cluster: 'oracle.ora-order-01.dba.db', spec: '通用型 8核16G' },
+    '10.1.20.45': { role: 'standby', kind: 'standby', status: '运行中', cluster: 'oracle.ora-pay.dba.db', spec: '高IO型 16核64G' },
+    '10.1.20.46': { role: 'standby', kind: 'standby', status: '不可用', cluster: 'oracle.ora-pay.dba.db', spec: '高IO型 16核64G' },
+    '10.1.30.12': { role: 'standby', kind: 'standby', status: '运行中', cluster: 'oracle.ora-crm.dba.db', spec: '通用型 16核32G' },
+    '10.1.30.18': { role: 'standby', kind: 'standby', status: '运行中', cluster: 'oracle.ora-crm.dba.db', spec: '通用型 16核32G' },
+    '10.1.20.60': { role: 'primary', kind: 'single', status: '运行中', cluster: 'oracle.ora-report.dba.db', spec: '通用型 8核16G' },
+    '10.1.20.40': { role: 'primary', kind: 'master', status: '运行中', cluster: 'oracle.ora-pay.dba.db', spec: '高IO型 16核64G' },
+    '10.1.30.10': { role: 'primary', kind: 'master', status: '运行中', cluster: 'oracle.ora-crm.dba.db', spec: '通用型 16核32G' }
+  };
+  const SPECS = ['通用型 8核16G', '通用型 16核32G', '高IO型 16核64G'];
+  const TAGS = ['通用无标签', '华南-核心', '华南-普通', 'Oracle 专用'];
+  const ERR_TEXT = '主机不包含任何从库实例';
+
+  const state = {
+    rows: [
+      { host: '10.1.20.31', spec: '通用型 8核16G', tags: ['通用无标签'] },
+      { host: '10.1.20.46', spec: '高IO型 16核64G', tags: ['华南-核心', 'Oracle 专用'] }
+    ]
+  };
+
+  const lookup = (host) => HOSTS[host] || null;
+  const clusterTypeLabel = (kind) => (kind === 'single' ? '单节点' : '主从集群');
+  const isValid = (host) => {
+    const info = lookup(host);
+    return !!info && (info.kind === 'single' || info.kind === 'standby');
+  };
+  const hasInput = () => state.rows.some((r) => r.host || r.spec || (r.tags && r.tags.length)) ||
+    (document.getElementById('remark').value.trim() !== '');
+
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  const OP_ADD = '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 2a6 6 0 100 12A6 6 0 008 2zm0 1a5 5 0 110 10A5 5 0 018 3zm.5 4.5V5h-1v2.5H5v1h2.5V11h1V8.5H11v-1H8.5z"/></svg>';
+  const OP_CLONE = '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5 2h7v9H5V2zm1 1v7h5V3H6z"/><path d="M3 5h1v8h7v1H3V5z"/></svg>';
+  const OP_DEL = '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M6 6v6h1V6H6zm3 0v6h1V6H9zM4 6V5h8v1h2v1H4V6zM6 4V3h4v1H6z"/></svg>';
+
+  const selectMarkup = (field, idx, value, options) => {
+    const label = value
+      ? '<span class="ui-select__value">' + esc(value) + '</span>'
+      : '<span class="ui-select__placeholder">请选择</span>';
+    const opts = options.map((o) =>
+      '<li class="ui-select__option' + (o === value ? ' is-selected' : '') + '" role="option" data-value="' + esc(o) + '">' + esc(o) + '</li>').join('');
+    return '<div class="ui-select" data-field="' + field + '" data-idx="' + idx + '">' +
+      '<div class="ui-select__control" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">' + label +
+      '<span class="ui-select__arrow"></span></div>' +
+      '<ul class="ui-select__menu" role="listbox" hidden>' + opts + '</ul></div>';
+  };
+
+  const tagsMarkup = (idx, values) => {
+    const tags = values.map((v) =>
+      '<span class="ui-select__tag' + (v === '通用无标签' ? ' is-notag' : '') + '">' + esc(v) +
+      '<span class="ui-select__tag-close" data-remove="' + esc(v) + '">' +
+      '<svg viewBox="0 0 24 24" width="10" height="10" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>' +
+      '</span></span>').join('');
+    const placeholder = values.length ? '' : '<span class="ui-select__placeholder">请选择</span>';
+    const noTagPicked = values.indexOf('通用无标签') > -1;
+    const opts = TAGS.map((t) => {
+      const selected = values.indexOf(t) > -1;
+      const disabled = (noTagPicked && t !== '通用无标签') || (!noTagPicked && values.length > 0 && t === '通用无标签');
+      return '<li class="ui-select__option' + (selected ? ' is-selected' : '') + (disabled ? ' is-disabled' : '') +
+        '" role="option" data-value="' + esc(t) + '">' + esc(t) + '</li>';
+    }).join('');
+    return '<div class="ui-select" data-multiple data-field="tags" data-idx="' + idx + '">' +
+      '<div class="ui-select__control" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">' +
+      '<span class="ui-select__tags">' + tags + '</span>' + placeholder +
+      '<span class="ui-select__arrow"></span></div>' +
+      '<ul class="ui-select__menu" role="listbox" hidden>' + opts + '</ul></div>';
+  };
+
+  const render = () => {
+    if (!state.rows.length) state.rows.push({ host: '', spec: '', tags: [] });
+    const tbody = document.getElementById('tool-tbody');
+    tbody.innerHTML = state.rows.map((row, idx) => {
+      const info = lookup(row.host);
+      const ok = isValid(row.host);
+      const showErr = row.host && !ok;
+      const role = ok ? info.role : '';
+      const status = ok ? info.status : '';
+      const cluster = ok ? info.cluster : '';
+      const clusterType = ok ? clusterTypeLabel(info.kind) : '';
+      const empty = '<span class="reverse-empty">-</span>';
+      return '<tr class="ui-table__row" data-idx="' + idx + '">' +
+        '<td class="ui-table__cell col-host"><div class="cl-input-wrap' + (showErr ? ' has-error' : '') + '">' +
+          '<input class="cl-input" data-field="host" data-idx="' + idx + '" value="' + esc(row.host) + '" placeholder="请输入主机 IP">' +
+          '<span class="cl-error-icon" data-hint="' + ERR_TEXT + '">' +
+            '<svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm.9 10.6H7.1v-1.8h1.8v1.8zm0-3H7.1V4.2h1.8v4.4z"/></svg>' +
+          '</span></div></td>' +
+        '<td class="ui-table__cell col-role">' + (role ? '<span class="cell-role">' + esc(role) + '</span>' : empty) + '</td>' +
+        '<td class="ui-table__cell col-status">' + (status
+            ? '<span class="cell-status ' + (status === '运行中' ? 's-running' : 's-unavailable') + '">' + esc(status) + '</span>'
+            : empty) + '</td>' +
+        '<td class="ui-table__cell col-cluster">' + (cluster ? esc(cluster) : empty) + '</td>' +
+        '<td class="ui-table__cell col-cluster-type">' + (clusterType ? esc(clusterType) : empty) + '</td>' +
+        '<td class="ui-table__cell col-spec">' + selectMarkup('spec', idx, row.spec, SPECS) + '</td>' +
+        '<td class="ui-table__cell col-tags">' + tagsMarkup(idx, row.tags || []) + '</td>' +
+        '<td class="ui-table__cell col-res"><button type="button" class="link" data-action="open-res" data-idx="' + idx + '">资源预览</button></td>' +
+        '<td class="ui-table__cell col-op"><span class="op-icons">' +
+          '<button type="button" data-action="row-add" data-idx="' + idx + '" aria-label="添加行">' + OP_ADD + '</button>' +
+          '<button type="button" data-action="row-clone" data-idx="' + idx + '" aria-label="克隆行">' + OP_CLONE + '</button>' +
+          '<button type="button" data-action="row-del" data-idx="' + idx + '" aria-label="删除行">' + OP_DEL + '</button>' +
+        '</span></td></tr>';
+    }).join('');
+    initSelects(tbody);
+    syncResetState();
+  };
+
+  /* ---------- ui-select 初始化（含表格内 fixed 浮层） ---------- */
+  const fixedOrigin = (menu) => {
+    for (let node = menu.parentElement; node && node !== document.body; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      if (style.transform !== 'none' || style.filter !== 'none' || style.perspective !== 'none') {
+        const box = node.getBoundingClientRect();
+        return { left: box.left, top: box.top };
+      }
+    }
+    return { left: 0, top: 0 };
+  };
+
+  const floatMenu = (root, menu, open) => {
+    if (!open) { menu.classList.remove('is-floating'); menu.removeAttribute('data-floated'); menu.style.cssText = ''; return; }
+    const rect = root.querySelector('.ui-select__control').getBoundingClientRect();
+    menu.classList.add('is-floating');
+    const origin = fixedOrigin(menu);
+    menu.style.width = rect.width + 'px';
+    menu.style.left = (rect.left - origin.left) + 'px';
+    menu.style.top = (rect.bottom + 4 - origin.top) + 'px';
+    const h = menu.offsetHeight;
+    if (rect.bottom + 4 + h > window.innerHeight - 4 && rect.top - 4 - h > 0) {
+      menu.style.top = (rect.top - 4 - h - origin.top) + 'px';
+    }
+  };
+
+  const closeAllSelects = () => {
+    document.querySelectorAll('.ui-select.is-open').forEach((root) => {
+      const menu = root.querySelector('.ui-select__menu');
+      root.classList.remove('is-open');
+      menu.hidden = true;
+      root.querySelector('.ui-select__control').setAttribute('aria-expanded', 'false');
+      floatMenu(root, menu, false);
+    });
+  };
+
+  const initSelects = (scope) => {
+    scope.querySelectorAll('.ui-select').forEach((root) => {
+      if (root.dataset.ready) return;
+      root.dataset.ready = '1';
+      const control = root.querySelector('.ui-select__control');
+      const menu = root.querySelector('.ui-select__menu');
+      const multiple = root.hasAttribute('data-multiple');
+
+      control.addEventListener('click', () => {
+        const willOpen = !root.classList.contains('is-open');
+        closeAllSelects();
+        if (!willOpen) return;
+        root.classList.add('is-open');
+        menu.hidden = false;
+        control.setAttribute('aria-expanded', 'true');
+        floatMenu(root, menu, true);
+      });
+
+      menu.addEventListener('click', (event) => {
+        const option = event.target.closest('.ui-select__option');
+        if (!option || option.classList.contains('is-disabled')) return;
+        const idx = Number(root.dataset.idx);
+        const value = option.dataset.value;
+        if (multiple) {
+          const list = state.rows[idx].tags || [];
+          const at = list.indexOf(value);
+          if (at > -1) list.splice(at, 1); else list.push(value);
+          state.rows[idx].tags = list;
+        } else {
+          state.rows[idx][root.dataset.field] = value;
+          closeAllSelects();
+        }
+        render();
+      });
+    });
+  };
+
+  /* ---------- 浮层 tooltip ---------- */
+  let tipEl = null;
+  const showTip = (anchor, text) => {
+    hideTip();
+    tipEl = document.createElement('div');
+    tipEl.className = 'bk-tooltip-content';
+    tipEl.textContent = text;
+    document.body.appendChild(tipEl);
+    const rect = anchor.getBoundingClientRect();
+    tipEl.style.left = Math.max(8, rect.left) + 'px';
+    tipEl.style.top = (rect.bottom + 6) + 'px';
+  };
+  const hideTip = () => { if (tipEl) { tipEl.remove(); tipEl = null; } };
+
+  document.addEventListener('mouseover', (e) => {
+    const el = e.target.closest('[data-hint]');
+    if (el) showTip(el, el.dataset.hint);
+  });
+  document.addEventListener('mouseout', (e) => {
+    if (e.target.closest('[data-hint]')) hideTip();
+  });
+
+  /* ---------- 弹窗 ---------- */
+  const initDialogs = () => {
+    document.querySelectorAll('.ui-dialog').forEach((dialog) => {
+      dialog.querySelectorAll('.ui-dialog__close, [data-dialog-close]').forEach((el) => {
+        el.addEventListener('click', () => dialog.close());
+      });
+      dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
+    });
+  };
+
+  /* ---------- 主机选择器 ---------- */
+  const pickerState = { chosen: [] };
+  const candidates = () => Object.keys(HOSTS).filter((h) => isValid(h));
+
+  const renderPicker = () => {
+    document.getElementById('picker-list').innerHTML = candidates().map((h) => {
+      const info = HOSTS[h];
+      /* 重复判定键 = 主机：表格已录入的主机不可再勾 */
+      const used = state.rows.some((r) => r.host === h);
+      return '<label class="picker__item ui-checkbox' + (used ? ' is-disabled' : '') + '"' +
+        (used ? ' data-hint="该主机已在表格中"' : '') + '>' +
+        '<input class="ui-checkbox__native" type="checkbox" data-pick="' + h + '"' +
+        (used ? ' disabled' : '') + (pickerState.chosen.indexOf(h) > -1 ? ' checked' : '') + '>' +
+        '<span class="ui-checkbox__input"><span class="ui-checkbox__inner">' +
+        '<svg class="ui-checkbox__tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.4 6.2 5 8.6 9.6 3.6"></path></svg>' +
+        '</span></span><span class="ui-checkbox__label">' + h + '</span>' +
+        '<span class="picker__meta">' + info.role + ' · ' + info.cluster + '</span></label>';
+    }).join('');
+    document.getElementById('picker-count').textContent = String(pickerState.chosen.length);
+    document.getElementById('picker-chosen').innerHTML = pickerState.chosen.length
+      ? pickerState.chosen.map((h) => '<div class="picker__chosen"><span>' + h + '</span>' +
+          '<button type="button" class="link" data-action="picker-remove" data-host="' + h + '">移除</button></div>').join('')
+      : '<div class="picker__empty">请从左侧勾选主机</div>';
+  };
+
+  /* ---------- 交互 ---------- */
+  const syncResetState = () => {
+    const btn = document.getElementById('reset-btn');
+    const enabled = hasInput();
+    btn.disabled = !enabled;
+    btn.classList.toggle('is-disabled', !enabled);
+  };
+
+  const toast = (text) => {
+    const box = document.createElement('div');
+    box.className = 'ui-message';
+    box.innerHTML = '<span>' + text + '</span><button type="button" class="ui-button is-text" data-action="goto-detail">查看详情</button>';
+    document.body.appendChild(box);
+    setTimeout(() => box.remove(), 4000);
+  };
+
+  const switchView = (view) => {
+    document.getElementById('view-form').hidden = view !== 'form';
+    document.getElementById('view-detail').hidden = view !== 'detail';
+    document.querySelectorAll('[data-action="switch-view"]').forEach((btn) => {
+      btn.classList.toggle('is-active', btn.dataset.view === view);
+    });
+  };
+
+  document.addEventListener('click', (e) => {
+    hideTip();
+    const el = e.target.closest('[data-action]');
+    if (!el) {
+      if (!e.target.closest('.ui-select')) closeAllSelects();
+      if (!e.target.closest('#reset-confirm')) document.getElementById('reset-confirm').hidden = true;
+      return;
+    }
+    const action = el.dataset.action;
+    const idx = Number(el.dataset.idx);
+
+    if (action === 'switch-view') switchView(el.dataset.view);
+    if (action === 'goto-detail') switchView('detail');
+
+    if (action === 'row-add') { state.rows.splice(idx + 1, 0, { host: '', spec: '', tags: [] }); render(); }
+    if (action === 'row-clone') {
+      const src = state.rows[idx];
+      state.rows.splice(idx + 1, 0, { host: src.host, spec: src.spec, tags: (src.tags || []).slice() });
+      render();
+    }
+    if (action === 'row-del') { state.rows.splice(idx, 1); render(); }
+
+    if (action === 'open-picker') {
+      pickerState.chosen = [];
+      renderPicker();
+      document.getElementById('picker-dialog').showModal();
+    }
+    if (action === 'picker-remove') {
+      pickerState.chosen = pickerState.chosen.filter((h) => h !== el.dataset.host);
+      renderPicker();
+    }
+    if (action === 'picker-confirm') {
+      pickerState.chosen.forEach((host) => {
+        const blank = state.rows.find((r) => !r.host);
+        const info = HOSTS[host];
+        if (blank) { blank.host = host; blank.spec = info.spec; blank.tags = blank.tags || []; }
+        else state.rows.push({ host: host, spec: info.spec, tags: [] });
+      });
+      document.getElementById('picker-dialog').close();
+      render();
+    }
+
+    if (action === 'open-batch') document.getElementById('batch-dialog').showModal();
+    if (action === 'batch-confirm') {
+      const raw = document.getElementById('batch-text').value.split(/[\s,;，；]+/).filter(Boolean);
+      if (document.getElementById('batch-override').checked) state.rows = [];
+      raw.forEach((host) => {
+        const info = lookup(host);
+        state.rows.push({ host: host, spec: info ? info.spec : '', tags: [] });
+      });
+      document.getElementById('batch-dialog').close();
+      render();
+    }
+
+    if (action === 'fill-spec') {
+      state.rows.forEach((r) => { if (r.host && isValid(r.host)) r.spec = HOSTS[r.host].spec; });
+      render();
+    }
+    if (action === 'fill-tags') {
+      state.rows.forEach((r) => { r.tags = ['华南-核心']; });
+      render();
+    }
+
+    if (action === 'open-res') {
+      const row = state.rows[idx];
+      document.getElementById('res-spec').textContent = row.spec || '--';
+      document.getElementById('res-tags').textContent = (row.tags && row.tags.length) ? row.tags.join('、') : '--';
+      document.getElementById('res-count').textContent = row.tags && row.tags.indexOf('通用无标签') > -1 ? '31' : '12';
+      document.getElementById('res-dialog').showModal();
+    }
+
+    if (action === 'reset' && hasInput()) document.getElementById('reset-confirm').hidden = false;
+    if (action === 'reset-cancel') document.getElementById('reset-confirm').hidden = true;
+    if (action === 'reset-confirm') {
+      state.rows = [{ host: '', spec: '', tags: [] }];
+      document.getElementById('remark').value = '';
+      document.getElementById('remark-count').textContent = '0 / 500';
+      document.getElementById('reset-confirm').hidden = true;
+      render();
+    }
+
+    if (action === 'submit') toast('单据提交成功，您可以继续提交新单据');
+
+    if (action === 'toggle-card') {
+      const card = el.closest('.detail-card');
+      const open = card.classList.toggle('is-open');
+      card.querySelector('.detail-card__body').hidden = !open;
+    }
+    if (action === 'toggle-spec') {
+      const pop = document.getElementById('spec-popover');
+      pop.hidden = !pop.hidden;
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    const closeTag = e.target.closest('.ui-select__tag-close');
+    if (!closeTag) return;
+    e.stopPropagation();
+    const root = closeTag.closest('.ui-select');
+    const idx = Number(root.dataset.idx);
+    state.rows[idx].tags = (state.rows[idx].tags || []).filter((t) => t !== closeTag.dataset.remove);
+    render();
+  }, true);
+
+  document.addEventListener('change', (e) => {
+    const pick = e.target.closest('[data-pick]');
+    if (pick) {
+      const host = pick.dataset.pick;
+      if (pick.checked) { if (pickerState.chosen.indexOf(host) < 0) pickerState.chosen.push(host); }
+      else pickerState.chosen = pickerState.chosen.filter((h) => h !== host);
+      renderPicker();
+    }
+  });
+
+  document.addEventListener('input', (e) => {
+    if (e.target.id === 'remark') {
+      document.getElementById('remark-count').textContent = e.target.value.length + ' / 500';
+      syncResetState();
+    }
+    if (e.target.classList.contains('cl-input')) {
+      const idx = Number(e.target.dataset.idx);
+      state.rows[idx].host = e.target.value.trim();
+      syncResetState();
+    }
+  });
+
+  document.addEventListener('change', (e) => {
+    if (e.target.classList.contains('cl-input')) {
+      const idx = Number(e.target.dataset.idx);
+      const host = e.target.value.trim();
+      state.rows[idx].host = host;
+      if (isValid(host)) state.rows[idx].spec = HOSTS[host].spec;
+      render();
+    }
+  });
+
+  document.addEventListener('scroll', () => closeAllSelects(), true);
+  window.addEventListener('resize', () => closeAllSelects());
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initDialogs();
+    render();
+  });
+})();
+</script>
+</body>
+</html>

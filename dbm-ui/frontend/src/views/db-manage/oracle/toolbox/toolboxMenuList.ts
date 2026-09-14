@@ -43,4 +43,18 @@ export const toolboxMenuList = [
     id: 'capacity',
     name: t('容量管理'),
   },
+  {
+    children: [
+      {
+        dbConsoleValue: 'oracle.toolbox.replaceHost',
+        desc: t('替换所选主机，支持单节点以及主从集群的从库。'),
+        id: TicketTypes.ORACLE_REPLACE_HOST,
+        name: t('整机替换'),
+        parentId: 'migrate',
+      },
+    ],
+    icon: 'db-icon-cluster',
+    id: 'migrate',
+    name: t('集群维护'),
+  },
 ];

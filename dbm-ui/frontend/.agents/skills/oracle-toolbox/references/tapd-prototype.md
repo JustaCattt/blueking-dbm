@@ -30,9 +30,9 @@ TAPD 需求大概率包含 HTML 原型图附件。流程：
 仔细阅读 TAPD 需求，确认需求涉及的是**一个单据类型还是多个独立单据类型**。
 
 - 如果需求描述了多种模式/方式，且每种模式对应**独立的 ticket_type**，则应为每种模式创建**独立的工具箱页面**（各自 `Index.vue`）
-- 判断依据：后端是否为每种模式分配了不同的 `ticket_type` 枚举值
+- 判断依据：后端是否为每种模式分配了不同的 `ticket_type` 枚举值，**注册前与后端确认枚举值真实存在**
 - **严禁将多个独立 ticket_type 合并到一个共用页面中用 CardCheckbox 切换**——每个 ticket_type 必须有自己的 `Index.vue`
-- **例外**：当原型图明确要求多个 ticket_type 共用同一页（如 `ORACLE_ADD_SLAVE` 和 `ORACLE_ADD_SLAVE_VIA_CASCADING` 共用一页），且产品意图是"一个功能、两个后端 ticket_type"时，允许使用双 ticket_type 共用页面模式。实现方式见 [page-template.md](page-template.md) 的「双 ticket_type 共用页面」节。
+- **模式内的子类型不算独立单据**：同一 ticket_type 内的模式区分（如 Oracle 添加从库的上游类型 single / master / slave）通过 `details` 内的协议字段（如 `upstream_type`）承载，单一页面 + 单一 hook 即可。曾把 Oracle 级联场景误设为独立 `ORACLE_ADD_SLAVE_VIA_CASCADING` 单据，后端确认不存在后回退为 `upstream_type` 方案
 
 ## 对照项目 UI 规范
 
@@ -48,6 +48,6 @@ TAPD 需求大概率包含 HTML 原型图附件。流程：
 后端提单/详情协议最权威的参考是 `cypress/fixtures/oracle/<TICKET_TYPE>/` 下的两个样例：
 
 - `createTicket.json`：提交 payload 结构（重点看 `details` 字段）
-- `ticketDetail.json`：单据详情接口的实际返回结构蛐
+- `ticketDetail.json`：单据详情接口的实际返回结构
 
 若 TAPD 需求或后端提供了协议 JSON，先落到这两个文件再写代码。

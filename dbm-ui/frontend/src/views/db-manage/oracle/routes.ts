@@ -124,6 +124,7 @@ const toolboxRouters: RouteRecordRaw[] = [
     children: [
       createRouteItem(TicketTypes.ORACLE_ADD_SLAVE, t('添加从库')),
       createRouteItem(TicketTypes.ORACLE_EXEC_SCRIPT_APPLY, t('变更SQL执行')),
+      createRouteItem(TicketTypes.ORACLE_REPLACE_HOST, t('整机替换')),
     ],
   },
 ];
