@@ -12,11 +12,6 @@
 -->
 
 <template>
-  <InfoList>
-    <InfoItem :label="t('数据冲突处理')">
-      {{ conflictHandleText || '--' }}
-    </InfoItem>
-  </InfoList>
   <TicketInfoTable
     :data="tableData"
     row-key="source_cluster">
@@ -142,6 +137,11 @@
       </template>
     </TicketInfoTableColumn>
   </TicketInfoTable>
+  <InfoList>
+    <InfoItem :label="t('数据冲突处理')">
+      {{ conflictHandleText || '--' }}
+    </InfoItem>
+  </InfoList>
 </template>
 <script setup lang="ts">
   import { useI18n } from 'vue-i18n';
