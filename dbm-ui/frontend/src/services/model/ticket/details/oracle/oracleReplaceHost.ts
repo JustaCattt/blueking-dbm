@@ -7,6 +7,8 @@ interface HostInfo {
   bk_host_id: number;
   ip: string;
   port: number;
+  // 主机角色（primary/standby 等），单据详情快照展示
+  role: string;
 }
 
 export interface oracleReplaceHost extends ResourcePoolDetailBase {

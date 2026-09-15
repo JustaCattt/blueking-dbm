@@ -93,7 +93,7 @@
   import { getOracleHaInstanceList } from '@services/source/oracleHaCluster';
   import { getOracleSingleInstanceList } from '@services/source/oracleSingleCluster';
 
-  import { ClusterTypes, DBTypes } from '@common/const';
+  import { clusterTypeInfos, ClusterTypes, DBTypes } from '@common/const';
   import { ipv4 } from '@common/regex';
 
   import ClusterInstanceStatus from '@components/cluster-instance-status/Index.vue';
@@ -172,22 +172,28 @@
     },
   ];
 
-  // 手输主机校验：checkInstance 实际返回 Oracle 实例模型（Oracle 单机单实例，实例即主机）
+  // 手输主机校验（Oracle 单机单实例，实例即主机；返回 InstanceInfos，无 cluster_type_name/version，需派生）
   const { loading, run: queryHost } = useRequest(checkInstance, {
     manual: true,
     onSuccess: (data) => {
-      const [currentHost] = data as unknown as InstanceModel[];
+      const [currentHost] = data;
       // 仅单点实例与从库实例可替换，主库/空主机/非 Oracle 主机报「主机不包含任何从库实例」
       if (
         currentHost &&
         (currentHost.cluster_type === ClusterTypes.ORACLE_SINGLE_NONE || currentHost.role === 'standby')
       ) {
+        // 关联集群版本（按 cluster_id 匹配）
+        const majorVersion = currentHost.related_clusters?.find(
+          (item) => item.id === currentHost.cluster_id,
+        )?.major_version;
         modelValue.value = createReplaceHost({
+          bk_biz_id: window.PROJECT_CONFIG.BIZ_ID,
           bk_cloud_id: currentHost.bk_cloud_id,
           bk_host_id: currentHost.bk_host_id,
           cluster_id: currentHost.cluster_id,
           cluster_type: currentHost.cluster_type,
-          cluster_type_name: currentHost.cluster_type_name,
+          // 返回无 cluster_type_name，按集群类型映射派生
+          cluster_type_name: clusterTypeInfos[currentHost.cluster_type]?.name || '',
           instance_address: currentHost.instance_address,
           ip: currentHost.ip,
           master_domain: currentHost.master_domain,
@@ -195,7 +201,8 @@
           role: currentHost.role,
           specId: currentHost.spec_config?.id || 0,
           status: currentHost.status,
-          version: currentHost.version,
+          // version 兜底：关联集群版本 / 单据回显版本，均无则空串（提交仍拼 Oracle-）
+          version: (majorVersion || modelValue.value.version || '').replace(/^Oracle-/, ''),
         });
       }
     },

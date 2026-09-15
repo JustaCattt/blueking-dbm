@@ -13,8 +13,20 @@
 
 import type { ClusterTypes } from '@common/const';
 
+// 协议主机要素（old_node / old_master 结构）
+export interface HostInfo {
+  bk_biz_id: number;
+  bk_cloud_id: number;
+  bk_host_id: number;
+  ip: string;
+  port: number;
+  // 主机角色（primary/standby 等），提交进协议供单据详情快照展示
+  role: string;
+}
+
 // 被替换主机（Oracle 单机单实例，实例反查结果即主机信息）
 export interface ReplaceHost {
+  bk_biz_id: number;
   bk_cloud_id: number;
   bk_host_id: number;
   cluster_id: number;
@@ -32,8 +44,9 @@ export interface ReplaceHost {
   version: string;
 }
 
-// 被替换主机字段工厂：统一默认值
+// 被替换主机字段工厂：统一默认值，bk_biz_id 默认当前业务
 export const createReplaceHost = (host: Partial<ReplaceHost> = {}): ReplaceHost => ({
+  bk_biz_id: window.PROJECT_CONFIG.BIZ_ID,
   bk_cloud_id: 0,
   bk_host_id: 0,
   cluster_id: 0,
@@ -48,4 +61,14 @@ export const createReplaceHost = (host: Partial<ReplaceHost> = {}): ReplaceHost 
   status: '',
   version: '',
   ...host,
+});
+
+// 提取协议主机要素（old_node / old_master）：缺省字段按默认值兜底
+export const buildHostInfo = (host: Partial<HostInfo> & Pick<HostInfo, 'ip' | 'port'>): HostInfo => ({
+  bk_biz_id: host.bk_biz_id ?? window.PROJECT_CONFIG.BIZ_ID,
+  bk_cloud_id: host.bk_cloud_id ?? 0,
+  bk_host_id: host.bk_host_id ?? 0,
+  ip: host.ip,
+  port: host.port,
+  role: host.role ?? '',
 });

@@ -47,7 +47,13 @@
           <ResourceTagColumn
             v-model="item.resourceTags"
             @batch-edit="handleBatchEditColumn" />
-          <AvailableResourceColumn :params="getAvailableResourceParams(item)" />
+          <AvailableResourceColumn
+            :params="{
+              for_bizs: [currentBizId, 0],
+              labels: item.resourceTags.map((tag) => tag.id).join(','),
+              resource_types: [DBTypes.ORACLE, 'PUBLIC'],
+              spec_id: item.specId,
+            }" />
           <OperationColumn
             v-model:table-data="formData.tableData"
             :create-row-method="createTableRow" />
@@ -74,6 +80,8 @@
   import { reactive, useTemplateRef } from 'vue';
   import { useI18n } from 'vue-i18n';
 
+  import type OracleHaInstanceModel from '@services/model/oracle/oracle-ha-instance';
+  import type OracleSingleInstanceModel from '@services/model/oracle/oracle-single-instance';
   import type { Oracle } from '@services/model/ticket/ticket';
   import { getOracleHaInstanceList } from '@services/source/oracleHaCluster';
 
@@ -92,27 +100,11 @@
   import { random } from '@utils';
 
   import HostColumnGroup from './components/HostColumnGroup.vue';
-  import type { ReplaceHost } from './types';
-  import { createReplaceHost } from './types';
+  import type { HostInfo, ReplaceHost } from './types';
+  import { buildHostInfo, createReplaceHost } from './types';
 
-  // 选择器返回的 Oracle 实例模型（Oracle 单机单实例，实例即主机）
-  type SelectorInstance = {
-    bk_cloud_id: number;
-    bk_host_id: number;
-    cluster_id: number;
-    cluster_type: ReplaceHost['cluster_type'];
-    cluster_type_name: string;
-    instance_address: string;
-    ip: string;
-    master_domain: string;
-    port: number;
-    role: string;
-    spec_config: {
-      id: number;
-    };
-    status: string;
-    version: string;
-  };
+  // 选择器返回的实例模型（Oracle 单机单实例，实例即主机）
+  type SelectorInstance = OracleHaInstanceModel | OracleSingleInstanceModel;
 
   interface RowData {
     host: ReplaceHost;
@@ -122,40 +114,6 @@
     }[];
     specId: number;
   }
-
-  // 提交协议（TAPD 评论区后端协议，两个场景共用 ORACLE_REPLACE_HOST 单据，仅 flow_type 区分）
-  type SubmitDetails = {
-    db_version: string;
-    flow_type: string;
-    infos: {
-      cluster_id: number;
-      // 级联场景（主从正常从库）：old_master 为主库
-      old_master?: {
-        bk_biz_id: number;
-        bk_cloud_id: number;
-        bk_host_id: number;
-        ip: string;
-        port: number;
-      };
-      old_node: {
-        bk_biz_id: number;
-        bk_cloud_id: number;
-        bk_host_id: number;
-        ip: string;
-        port: number;
-      };
-      replace_flag: boolean;
-      resource_spec: {
-        oracle: {
-          count: number;
-          label_names: string[];
-          labels: string[];
-          spec_id: number;
-        };
-      };
-    }[];
-    ip_source: string;
-  };
 
   defineOptions({ name: TicketTypes.ORACLE_REPLACE_HOST });
 
@@ -187,31 +145,26 @@
   const formData = reactive(defaultData());
   const tableKey = ref(random());
 
-  const selectedHosts = computed(() => formData.tableData.filter((item) => item.host.bk_host_id).map((item) => item.host));
-
-  // AvailableResourceColumn 参数
-  const getAvailableResourceParams = (item: RowData) => ({
-    for_bizs: [currentBizId, 0],
-    labels: item.resourceTags.map((tag) => tag.id).join(','),
-    resource_types: [DBTypes.ORACLE, 'PUBLIC'],
-    spec_id: item.specId,
-  });
+  const selectedHosts = computed(() =>
+    formData.tableData.filter((item) => item.host.bk_host_id).map((item) => item.host),
+  );
 
   // 回填：单据详情 infos 还原表格行
   useTicketDetail<Oracle.oracleReplaceHost>(TicketTypes.ORACLE_REPLACE_HOST, {
     onSuccess(ticketDetail) {
-      const { details } = ticketDetail;
-      const { infos } = details;
+      const { db_version: dbVersion, infos } = ticketDetail.details;
       Object.assign(formData, {
-        ...createTicketPayload(ticketDetail),
+        payload: createTicketPayload(ticketDetail),
         tableData: infos.map((item) =>
           createTableRow({
+            // 协议回填 ip/port/role，bk_host_id 留空触发 HostColumnGroup 反查补齐
             host: createReplaceHost({
+              bk_biz_id: item.old_node.bk_biz_id,
               bk_cloud_id: item.old_node.bk_cloud_id,
-              bk_host_id: item.old_node.bk_host_id,
               ip: item.old_node.ip,
               port: item.old_node.port,
-              version: (details.db_version || '').replace(/^Oracle-/, ''),
+              role: item.old_node.role,
+              version: (dbVersion || '').replace(/^Oracle-/, ''),
             }),
             resourceTags: (item.resource_spec.oracle.labels || []).map((labelId: string, index: number) => ({
               id: Number(labelId),
@@ -225,7 +178,26 @@
   });
 
   // 两个场景共用 ORACLE_REPLACE_HOST 单据，仅 flow_type 区分：ORACLE_ADD_SLAVE（单节点/异常从库）与 ORACLE_ADD_SLAVE_VIA_CASCADING（主从正常从库，级联）
-  const { loading: isSubmitting, run: runCreateTicket } = useCreateTicket<SubmitDetails>(TicketTypes.ORACLE_REPLACE_HOST);
+  const { loading: isSubmitting, run: runCreateTicket } = useCreateTicket<{
+    db_version: string;
+    flow_type: string;
+    infos: {
+      cluster_id: number;
+      // 级联场景：old_master 为主库
+      old_master?: HostInfo;
+      old_node: HostInfo;
+      replace_flag: boolean;
+      resource_spec: {
+        oracle: {
+          count: number;
+          label_names: string[];
+          labels: string[];
+          spec_id: number;
+        };
+      };
+    }[];
+    ip_source: string;
+  }>(TicketTypes.ORACLE_REPLACE_HOST);
 
   // 批量追加：仅首行为空表单时保留全部既有行，否则清空重建
   const appendRows = (rows: RowData[], isClear = false) => {
@@ -238,61 +210,30 @@
     formData.tableData = [...keep, ...rows];
   };
 
-  // 协议主机要素（old_node / old_master 结构），bk_biz_id 默认当前业务
-  const buildHostInfo = (host: ReplaceHost) => ({
-    bk_biz_id: window.PROJECT_CONFIG.BIZ_ID,
-    bk_cloud_id: host.bk_cloud_id,
-    bk_host_id: host.bk_host_id,
-    ip: host.ip,
-    port: host.port,
-  });
-
-  // 场景分流：单节点 / 主从集群从库
-  // flow_type=ORACLE_ADD_SLAVE：单节点与异常从库（非级联）
-  // flow_type=ORACLE_ADD_SLAVE_VIA_CASCADING：主从集群正常从库（级联，需 old_master）
-  const isCascadingScene = (host: ReplaceHost) => host.cluster_type === ClusterTypes.ORACLE_PRIMARY_STANDBY && host.status === ClusterInstStatusKeys.RUNNING;
-
   const handleSubmit = () => {
     tableRef.value!.validate().then(async () => {
-      // 行按场景分组提交对应单据
-      const singleRows: RowData[] = [];
-      const abnormalSlaveRows: RowData[] = [];
+      // 场景分组：主从集群且运行中的从库走级联（ORACLE_ADD_SLAVE_VIA_CASCADING，需反查主库），其余（单节点/异常从库）走 ORACLE_ADD_SLAVE
       const cascadingRows: RowData[] = [];
+      const replaceRows: RowData[] = [];
       formData.tableData.forEach((item) => {
-        if (isCascadingScene(item.host)) {
+        if (
+          item.host.cluster_type === ClusterTypes.ORACLE_PRIMARY_STANDBY &&
+          item.host.status === ClusterInstStatusKeys.RUNNING
+        ) {
           cascadingRows.push(item);
-        } else if (item.host.cluster_type === ClusterTypes.ORACLE_SINGLE_NONE) {
-          singleRows.push(item);
         } else {
-          abnormalSlaveRows.push(item);
+          replaceRows.push(item);
         }
       });
 
-      // 主从集群正常从库（级联）需反查主库实例
-      const queryMaster = async (host: ReplaceHost) => {
-        const results = await getOracleHaInstanceList({
-          cluster_id: host.cluster_id,
-          role: 'primary',
-        });
-        const [master] = results.results;
-        return master
-          ? {
-              bk_biz_id: window.PROJECT_CONFIG.BIZ_ID,
-              bk_cloud_id: master.bk_cloud_id,
-              bk_host_id: master.bk_host_id,
-              ip: master.ip,
-              port: master.port,
-            }
-          : undefined;
-      };
-
-      // 组装通用提交要素
-      const buildDetails = (rows: RowData[], flowType: string): SubmitDetails => ({
+      // 组装提交协议（flow_type 与是否级联由行数据决定）
+      const buildDetails = (rows: RowData[], flowType: string) => ({
         db_version: `Oracle-${rows[0]?.host.version || ''}`,
         flow_type: flowType,
         infos: rows.map((item) => ({
           cluster_id: item.host.cluster_id,
-          old_master: undefined,
+          // 级联场景需反查主库填入
+          old_master: undefined as HostInfo | undefined,
           old_node: buildHostInfo(item.host),
           replace_flag: true,
           resource_spec: {
@@ -307,28 +248,29 @@
         ip_source: 'resource_pool',
       });
 
+      // 级联场景每行反查主库实例填 old_master，反查失败则缺省（后端按 old_node 处理）
       if (cascadingRows.length) {
         const details = buildDetails(cascadingRows, 'ORACLE_ADD_SLAVE_VIA_CASCADING');
-        // 级联场景每行反查主库填 old_master
         await Promise.all(
           cascadingRows.map(async (item, index) => {
-            const master = await queryMaster(item.host);
+            const [master] = (
+              await getOracleHaInstanceList({
+                cluster_id: item.host.cluster_id,
+                role: 'primary',
+              })
+            ).results;
             if (master) {
-              details.infos[index].old_master = master;
+              details.infos[index].old_master = buildHostInfo(master);
             }
           }),
         );
         await runCreateTicket({ details, ...formData.payload });
       }
-      if (singleRows.length) {
+
+      // 单节点与异常从库共用 flow_type=ORACLE_ADD_SLAVE
+      if (replaceRows.length) {
         await runCreateTicket({
-          details: buildDetails(singleRows, 'ORACLE_ADD_SLAVE'),
-          ...formData.payload,
-        });
-      }
-      if (abnormalSlaveRows.length) {
-        await runCreateTicket({
-          details: buildDetails(abnormalSlaveRows, 'ORACLE_ADD_SLAVE'),
+          details: buildDetails(replaceRows, 'ORACLE_ADD_SLAVE'),
           ...formData.payload,
         });
       }

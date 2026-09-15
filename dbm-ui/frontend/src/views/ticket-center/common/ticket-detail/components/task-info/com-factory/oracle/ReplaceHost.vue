@@ -21,15 +21,15 @@
       :min-width="190"
       :title="t('被替换主机')">
       <template #default="{ row }: { row: IRowData }">
-        {{ formatInstanceAddress(row.old_node) }}
+        {{ row.old_node.ip || '--' }}
       </template>
     </TicketInfoTableColumn>
     <TicketInfoTableColumn
-      col-key="old_master"
-      :min-width="210"
-      :title="t('主库实例')">
+      col-key="role"
+      :min-width="110"
+      :title="t('角色')">
       <template #default="{ row }: { row: IRowData }">
-        {{ row.old_master ? formatInstanceAddress(row.old_master) : '--' }}
+        {{ row.old_node.role || '--' }}
       </template>
     </TicketInfoTableColumn>
     <TicketInfoTableColumn
@@ -101,14 +101,6 @@
 
   defineProps<Props>();
   const { t } = useI18n();
-
-  // 协议 old_node/old_master 携带 port，展示 ip:port；兼容无 port 的存量单据仅展示 ip
-  const formatInstanceAddress = (host?: { ip: string; port?: number }) => {
-    if (!host?.ip) {
-      return '--';
-    }
-    return host.port ? `${host.ip}:${host.port}` : host.ip;
-  };
 </script>
 
 <style lang="less" scoped>
