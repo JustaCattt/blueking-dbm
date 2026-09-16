@@ -380,11 +380,7 @@
     } else {
       tableData.value = [...(tableData.value[0].cluster.id ? tableData.value : []), ...dataList];
     }
-    setTimeout(() => {
-      tableRef.value?.validate();
-    }, 200);
   };
-
   defineExpose<Exposes>({
     getValue() {
       return tableRef.value!.validate().then(() => {

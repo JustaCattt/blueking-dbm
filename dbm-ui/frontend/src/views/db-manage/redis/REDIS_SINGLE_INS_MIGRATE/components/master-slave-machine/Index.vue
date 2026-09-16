@@ -319,9 +319,6 @@
     } else {
       tableData.value = [...(selected.value.length ? tableData.value : []), ...newList];
     }
-    setTimeout(() => {
-      editableTableRef.value!.validate();
-    }, 200);
   };
 
   const handleBatchEdit = (value: number, field: string) => {
