@@ -15,7 +15,6 @@
   <DbUpload
     ref="uploadRef"
     class="version-upload-file"
-    :duplicate-checker="handleDuplicateCheck"
     :options="uploadOptions"
     @error="handleUploadError"
     @success="handleUpdateSuccess">
@@ -78,13 +77,12 @@
     accept: ['mysql', 'mysql-proxy'].includes(props.pkgType) ? '.tar.gz,.tar.xz' : '',
     basePath: `/${props.dbType}/${props.pkgType}/${props.version}`,
     disabled: !props.version,
+    excludeNames: props.uploadedFileNames,
     mode: 'bkrepo' as const,
     multiple: true,
     showFileList: false,
     size: 10240,
   }));
-
-  const handleDuplicateCheck = (file: File) => props.uploadedFileNames.includes(file.name);
 
   const handleUpdateSuccess = (file: UploadFile) => {
     const data = (file.response as { data?: { fullPath?: string; md5?: string; name?: string; size?: number } })?.data;

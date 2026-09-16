@@ -16,14 +16,13 @@ import type { Ref } from 'vue';
 import { computed, isRef, onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import type { DbUploadOptions, DuplicateChecker, UploadFile, UploadRawFile } from '../types';
+import type { DbUploadOptions, UploadFile, UploadRawFile } from '../types';
 import { UploadStatus } from '../types';
 import { getMaxSize, validateAccept, validateSize } from '../utils';
 
 interface Handlers {
   beforeUpload?: (file: File) => boolean | Promise<boolean>;
   customRequest?: (option: Callbacks) => void;
-  duplicateChecker?: DuplicateChecker;
 }
 
 interface Callbacks {
@@ -35,7 +34,6 @@ interface Callbacks {
 
 interface Emits {
   onDelete: (file: UploadFile, fileList: UploadFile[]) => void;
-  onDuplicateRejected: (names: string[]) => void;
   onError: (file: UploadFile, fileList: UploadFile[]) => void;
   onSuccess: (file: UploadFile, fileList: UploadFile[]) => void;
 }
@@ -57,6 +55,12 @@ export const useUpload = (options: DbUploadOptions | Ref<DbUploadOptions>, handl
     if (index !== -1) {
       fileList.value[index] = { ...fileList.value[index], ...updates };
     }
+  };
+
+  /** 按 uid 查找文件并触发 emit */
+  const emitFileEvent = (uid: number, emitFn: (file: UploadFile, list: UploadFile[]) => void) => {
+    const file = fileList.value.find((f) => f.uid === uid);
+    if (file) emitFn(file, fileList.value);
   };
 
   const genUid = (): number => Date.now() + tempIndex++;
@@ -90,16 +94,14 @@ export const useUpload = (options: DbUploadOptions | Ref<DbUploadOptions>, handl
   const validateAndUpload = (rawFile: UploadRawFile): void => {
     if (!validateAccept(rawFile, opts.value.accept)) {
       updateFile(rawFile.uid, { errMsg: t('文件格式不支持'), status: UploadStatus.FAIL });
-      const file = fileList.value.find((f) => f.uid === rawFile.uid);
-      if (file) emits.onError(file, fileList.value);
+      emitFileEvent(rawFile.uid, emits.onError);
       return;
     }
 
     if (!validateSize(rawFile, opts.value.size)) {
       const maxSize = getMaxSize(rawFile, opts.value.size);
       updateFile(rawFile.uid, { errMsg: t('文件大小超出限制', [maxSize]), status: UploadStatus.FAIL });
-      const file = fileList.value.find((f) => f.uid === rawFile.uid);
-      if (file) emits.onError(file, fileList.value);
+      emitFileEvent(rawFile.uid, emits.onError);
       return;
     }
 
@@ -130,27 +132,21 @@ export const useUpload = (options: DbUploadOptions | Ref<DbUploadOptions>, handl
       postFiles.splice(remaining);
     }
 
-    // 重名拦截
+    // 重名拦截：excludeNames + 内部 fileList + 同批次去重
+    const existingNames = new Set([...(opts.value.excludeNames ?? []), ...fileList.value.map((f) => f.name)]);
     const accepted: File[] = [];
     const rejectedNames: string[] = [];
-    if (hs.value.duplicateChecker) {
-      postFiles.forEach((file) => {
-        const result = hs.value.duplicateChecker!(file, fileList.value);
-        if (result === true) {
-          rejectedNames.push(file.name);
-        } else if (Array.isArray(result) && result.length > 0) {
-          rejectedNames.push(...result);
-        } else {
-          accepted.push(file);
-        }
-      });
-    } else {
-      accepted.push(...postFiles);
-    }
+    postFiles.forEach((file) => {
+      if (existingNames.has(file.name)) {
+        rejectedNames.push(file.name);
+      } else {
+        existingNames.add(file.name);
+        accepted.push(file);
+      }
+    });
 
     if (rejectedNames.length > 0) {
       showDuplicateTip(rejectedNames);
-      emits.onDuplicateRejected(rejectedNames);
     }
 
     accepted.forEach((file) => {
@@ -174,8 +170,7 @@ export const useUpload = (options: DbUploadOptions | Ref<DbUploadOptions>, handl
       hs.value.customRequest({
         onError: (error: Error) => {
           updateFile(rawFile.uid, { errMsg: error.message || t('上传失败，请重试'), status: UploadStatus.FAIL });
-          const file = fileList.value.find((f) => f.uid === rawFile.uid);
-          if (file) emits.onError(file, fileList.value);
+          emitFileEvent(rawFile.uid, emits.onError);
         },
         onProgress: (event: ProgressEvent) => {
           const percentage = event.lengthComputable ? Math.round((event.loaded / event.total) * 100) : 0;
@@ -183,15 +178,13 @@ export const useUpload = (options: DbUploadOptions | Ref<DbUploadOptions>, handl
         },
         onSuccess: (res: unknown) => {
           updateFile(rawFile.uid, { percentage: 100, response: res, status: UploadStatus.SUCCESS });
-          const file = fileList.value.find((f) => f.uid === rawFile.uid);
-          if (file) emits.onSuccess(file, fileList.value);
+          emitFileEvent(rawFile.uid, emits.onSuccess);
         },
         rawFile,
       });
     } else {
       updateFile(rawFile.uid, { percentage: 100, status: UploadStatus.SUCCESS });
-      const file = fileList.value.find((f) => f.uid === rawFile.uid);
-      if (file) emits.onSuccess(file, fileList.value);
+      emitFileEvent(rawFile.uid, emits.onSuccess);
     }
   };
 

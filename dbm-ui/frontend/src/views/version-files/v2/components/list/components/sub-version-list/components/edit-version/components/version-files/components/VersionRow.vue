@@ -60,13 +60,21 @@
       <template v-else-if="status === 'failed'">
         <div class="version-file-name-container">
           <div class="version-file-name-row">
+            <DbIcon
+              class="file-icon file-icon-error"
+              type="file" />
             <span
               v-overflow-tips
               class="text-overflow version-file-name-failed">
               {{ data.name }}
             </span>
           </div>
-          <div class="version-file-err-msg">{{ errMsg || t('上传失败，请重试') }}</div>
+          <div class="version-file-err-msg">
+            <DbIcon
+              class="err-icon"
+              type="close-circle-fill" />
+            <span>{{ errMsg || t('上传失败，请重试') }}</span>
+          </div>
         </div>
       </template>
 
@@ -79,9 +87,6 @@
             {{ data.name }}
           </div>
           <div class="version-file-md5-staged">
-            <DbIcon
-              class="check-icon"
-              type="check-circle-fill" />
             <span class="md5-text">MD5: {{ data.md5 }}</span>
           </div>
         </div>
@@ -110,7 +115,9 @@
       </template>
       <span
         v-else
-        class="cell-placeholder">--</span>
+        class="cell-placeholder">
+        --
+      </span>
     </td>
 
     <!-- OS 版本选择列 - 仅在已上传状态显示 -->
@@ -186,7 +193,9 @@
       </template>
       <span
         v-else
-        class="cell-placeholder">--</span>
+        class="cell-placeholder">
+        --
+      </span>
     </td>
 
     <!-- 操作列 -->
@@ -244,6 +253,7 @@
 </template>
 <script setup lang="ts">
   import _ from 'lodash';
+  import { onBeforeUnmount } from 'vue';
   import { useI18n } from 'vue-i18n';
   import { useRequest } from 'vue-request';
 
@@ -307,6 +317,7 @@
   const selectedAllVersions = ref<Record<string, Set<string>>>({});
 
   let supportSystems: Record<string, string[]> = {};
+  let osTypeInitTimer: ReturnType<typeof setTimeout> | undefined;
 
   useRequest(listSupportSystems, {
     onSuccess(data) {
@@ -336,7 +347,8 @@
         }
         localData.value.permit_os_type = props.data.permit_os_type || '';
         if (localData.value.permit_os_type) {
-          setTimeout(() => {
+          if (osTypeInitTimer) clearTimeout(osTypeInitTimer);
+          osTypeInitTimer = setTimeout(() => {
             handleOsTypeChange(localData.value.permit_os_type, true);
           });
         }
@@ -455,6 +467,10 @@
       };
     },
   });
+
+  onBeforeUnmount(() => {
+    if (osTypeInitTimer) clearTimeout(osTypeInitTimer);
+  });
 </script>
 <style lang="less">
   .version-display-trigger {
@@ -561,6 +577,10 @@
         color: #3a84ff;
       }
 
+      .file-icon-error {
+        color: #ea3636;
+      }
+
       .version-file-name-failed {
         color: #ea3636 !important;
       }
@@ -598,7 +618,7 @@
       display: flex;
       align-items: center;
       gap: 4px;
-      margin-top: 4px;
+      margin-top: -10px;
 
       .check-icon {
         flex-shrink: 0;
@@ -617,9 +637,18 @@
     }
 
     .version-file-err-msg {
-      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 2px;
       font-size: 12px;
       color: #ea3636;
+
+      .err-icon {
+        flex-shrink: 0;
+        font-size: 14px;
+        color: #ea3636;
+      }
     }
   }
 

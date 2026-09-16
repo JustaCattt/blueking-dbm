@@ -5,10 +5,10 @@
     <table class="version-files-table">
       <thead>
         <tr>
-          <th style="width: 340px">{{ t('文件') }}</th>
-          <th style="width: 152px">OS</th>
-          <th style="width: 356px">{{ t('OS版本') }}</th>
-          <th style="width: 80px"></th>
+          <th style="width: 37%">{{ t('文件') }}</th>
+          <th style="width: 17%">OS</th>
+          <th style="width: 37%">{{ t('OS版本') }}</th>
+          <th style="width: 9%"></th>
         </tr>
       </thead>
       <tbody>
@@ -337,7 +337,7 @@
   .version-files-table-container {
     width: 100%;
     border: 1px solid transparent;
-    box-sizing: content-box;
+    box-sizing: border-box;
 
     &.is-valid-error {
       border-color: #ed3f14;

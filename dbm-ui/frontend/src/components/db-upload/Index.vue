@@ -113,10 +113,10 @@
 
   import FileList from './components/FileList.vue';
   import { useUpload } from './hooks/useUpload';
-  import type { DbUploadOptions, DuplicateChecker, UploadFile } from './types';
+  import type { DbUploadOptions, UploadFile } from './types';
   import { UploadStatus } from './types';
   import {
-    BKREPO_DEFAULT_HEADERS,
+    createBkrepoHeaders,
     createBkrepoUploadUrl,
     createXhrUpload,
     isExcelAccept,
@@ -124,15 +124,12 @@
   } from './utils/index';
 
   interface Props {
-    /** 同表重名规则，选择即拦截 */
-    duplicateChecker?: DuplicateChecker;
     /** 上传配置 */
     options?: DbUploadOptions;
   }
 
   type Emits = {
     (e: 'delete', file: UploadFile, fileList: UploadFile[]): void;
-    (e: 'duplicate-rejected', names: string[]): void;
     (e: 'error', file: UploadFile, fileList: UploadFile[]): void;
     (e: 'success', file: UploadFile, fileList: UploadFile[]): void;
   };
@@ -142,7 +139,6 @@
   });
 
   const props = withDefaults(defineProps<Props>(), {
-    duplicateChecker: undefined,
     options: () => ({}),
   });
 
@@ -190,7 +186,7 @@
             return;
           }
           createXhrUpload({
-            headers: { ...BKREPO_DEFAULT_HEADERS },
+            headers: createBkrepoHeaders(),
             onError: option.onError,
             onProgress: option.onProgress,
             onSuccess: option.onSuccess,
@@ -198,7 +194,6 @@
             url,
           });
         }) as (option: Record<string, any>) => void,
-        duplicateChecker: props.duplicateChecker,
       };
     }
     // Excel accept 模式：内置 parseExcelFile 解析 + 前端模拟进度
@@ -218,10 +213,9 @@
             })
             .catch((err: Error) => option.onError(err));
         }) as (option: Record<string, any>) => void,
-        duplicateChecker: props.duplicateChecker,
       };
     }
-    return { duplicateChecker: props.duplicateChecker };
+    return {};
   });
 
   const {
@@ -238,7 +232,6 @@
     isDragover,
   } = useUpload(mergedOptions, handlers, {
     onDelete: (file, list) => emit('delete', file, list),
-    onDuplicateRejected: (names) => emit('duplicate-rejected', names),
     onError: (file, list) => emit('error', file, list),
     onSuccess: (file, list) => emit('success', file, list),
   });

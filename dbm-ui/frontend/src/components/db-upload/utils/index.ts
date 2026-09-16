@@ -20,14 +20,14 @@ export { isExcelAccept, parseExcelFile } from './excel';
 
 // re-export bkrepo utils
 export type { XhrUploadOptions } from './bkrepo';
-export { BKREPO_DEFAULT_HEADERS, createBkrepoUploadUrl, createXhrUpload } from './bkrepo';
+export { createBkrepoHeaders, createBkrepoUploadUrl, createXhrUpload, parseXhrResponse } from './bkrepo';
 
 /** 格式化文件大小为带单位的可读字符串 */
 export const formatFileSize = (size: number): string => {
   if (size === 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB'];
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   const k = 1024;
-  const i = Math.floor(Math.log(size) / Math.log(k));
+  const i = Math.min(Math.floor(Math.log(size) / Math.log(k)), units.length - 1);
   return `${parseFloat((size / k ** i).toFixed(2))} ${units[i]}`;
 };
 
@@ -64,15 +64,4 @@ export const validateSize = (file: File, size?: number | MaxSize): boolean => {
   const maxSize = getMaxSize(file, size);
   if (maxSize === undefined) return true;
   return file.size / 1024 / 1024 <= maxSize;
-};
-
-/** 解析 XMLHttpRequest 响应：优先 JSON.parse，失败回退原始文本 */
-export const parseXhrResponse = (xhr: XMLHttpRequest): XMLHttpRequestResponseType => {
-  const res = xhr.responseText || xhr.response;
-  if (!res) return res;
-  try {
-    return JSON.parse(res);
-  } catch {
-    return res;
-  }
 };

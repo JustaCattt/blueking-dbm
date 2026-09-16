@@ -17,7 +17,7 @@ import Cookies from 'js-cookie';
 import { createBkrepoAccessToken } from '@services/source/storage';
 
 /** 解析 XMLHttpRequest 响应：优先 JSON.parse，失败回退原始文本 */
-const parseXhrResponse = (xhr: XMLHttpRequest): XMLHttpRequestResponseType => {
+export const parseXhrResponse = (xhr: XMLHttpRequest): XMLHttpRequestResponseType => {
   const res = xhr.responseText || xhr.response;
   if (!res) return res;
   try {
@@ -27,12 +27,12 @@ const parseXhrResponse = (xhr: XMLHttpRequest): XMLHttpRequestResponseType => {
   }
 };
 
-/** bkrepo 直传默认请求头 */
-export const BKREPO_DEFAULT_HEADERS: Record<string, string> = {
+/** bkrepo 直传默认请求头（CSRF token 动态读取，避免模块加载时固化） */
+export const createBkrepoHeaders = (): Record<string, string> => ({
   'Content-Type': 'application/octet-stream',
   'X-BKREPO-OVERWRITE': 'true',
   'X-CSRFToken': Cookies.get('dbm_csrftoken') || '',
-};
+});
 
 /**
  * 获取 bkrepo 临时凭证并拼装上传地址

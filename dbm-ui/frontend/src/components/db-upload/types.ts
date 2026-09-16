@@ -57,9 +57,6 @@ export interface MaxSize {
   maxImgSize: number;
 }
 
-/** 重名检查函数：返回 true 表示重名，或返回被忽略的文件名数组 */
-export type DuplicateChecker = (file: File, fileList: UploadFile[]) => boolean | string[];
-
 /** 文件列表相对触发区的位置 */
 export type ListPosition = 'bottom' | 'top';
 
@@ -76,6 +73,8 @@ export interface DbUploadOptions {
   disabled?: boolean;
   /** 是否启用拖拽上传模式 */
   draggable?: boolean;
+  /** 禁止上传的同名文件列表（如已上传的文件名），组件内部自动拦截 */
+  excludeNames?: string[];
   /** 文件列表中的文件图标类型 */
   fileIcon?: string;
   /** 最大文件数量限制 */
