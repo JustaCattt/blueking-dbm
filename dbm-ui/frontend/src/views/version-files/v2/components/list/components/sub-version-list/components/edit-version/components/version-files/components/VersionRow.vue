@@ -60,19 +60,16 @@
       <template v-else-if="status === 'failed'">
         <div class="version-file-name-container">
           <div class="version-file-name-row">
-            <DbIcon
-              class="file-icon file-icon-error"
-              type="file" />
             <span
               v-overflow-tips
-              class="text-overflow version-file-name-failed">
+              class="text-overflow">
               {{ data.name }}
             </span>
           </div>
           <div class="version-file-err-msg">
             <DbIcon
               class="err-icon"
-              type="close-circle-fill" />
+              type="bk-dbm-icon db-icon-close-circle-shape" />
             <span>{{ errMsg || t('上传失败，请重试') }}</span>
           </div>
         </div>
@@ -580,10 +577,6 @@
       .file-icon-error {
         color: #ea3636;
       }
-
-      .version-file-name-failed {
-        color: #ea3636 !important;
-      }
     }
 
     .file-upload-progress-wrapper {
@@ -640,7 +633,7 @@
       display: flex;
       align-items: center;
       gap: 4px;
-      margin-top: 2px;
+      margin-top: -10px;
       font-size: 12px;
       color: #ea3636;
 
