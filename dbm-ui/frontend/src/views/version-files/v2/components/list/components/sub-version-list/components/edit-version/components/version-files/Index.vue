@@ -73,10 +73,14 @@
     version: string;
   }
 
-  type Emits = (e: 'valueChange') => void;
+  interface Emits {
+    (e: 'uploadingChange', isUploading: boolean): void;
+    (e: 'valueChange'): void;
+  }
 
   interface Exposes {
     getValue: () => ReturnType<InstanceType<typeof VersionRow>['getValue']>[] | string;
+    isUploading: () => boolean;
   }
 
   const props = withDefaults(defineProps<Props>(), {
@@ -102,6 +106,9 @@
   const isOnlyOneFile = computed(
     () => tableData.value.filter((item) => item.status === 'staged' || !item.status).length === 1,
   );
+  const isUploading = computed(() => tableData.value.some((item) => item.status === 'uploading'));
+
+  watch(isUploading, (value) => emits('uploadingChange', value), { immediate: true });
 
   // Watch existing data from parent (edit mode)
   watch(
@@ -331,6 +338,7 @@
 
       return filesInfo;
     },
+    isUploading: () => isUploading.value,
   });
 </script>
 <style lang="less">

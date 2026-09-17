@@ -17,7 +17,7 @@
       ellipsis
       :min-width="180"
       resizable
-      :resize="{ minWidth: 180, maxWidth: 500 }"
+      :resize="{ minWidth: 180 }"
       :title="t('版本名')">
       <template #default="{ row, rowIndex }">
         <TextOverflowLayout
@@ -91,7 +91,7 @@
       col-key="packages"
       :min-width="380"
       resizable
-      :resize="{ minWidth: 380, maxWidth: 600 }">
+      :resize="{ minWidth: 380 }">
       <template #title>
         <span class="version-file-column-title">
           {{ t('版本文件') }}
@@ -155,8 +155,8 @@
     <TableColumn
       col-key="id"
       fixed="right"
-      :min-width="150"
-      :title="t('操作')">
+      :title="t('操作')"
+      :width="150">
       <template #default="{ row }">
         <AuthButton
           action-id="package_manage"
@@ -486,7 +486,7 @@
   const rowspanAndColspan = ({ colIndex, rowIndex }: { col: any; colIndex: number; rowIndex: number }) => {
     if (tableData.value[rowIndex].versionSeriesInfo && colIndex === 0) {
       return {
-        colspan: 9,
+        colspan: 8,
       };
     }
     return {};
@@ -619,23 +619,13 @@
     width: 100%;
 
     .version-name-table-cell {
-      max-width: 500px;
       overflow: hidden;
       box-sizing: border-box;
-
-      &[colspan] {
-        max-width: none;
-      }
     }
 
     .version-packages-table-cell {
-      max-width: 600px;
       overflow: hidden;
       box-sizing: border-box;
-
-      &[colspan] {
-        max-width: none;
-      }
     }
 
     .t-table__header {
