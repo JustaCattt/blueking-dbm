@@ -69,6 +69,7 @@ export function semanticCheck(params: {
   bk_biz_id: number;
   charset: string;
   cluster_ids: number[];
+  cluster_storage_engines?: Record<number, string>;
   cluster_type: DBTypes;
   execute_objects: Mysql.ImportSqlFile['execute_objects'];
   is_auto_commit: boolean;

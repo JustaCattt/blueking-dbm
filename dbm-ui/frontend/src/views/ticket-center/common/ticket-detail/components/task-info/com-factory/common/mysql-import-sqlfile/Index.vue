@@ -66,6 +66,13 @@
           </template>
         </TicketInfoTableColumn>
         <TicketInfoTableColumn
+          col-key="default_storage_engine"
+          :title="t('默认存储引擎')">
+          <template #default="{ row }: { row: TargerCluster }">
+            {{ ticketDetails.details.clusters[row.id].default_storage_engine || '--' }}
+          </template>
+        </TicketInfoTableColumn>
+        <TicketInfoTableColumn
           col-key="status"
           :title="t('状态')">
           <template #default="{ row }: { row: TargerCluster }">

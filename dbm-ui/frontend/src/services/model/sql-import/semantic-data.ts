@@ -20,6 +20,7 @@ export default class SemanticData {
   bk_biz_id: number;
   charset: string;
   cluster_ids: number[];
+  cluster_storage_engines?: Record<number, string>;
   created_by: string;
   execute_db_infos: Array<{
     dbnames: string[];
@@ -49,6 +50,7 @@ export default class SemanticData {
     this.bk_biz_id = payload.bk_biz_id;
     this.charset = payload.charset;
     this.cluster_ids = payload.cluster_ids;
+    this.cluster_storage_engines = payload.cluster_storage_engines;
     this.created_by = payload.created_by;
     this.execute_db_infos = payload.execute_db_infos;
     this.execute_objects = payload.execute_objects;
