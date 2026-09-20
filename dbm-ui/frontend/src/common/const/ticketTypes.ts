@@ -242,6 +242,7 @@ export enum TicketTypes {
 }
 
 export enum TicketTypes {
+  ORACLE_ADD_SLAVE = 'ORACLE_ADD_SLAVE', // Oracle 添加从库
   ORACLE_EXEC_SCRIPT_APPLY = 'ORACLE_EXEC_SCRIPT_APPLY', // oracle SQL变更执行'
 }
 
