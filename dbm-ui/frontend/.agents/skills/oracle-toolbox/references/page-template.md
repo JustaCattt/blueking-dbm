@@ -72,17 +72,19 @@ const defaultData = () => ({ payload: createTicketPayload(), tableData: [createT
 const formData = reactive(defaultData());
 
 // --- 编辑/克隆回填 ---
-useTicketDetail(TicketTypes.ORACLE_YOUR_NEW_TYPE, {
+// 回填泛型用详情类型（services/model/ticket/details/oracle/ 下注册）
+useTicketDetail<Oracle.YourNewType>(TicketTypes.ORACLE_YOUR_NEW_TYPE, {
   onSuccess(ticketDetail) {
+    isApplying.value = true;
     const { details } = ticketDetail;
     const { clusters, infos } = details;
     const tableData = infos.map((item) =>
       createTableRow({
         // 从 details 映射回 formData
         // labels 是 id 列表，配合 label_names 补名称回显（有资源标签列时必写）
-        labels: (item.resource_spec?.slave?.labels || []).map((labelId, index) => ({
+        resourceTags: (item.resource_spec?.oracle?.labels || []).map((labelId, index) => ({
           id: Number(labelId),
-          value: item.resource_spec?.slave?.label_names?.[index] || '',
+          value: item.resource_spec?.oracle?.label_names?.[index] || '',
         })),
       }),
     );
@@ -90,16 +92,21 @@ useTicketDetail(TicketTypes.ORACLE_YOUR_NEW_TYPE, {
       payload: createTicketPayload(ticketDetail),
       tableData: tableData.length ? tableData : [createTableRow()],
     });
+    nextTick(() => {
+      isApplying.value = false;
+    });
   },
 });
 
 // --- 提交 ---
-// 泛型用内联的提交 payload 类型，禁止复用详情类型
-const { loading: isSubmitting, run: createTicketRun } = useCreateTicket<SubmitDetailsType>(TicketTypes.ORACLE_YOUR_NEW_TYPE);
+// 泛型用内联的提交 payload 类型，禁止复用详情类型、禁止抽独立 SubmitDetails interface
+const { loading: isSubmitting, run: createTicketRun } = useCreateTicket<{
+  // 提交 details 结构
+}>(TicketTypes.ORACLE_YOUR_NEW_TYPE);
 const handleSubmit = async () => {
   const result = await tableRef.value!.validate();
   if (!result) return;
-  createTicketRun({ details: { /* ... */ }, ...formData.payload });
+  createTicketRun({ details: { /* 行映射直接内联在此 */ }, ...formData.payload });
 };
 
 // --- 重置 ---
@@ -118,7 +125,7 @@ defineExpose({ routerBack() { router.push({ name: 'OracleToolboxIndex' }); } });
 
 - 可编辑列：`EditableInput`、`EditableSelect`
 - 只读列：`EditableBlock`
-- 校验规则通过 `EditableColumn` 的 `appendRules` 或 `rules` prop 传入 площа
+- 校验规则通过 `EditableColumn` 的 `appendRules` 或 `rules` prop 传入
 
 ```vue
 <!-- 可编辑列（带校验） -->
@@ -144,41 +151,40 @@ defineExpose({ routerBack() { router.push({ name: 'OracleToolboxIndex' }); } });
 </EditableColumn>
 ```
 
-## 双 ticket_type 共用页面
+## 页内子类型（模式 C，单 ticket_type）
 
-当原型图要求多个 ticket_type 共用同一页（通过 CardCheckbox 切换子类型，提交时动态选择 ticket_type）时使用。参考实现：`ORACLE_ADD_SLAVE/Index.vue`。
+同一 ticket_type 内的子类型切换（如上游类型 single / master / slave），用页级 `BkFormItem` + `CardCheckbox`，条件列 `v-if="formData.mode === 'xxx'"`。参考实现：`ORACLE_ADD_SLAVE/Index.vue`。
 
-### 提交 hook
-
-需要两个 `useCreateTicket` 实例，各自绑定不同 ticket_type：
+**单一 hook 实例**，子类型区分走 `details` 内的协议字段（如 `upstream_type`），不建第二个 `useCreateTicket` / `useTicketDetail`：
 
 ```typescript
-const { loading: isSubmittingA, run: runA } = useCreateTicket<SubmitDetails>(TicketTypes.TYPE_A);
-const { loading: isSubmittingB, run: runB } = useCreateTicket<SubmitDetails>(TicketTypes.TYPE_B);
-
-const isSubmitting = computed(() => isSubmittingA.value || isSubmittingB.value);
-
-const submitTicketType = computed(() =>
-  formData.mode === 'someMode' ? TicketTypes.TYPE_B : TicketTypes.TYPE_A,
-);
+// 提交：一个 hook，子类型写进 details
+const { loading: isSubmitting, run: runCreateTicket } = useCreateTicket<{
+  // 内联提交 payload 类型
+  upstream_type: 'single' | 'master' | 'slave';
+  // ...
+}>(TicketTypes.ORACLE_XXX);
 
 const handleSubmit = () => {
   tableRef.value!.validate().then(() => {
-    const payload = { details: buildSubmitDetails(), ...formData.payload };
-    if (submitTicketType.value === TicketTypes.TYPE_B) {
-      runB(payload);
-    } else {
-      runA(payload);
-    }
+    runCreateTicket({
+      details: { /* 含 upstream_type: formData.mode */ },
+      ...formData.payload,
+    });
   });
 };
+
+// 回填：一个 hook，从协议字段映射回 formData.mode
+useTicketDetail<Oracle.OracleXxx>(TicketTypes.ORACLE_XXX, {
+  onSuccess(ticketDetail) {
+    isApplying.value = true;
+    Object.assign(formData, { mode: ticketDetail.details.upstream_type, /* ... */ });
+    nextTick(() => {
+      isApplying.value = false;
+    });
+  },
+});
 ```
 
-### 回填 hook
+**Oracle 不存在双 ticket_type 共用页面模式**（曾为 ADD_SLAVE 设计过双 ticket_type + 动态选择方案，后端确认无独立级联单据后已废弃）。若后端真的为不同模式分配了独立 ticket_type，必须各建独立页面，不许共用。
 
-两个 `useTicketDetail` 实例，各自监听不同 ticket_type 的回填：
-
-```typescript
-useTicketDetail(TicketTypes.TYPE_A, { onSuccess(ticketDetail) { applyTicketDetail(ticketDetail); } });
-useTicketDetail(TicketTypes.TYPE_B, { onSuccess(ticketDetail) { applyTicketDetail(ticketDetail); } });
-```
