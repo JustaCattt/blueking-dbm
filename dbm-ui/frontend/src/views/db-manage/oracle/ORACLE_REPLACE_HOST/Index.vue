@@ -80,14 +80,12 @@
   import { reactive, useTemplateRef } from 'vue';
   import { useI18n } from 'vue-i18n';
 
-  import type OracleHaInstanceModel from '@services/model/oracle/oracle-ha-instance';
-  import type OracleSingleInstanceModel from '@services/model/oracle/oracle-single-instance';
   import type { Oracle } from '@services/model/ticket/ticket';
   import { getOracleHaInstanceList } from '@services/source/oracleHaCluster';
 
   import { useCreateTicket, useTicketDetail } from '@hooks';
 
-  import { ClusterInstStatusKeys, ClusterTypes, DBTypes, TicketTypes } from '@common/const';
+  import { ClusterInstStatusKeys, clusterTypeInfos, ClusterTypes, DBTypes, TicketTypes } from '@common/const';
 
   import BatchInput from '@views/db-manage/common/batch-input/Index.vue';
   import AvailableResourceColumn from '@views/db-manage/common/toolbox-field/column/available-resource-column/Index.vue';
@@ -100,11 +98,8 @@
   import { random } from '@utils';
 
   import HostColumnGroup from './components/HostColumnGroup.vue';
-  import type { HostInfo, ReplaceHost } from './types';
-  import { buildHostInfo, createReplaceHost } from './types';
-
-  // 选择器返回的实例模型（Oracle 单机单实例，实例即主机）
-  type SelectorInstance = OracleHaInstanceModel | OracleSingleInstanceModel;
+  import type { ReplaceHost, SelectorMachine, TicketInfo } from './types';
+  import { buildHostInfo, computeReplicationSource, createReplaceHost } from './types';
 
   interface RowData {
     host: ReplaceHost;
@@ -188,23 +183,7 @@
   const { loading: isSubmitting, run: runCreateTicket } = useCreateTicket<{
     db_version: string;
     flow_type: string;
-    infos: {
-      cluster_id: number;
-      // 级联场景：old_master 为主库
-      old_master?: HostInfo;
-      old_node: HostInfo;
-      replace_flag: boolean;
-      // 页面所选主机（被替换主机）
-      replace_host: HostInfo;
-      resource_spec: {
-        oracle: {
-          count: number;
-          label_names: string[];
-          labels: string[];
-          spec_id: number;
-        };
-      };
-    }[];
+    infos: TicketInfo[];
     ip_source: string;
   }>(TicketTypes.ORACLE_REPLACE_HOST);
 
@@ -218,6 +197,28 @@
     const keep = formData.tableData[0].host.ip ? formData.tableData : [];
     formData.tableData = [...keep, ...rows];
   };
+
+  // 组装提交协议
+  const buildDetails = (rows: RowData[], flowType: string) => ({
+    db_version: `Oracle-${rows[0]?.host.version || ''}`,
+    flow_type: flowType,
+    infos: rows.map<TicketInfo>((item) => ({
+      cluster_id: item.host.cluster_id,
+      old_node: buildHostInfo(item.host),
+      replace_flag: true,
+      // 页面所选主机（被替换主机）
+      replace_host: buildHostInfo(item.host),
+      resource_spec: {
+        oracle: {
+          count: 1,
+          label_names: item.resourceTags.map((tag) => tag.value),
+          labels: item.resourceTags.map((tag) => String(tag.id)),
+          spec_id: item.specId,
+        },
+      },
+    })),
+    ip_source: 'resource_pool',
+  });
 
   const handleSubmit = () => {
     tableRef.value!.validate().then(async () => {
@@ -233,28 +234,6 @@
         } else {
           replaceRows.push(item);
         }
-      });
-
-      // 组装提交协议（flow_type 与是否级联由行数据决定）
-      const buildDetails = (rows: RowData[], flowType: string) => ({
-        db_version: `Oracle-${rows[0]?.host.version || ''}`,
-        flow_type: flowType,
-        infos: rows.map((item) => ({
-          cluster_id: item.host.cluster_id,
-          old_node: buildHostInfo(item.host),
-          replace_flag: true,
-          // 页面所选主机（被替换主机）
-          replace_host: buildHostInfo(item.host),
-          resource_spec: {
-            oracle: {
-              count: 1,
-              label_names: item.resourceTags.map((tag) => tag.value),
-              labels: item.resourceTags.map((tag) => String(tag.id)),
-              spec_id: item.specId,
-            },
-          },
-        })),
-        ip_source: 'resource_pool',
       });
 
       // 级联场景每行反查主库实例填 old_master，反查失败则缺省（后端按 old_node 处理）
@@ -290,45 +269,38 @@
     Object.assign(formData, defaultData());
   };
 
-  // §2.4 复制源推导（选择器路径）：单点→自身 primary；从库正常→自身 standby；从库异常→需反查主库
-  const computeReplicationSource = (item: SelectorInstance): { address: string; role: string } => {
-    if (item.cluster_type === ClusterTypes.ORACLE_SINGLE_NONE) {
-      return { address: item.instance_address, role: 'primary' };
-    }
-    if (item.role === 'standby') {
-      if (item.status === ClusterInstStatusKeys.RUNNING) {
-        return { address: item.instance_address, role: 'standby' };
-      }
-      // 从库异常：复制源为主库，地址需反查（此处先留空，由 HostColumnGroup watch 补齐）
-      return { address: '', role: 'primary' };
-    }
-    return { address: '', role: '' };
-  };
-
-  const handleBatchEditHost = (list: SelectorInstance[]) => {
+  const handleBatchEditHost = (list: SelectorMachine[]) => {
     const selectedIps = new Set(selectedHosts.value.map((item) => item.ip));
     const dataList = list
       .filter((item) => !selectedIps.has(item.ip))
-      .map((item) =>
-        createTableRow({
+      .map((item) => {
+        const instance = item.related_instances?.[0];
+        const cluster = item.related_clusters?.[0];
+        return createTableRow({
           host: createReplaceHost({
             bk_cloud_id: item.bk_cloud_id,
             bk_host_id: item.bk_host_id,
-            cluster_id: item.cluster_id,
-            cluster_type: item.cluster_type,
-            cluster_type_name: item.cluster_type_name,
-            instance_address: item.instance_address,
+            cluster_id: cluster?.id || 0,
+            cluster_type: item.cluster_type as ClusterTypes,
+            cluster_type_name:
+              cluster?.cluster_type_name || clusterTypeInfos[item.cluster_type as ClusterTypes]?.name || '',
+            instance_address: instance?.instance || '',
             ip: item.ip,
-            master_domain: item.master_domain,
-            port: item.port,
-            replication_source: computeReplicationSource(item),
-            role: item.role,
-            specId: item.spec_config?.id || 0,
-            status: item.status,
-            version: item.version,
+            master_domain: cluster?.immute_domain || '',
+            port: instance?.port || 0,
+            replication_source: computeReplicationSource({
+              cluster_type: item.cluster_type,
+              instance_address: instance?.instance,
+              instance_role: item.instance_role,
+              status: instance?.status,
+            }),
+            role: item.instance_role,
+            specId: item.spec_id || instance?.spec_config?.id || 0,
+            status: instance?.status || '',
+            version: (cluster?.major_version || '').replace(/^Oracle-/, ''),
           }),
-        }),
-      );
+        });
+      });
     appendRows(dataList);
   };
 

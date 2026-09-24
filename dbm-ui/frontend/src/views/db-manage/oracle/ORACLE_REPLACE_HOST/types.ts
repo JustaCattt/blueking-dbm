@@ -7,11 +7,14 @@
  * You may obtain a copy of the License at https://opensource.org/licenses/MIT
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either or implied. See the License for
  * the specific language governing permissions and limitations under the License.
  */
 
-import type { ClusterTypes } from '@common/const';
+import { ClusterInstStatusKeys, ClusterTypes } from '@common/const';
+
+import type OracleHaMachineModel from '@services/model/oracle/oracle-ha-machine';
+import type OracleSingleMachineModel from '@services/model/oracle/oracle-single-machine';
 
 // 协议主机要素（old_node / old_master 结构）
 export interface HostInfo {
@@ -52,6 +55,26 @@ export interface ReplaceHost {
   version: string;
 }
 
+// 选择器返回的主机模型（主从 / 单节点）
+export type SelectorMachine = OracleHaMachineModel | OracleSingleMachineModel;
+
+// 提交单据 info 结构
+export interface TicketInfo {
+  cluster_id: number;
+  old_master?: HostInfo;
+  old_node: HostInfo;
+  replace_flag: boolean;
+  replace_host: HostInfo;
+  resource_spec: {
+    oracle: {
+      count: number;
+      label_names: string[];
+      labels: string[];
+      spec_id: number;
+    };
+  };
+}
+
 // 被替换主机字段工厂：统一默认值，bk_biz_id 默认当前业务
 export const createReplaceHost = (host: DeepPartial<ReplaceHost> = {}): ReplaceHost => {
   const { replication_source: rs, ...rest } = host;
@@ -87,3 +110,29 @@ export const buildHostInfo = (host: Partial<HostInfo> & Pick<HostInfo, 'ip' | 'p
   port: host.port,
   role: host.role ?? '',
 });
+
+// §2.4 复制源推导（统一入口）：单点→自身 primary；从库正常→自身 standby；从库异常→需反查主库
+// 接受选择器主机模型或 checkInstance 返回的实例信息
+export const computeReplicationSource = (data: {
+  cluster_type: ClusterTypes | string;
+  instance_address?: string;
+  instance_role?: string;
+  role?: string;
+  status?: string;
+}): ReplicationSource => {
+  // SelectorMachine 用 instance_role，InstanceInfos 用 role
+  const role = data.instance_role ?? data.role ?? '';
+  const address = data.instance_address ?? '';
+
+  if (data.cluster_type === ClusterTypes.ORACLE_SINGLE_NONE) {
+    return { address, role: 'primary' };
+  }
+  if (role === 'standby') {
+    if (data.status === ClusterInstStatusKeys.RUNNING) {
+      return { address, role: 'standby' };
+    }
+    // 从库异常：复制源为主库，地址需反查（由调用方补齐）
+    return { address: '', role: 'primary' };
+  }
+  return { address: '', role: '' };
+};

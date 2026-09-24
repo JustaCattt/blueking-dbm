@@ -90,8 +90,8 @@
       <span v-if="modelValue.cluster_type_name">{{ modelValue.cluster_type_name }}</span>
     </EditableBlock>
   </EditableColumn>
-  <InstanceSelector
-    v-model="selectedInstances"
+  <HostSelector
+    v-model="selectedHosts"
     v-model:is-show="showSelector"
     :cluster-types="[ClusterTypes.ORACLE_PRIMARY_STANDBY, ClusterTypes.ORACLE_SINGLE_NONE]"
     :data-source-map="dataSourceMap"
@@ -102,31 +102,29 @@
   import { useI18n } from 'vue-i18n';
   import { useRequest } from 'vue-request';
 
-  import type OracleHaInstanceModel from '@services/model/oracle/oracle-ha-instance';
-  import type OracleSingleInstanceModel from '@services/model/oracle/oracle-single-instance';
   import { checkInstance } from '@services/source/dbbase';
-  import { getOracleHaInstanceList } from '@services/source/oracleHaCluster';
-  import { getOracleSingleInstanceList } from '@services/source/oracleSingleCluster';
+  import { getOracleHaInstanceList, getOracleHaMachineList } from '@services/source/oracleHaCluster';
+  import { getOracleSingleMachineList } from '@services/source/oracleSingleCluster';
 
   import { ClusterInstStatusKeys, clusterTypeInfos, ClusterTypes, DBTypes } from '@common/const';
   import { ipv4 } from '@common/regex';
 
   import ClusterInstanceStatus from '@components/cluster-instance-status/Index.vue';
-  import InstanceSelector from '@components/instance-selector-new/Index.vue';
+  import HostSelector from '@components/host-selector/Index.vue';
+  import type { HostSelectorValues } from '@components/host-selector/types';
 
-  import type { ReplaceHost } from '../types';
-  import { createReplaceHost } from '../types';
-
-  type InstanceModel = OracleHaInstanceModel | OracleSingleInstanceModel;
+  import type { ReplaceHost, SelectorMachine } from '../types';
+  import { computeReplicationSource, createReplaceHost } from '../types';
 
   interface Props {
     selected: {
+      cluster_type?: ClusterTypes | '';
       instance_address?: string;
       ip: string;
     }[];
   }
 
-  type Emits = (e: 'batch-edit', list: InstanceModel[]) => void;
+  type Emits = (e: 'batch-edit', list: SelectorMachine[]) => void;
 
   const props = defineProps<Props>();
 
@@ -138,34 +136,41 @@
 
   const { t } = useI18n();
 
-  // 主从 tab 只列从库实例，单节点 tab 列单点实例
+  // 主从 tab 只列从库主机（instance_role=standby），单节点 tab 列单点主机
   const dataSourceMap = {
-    [ClusterTypes.ORACLE_PRIMARY_STANDBY]: (params: ServiceParameters<typeof getOracleHaInstanceList>) =>
-      getOracleHaInstanceList({
+    [ClusterTypes.ORACLE_PRIMARY_STANDBY]: (params: ServiceParameters<typeof getOracleHaMachineList>) =>
+      getOracleHaMachineList({
         ...params,
-        role: 'standby',
+        instance_role: 'standby',
       }),
-    [ClusterTypes.ORACLE_SINGLE_NONE]: (params: ServiceParameters<typeof getOracleSingleInstanceList>) =>
-      getOracleSingleInstanceList(params),
+    [ClusterTypes.ORACLE_SINGLE_NONE]: (params: ServiceParameters<typeof getOracleSingleMachineList>) =>
+      getOracleSingleMachineList(params),
   };
 
   // 表格已录入主机在选择器中禁选
-  const disableSelectMethod = (data: InstanceModel) => {
+  const disableSelectMethod = (data: SelectorMachine) => {
     const existHost = props.selected.find((item) => item.ip === data.ip);
     return existHost ? t('该主机已在表格中') : false;
   };
 
   const showSelector = ref(false);
-  const selectedInstances = computed(() => {
-    const list = props.selected.map(
-      (item) =>
-        ({
-          instance_address: item.instance_address || item.ip,
-        }) as InstanceModel,
-    );
+  const selectedHosts = computed<
+    HostSelectorValues<ClusterTypes.ORACLE_PRIMARY_STANDBY | ClusterTypes.ORACLE_SINGLE_NONE>
+  >(() => {
+    // 按 cluster_type 分配到对应 tab，避免同一 IP 在两个 tab 中重复出现
+    const haList: SelectorMachine[] = [];
+    const singleList: SelectorMachine[] = [];
+    props.selected.forEach((item) => {
+      const host = { ip: item.ip } as SelectorMachine;
+      if (item.cluster_type === ClusterTypes.ORACLE_SINGLE_NONE) {
+        singleList.push(host);
+      } else {
+        haList.push(host);
+      }
+    });
     return {
-      [ClusterTypes.ORACLE_PRIMARY_STANDBY]: list,
-      [ClusterTypes.ORACLE_SINGLE_NONE]: list,
+      [ClusterTypes.ORACLE_PRIMARY_STANDBY]: haList,
+      [ClusterTypes.ORACLE_SINGLE_NONE]: singleList,
     };
   });
 
@@ -202,43 +207,27 @@
           (item) => item.id === currentHost.cluster_id,
         )?.major_version;
 
-        // §2.4 复制源推导：
-        // - 单节点：复制源为该单点实例 {IP:Port} primary
-        // - 从库正常：复制源为该从库 {IP:Port} standby
-        // - 从库异常：复制源为主库 {IP:Port} primary（需反查主库实例）
-        let replicationSource: { address: string; role: string } = { address: '', role: '' };
+        const replicationSource = computeReplicationSource(currentHost);
 
-        if (currentHost.cluster_type === ClusterTypes.ORACLE_SINGLE_NONE) {
-          // 单节点：复制源为自身实例
-          replicationSource = {
-            address: currentHost.instance_address,
-            role: 'primary',
-          };
-        } else if (currentHost.role === 'standby') {
-          if (currentHost.status === ClusterInstStatusKeys.RUNNING) {
-            // 从库正常：复制源为该从库自身
-            replicationSource = {
-              address: currentHost.instance_address,
-              role: 'standby',
-            };
-          } else {
-            // 从库异常：复制源为主库，需反查
-            try {
-              const [masterInstance] = (
-                await getOracleHaInstanceList({
-                  cluster_id: currentHost.cluster_id,
-                  role: 'primary',
-                })
-              ).results;
-              if (masterInstance) {
-                replicationSource = {
-                  address: masterInstance.instance_address,
-                  role: 'primary',
-                };
-              }
-            } catch {
-              // 反查失败：复制源留空，后端 validate 兜底
+        // 从库异常时复制源地址为空，需反查主库实例补齐
+        if (
+          currentHost.cluster_type === ClusterTypes.ORACLE_PRIMARY_STANDBY &&
+          currentHost.role === 'standby' &&
+          currentHost.status !== ClusterInstStatusKeys.RUNNING &&
+          !replicationSource.address
+        ) {
+          try {
+            const [masterInstance] = (
+              await getOracleHaInstanceList({
+                cluster_id: currentHost.cluster_id,
+                role: 'primary',
+              })
+            ).results;
+            if (masterInstance) {
+              replicationSource.address = masterInstance.instance_address;
             }
+          } catch {
+            // 反查失败：复制源留空，后端 validate 兜底
           }
         }
 
@@ -247,7 +236,6 @@
           bk_host_id: currentHost.bk_host_id,
           cluster_id: currentHost.cluster_id,
           cluster_type: currentHost.cluster_type,
-          // 返回无 cluster_type_name，按集群类型映射派生
           cluster_type_name: clusterTypeInfos[currentHost.cluster_type]?.name || '',
           instance_address: currentHost.instance_address,
           ip: currentHost.ip,
@@ -257,7 +245,6 @@
           role: currentHost.role,
           specId: currentHost.spec_config?.id || 0,
           status: currentHost.status,
-          // version 兜底：关联集群版本 / 单据回显版本，均无则空串（提交仍拼 Oracle-）
           version: (majorVersion || modelValue.value.version || '').replace(/^Oracle-/, ''),
         });
       }
@@ -275,10 +262,9 @@
     });
   };
 
-  const handleSelectorChange = (selected: {
-    [ClusterTypes.ORACLE_PRIMARY_STANDBY]: OracleHaInstanceModel[];
-    [ClusterTypes.ORACLE_SINGLE_NONE]: OracleSingleInstanceModel[];
-  }) => {
+  const handleSelectorChange = (
+    selected: HostSelectorValues<ClusterTypes.ORACLE_PRIMARY_STANDBY | ClusterTypes.ORACLE_SINGLE_NONE>,
+  ) => {
     emits(
       'batch-edit',
       Object.values(selected).flatMap((item) => item),
@@ -345,14 +331,14 @@
     align-items: baseline;
 
     &__addr {
-      color: #313238;
       font-family: 'JetBrains Mono', Consolas, monospace;
       font-size: 12px;
+      color: #313238;
     }
 
     &__role {
-      color: #979ba5;
       font-size: 12px;
+      color: #979ba5;
     }
   }
 </style>
