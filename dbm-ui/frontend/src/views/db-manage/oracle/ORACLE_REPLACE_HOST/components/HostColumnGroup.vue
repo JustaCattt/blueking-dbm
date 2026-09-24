@@ -193,9 +193,10 @@
   ];
 
   // 手输主机校验（Oracle 单机单实例，实例即主机；返回 InstanceInfos，无 cluster_type_name/version，需派生）
+  // 异常从库的复制源反查由 watch + queryMasterForReplicationSource 统一处理，此处不重复
   const { loading, run: queryHost } = useRequest(checkInstance, {
     manual: true,
-    onSuccess: async (data) => {
+    onSuccess: (data) => {
       const [currentHost] = data;
       // 仅单点实例与从库实例可替换，主库/空主机/非 Oracle 主机报「主机不包含任何从库实例」
       if (
@@ -207,30 +208,6 @@
           (item) => item.id === currentHost.cluster_id,
         )?.major_version;
 
-        const replicationSource = computeReplicationSource(currentHost);
-
-        // 从库异常时复制源地址为空，需反查主库实例补齐
-        if (
-          currentHost.cluster_type === ClusterTypes.ORACLE_PRIMARY_STANDBY &&
-          currentHost.role === 'standby' &&
-          currentHost.status !== ClusterInstStatusKeys.RUNNING &&
-          !replicationSource.address
-        ) {
-          try {
-            const [masterInstance] = (
-              await getOracleHaInstanceList({
-                cluster_id: currentHost.cluster_id,
-                role: 'primary',
-              })
-            ).results;
-            if (masterInstance) {
-              replicationSource.address = masterInstance.instance_address;
-            }
-          } catch {
-            // 反查失败：复制源留空，后端 validate 兜底
-          }
-        }
-
         modelValue.value = createReplaceHost({
           bk_cloud_id: currentHost.bk_cloud_id,
           bk_host_id: currentHost.bk_host_id,
@@ -241,7 +218,7 @@
           ip: currentHost.ip,
           master_domain: currentHost.master_domain,
           port: currentHost.port,
-          replication_source: replicationSource,
+          replication_source: computeReplicationSource(currentHost),
           role: currentHost.role,
           specId: currentHost.spec_config?.id || 0,
           status: currentHost.status,

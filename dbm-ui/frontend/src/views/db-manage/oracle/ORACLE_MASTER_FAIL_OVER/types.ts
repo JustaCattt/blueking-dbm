@@ -11,6 +11,8 @@
  * the specific language governing permissions and limitations under the License.
  */
 
+import type OracleHaMachineModel from '@services/model/oracle/oracle-ha-machine';
+
 // 协议主机要素（master / slave 结构）
 export interface HostInfo {
   bk_biz_id: number;
@@ -28,6 +30,16 @@ export interface FailOverMaster {
   // 所属集群域名（反查主机所属集群）
   master_domain: string;
   role: string;
+}
+
+// 选择器返回的主机模型
+export type SelectorMachine = OracleHaMachineModel;
+
+// 提交单据 info 结构
+export interface TicketInfo {
+  cluster_id: number;
+  master: HostInfo;
+  slave: HostInfo;
 }
 
 // 主机字段工厂：统一默认值

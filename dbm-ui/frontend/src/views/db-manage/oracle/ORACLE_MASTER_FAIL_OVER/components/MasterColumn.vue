@@ -33,8 +33,8 @@
       :placeholder="t('请输入主机 IP')"
       @change="handleInputChange" />
   </EditableColumn>
-  <InstanceSelector
-    v-model="selectedInstances"
+  <HostSelector
+    v-model="selectedHosts"
     v-model:is-show="showSelector"
     :cluster-types="[ClusterTypes.ORACLE_PRIMARY_STANDBY]"
     :data-source-map="dataSourceMap"
@@ -45,16 +45,16 @@
   import { useI18n } from 'vue-i18n';
   import { useRequest } from 'vue-request';
 
-  import type OracleHaInstanceModel from '@services/model/oracle/oracle-ha-instance';
   import { checkInstance } from '@services/source/dbbase';
-  import { getOracleHaInstanceList } from '@services/source/oracleHaCluster';
+  import { getOracleHaMachineList } from '@services/source/oracleHaCluster';
 
   import { ClusterTypes, DBTypes } from '@common/const';
   import { ipv4 } from '@common/regex';
 
-  import InstanceSelector from '@components/instance-selector-new/Index.vue';
+  import HostSelector from '@components/host-selector/Index.vue';
+  import type { HostSelectorValues } from '@components/host-selector/types';
 
-  import type { FailOverMaster } from '../types';
+  import type { FailOverMaster, SelectorMachine } from '../types';
   import { createFailOverMaster } from '../types';
 
   interface Props {
@@ -63,7 +63,7 @@
     }[];
   }
 
-  type Emits = (e: 'batch-edit', list: OracleHaInstanceModel[]) => void;
+  type Emits = (e: 'batch-edit', list: SelectorMachine[]) => void;
 
   const props = defineProps<Props>();
 
@@ -75,28 +75,25 @@
 
   const { t } = useI18n();
 
-  // 主从 tab 只列主库实例
+  // 主从 tab 只列主库主机（instance_role=primary）
   const dataSourceMap = {
-    [ClusterTypes.ORACLE_PRIMARY_STANDBY]: (params: ServiceParameters<typeof getOracleHaInstanceList>) =>
-      getOracleHaInstanceList({
+    [ClusterTypes.ORACLE_PRIMARY_STANDBY]: (params: ServiceParameters<typeof getOracleHaMachineList>) =>
+      getOracleHaMachineList({
         ...params,
-        role: 'primary',
+        instance_role: 'primary',
       }),
   };
 
   // 表格已录入主机在选择器中禁选
-  const disableSelectMethod = (data: OracleHaInstanceModel) => {
+  const disableSelectMethod = (data: SelectorMachine) => {
     const existHost = props.selected.find((item) => item.ip === data.ip);
     return existHost ? t('该主机已在表格中') : false;
   };
 
   const showSelector = ref(false);
-  const selectedInstances = computed(() => ({
+  const selectedHosts = computed<HostSelectorValues<ClusterTypes.ORACLE_PRIMARY_STANDBY>>(() => ({
     [ClusterTypes.ORACLE_PRIMARY_STANDBY]: props.selected.map(
-      (item) =>
-        ({
-          instance_address: item.ip,
-        }) as OracleHaInstanceModel,
+      (item) => ({ ip: item.ip }) as SelectorMachine,
     ),
   }));
 
@@ -151,7 +148,7 @@
     });
   };
 
-  const handleSelectorChange = (selected: { [ClusterTypes.ORACLE_PRIMARY_STANDBY]: OracleHaInstanceModel[] }) => {
+  const handleSelectorChange = (selected: HostSelectorValues<ClusterTypes.ORACLE_PRIMARY_STANDBY>) => {
     emits('batch-edit', selected[ClusterTypes.ORACLE_PRIMARY_STANDBY]);
   };
 

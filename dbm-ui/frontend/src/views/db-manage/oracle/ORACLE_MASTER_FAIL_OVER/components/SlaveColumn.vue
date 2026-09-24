@@ -30,6 +30,9 @@
 
   import { getOracleHaInstanceList } from '@services/source/oracleHaCluster';
 
+  import type { HostInfo } from '../types';
+  import { buildHostInfo } from '../types';
+
   interface Props {
     master: {
       cluster_id: number;
@@ -38,12 +41,7 @@
 
   const props = defineProps<Props>();
 
-  const modelValue = defineModel<{
-    bk_biz_id: number;
-    bk_cloud_id: number;
-    bk_host_id: number;
-    ip: string;
-  }>({
+  const modelValue = defineModel<HostInfo>({
     required: true,
   });
 
@@ -55,12 +53,11 @@
     onSuccess: (data) => {
       const [slaveInstance] = data.results;
       if (slaveInstance) {
-        modelValue.value = {
-          bk_biz_id: window.PROJECT_CONFIG.BIZ_ID,
+        modelValue.value = buildHostInfo({
           bk_cloud_id: slaveInstance.bk_cloud_id,
           bk_host_id: slaveInstance.bk_host_id,
           ip: slaveInstance.ip,
-        };
+        });
       }
     },
   });
@@ -73,13 +70,9 @@
           role: 'standby',
         });
       } else {
-        modelValue.value = {
-          bk_biz_id: 0,
-          bk_cloud_id: 0,
-          bk_host_id: 0,
-          ip: '',
-        };
-      }    },
+        modelValue.value = buildHostInfo({ ip: '' });
+      }
+    },
     {
       immediate: true,
     },

@@ -81,7 +81,6 @@
   import { reactive, useTemplateRef } from 'vue';
   import { useI18n } from 'vue-i18n';
 
-  import type OracleHaInstanceModel from '@services/model/oracle/oracle-ha-instance';
   import type { Oracle } from '@services/model/ticket/ticket';
 
   import { useCreateTicket, useTicketDetail } from '@hooks';
@@ -98,8 +97,8 @@
 
   import MasterColumn from './components/MasterColumn.vue';
   import SlaveColumn from './components/SlaveColumn.vue';
-  import type { FailOverMaster, HostInfo } from './types';
-  import { createFailOverMaster } from './types';
+  import type { FailOverMaster, HostInfo, SelectorMachine, TicketInfo } from './types';
+  import { buildHostInfo, createFailOverMaster } from './types';
 
   interface RowData {
     master: FailOverMaster;
@@ -165,11 +164,7 @@
   });
 
   const { loading: isSubmitting, run: runCreateTicket } = useCreateTicket<{
-    infos: {
-      cluster_id: number;
-      master: HostInfo;
-      slave: HostInfo;
-    }[];
+    infos: TicketInfo[];
     is_check_process: boolean;
   }>(TicketTypes.ORACLE_MASTER_FAIL_OVER);
 
@@ -188,20 +183,10 @@
     tableRef.value!.validate().then(() => {
       runCreateTicket({
         details: {
-          infos: formData.tableData.map((item) => ({
+          infos: formData.tableData.map<TicketInfo>((item) => ({
             cluster_id: item.master.cluster_id,
-            master: {
-              bk_biz_id: window.PROJECT_CONFIG.BIZ_ID,
-              bk_cloud_id: item.master.bk_cloud_id,
-              bk_host_id: item.master.bk_host_id,
-              ip: item.master.ip,
-            },
-            slave: {
-              bk_biz_id: item.slave.bk_biz_id,
-              bk_cloud_id: item.slave.bk_cloud_id,
-              bk_host_id: item.slave.bk_host_id,
-              ip: item.slave.ip,
-            },
+            master: buildHostInfo(item.master),
+            slave: buildHostInfo(item.slave),
           })),
           is_check_process: formData.is_check_process,
         },
@@ -214,22 +199,24 @@
     Object.assign(formData, defaultData());
   };
 
-  const handleBatchEdit = (list: OracleHaInstanceModel[]) => {
+  // 选择器返回主机模型（OracleHaMachineModel），需从 related_instances/related_clusters 派生字段
+  const handleBatchEdit = (list: SelectorMachine[]) => {
     const selectedIps = new Set(selectedMasters.value.map((item) => item.ip));
     const dataList = list
       .filter((item) => !selectedIps.has(item.ip))
-      .map((item) =>
-        createTableRow({
+      .map((item) => {
+        const cluster = item.related_clusters?.[0];
+        return createTableRow({
           master: createFailOverMaster({
             bk_cloud_id: item.bk_cloud_id,
             bk_host_id: item.bk_host_id,
-            cluster_id: item.cluster_id,
+            cluster_id: cluster?.id || 0,
             ip: item.ip,
-            master_domain: item.master_domain,
-            role: item.role,
+            master_domain: cluster?.immute_domain || '',
+            role: item.instance_role,
           }),
-        }),
-      );
+        });
+      });
     appendRows(dataList);
   };
 
