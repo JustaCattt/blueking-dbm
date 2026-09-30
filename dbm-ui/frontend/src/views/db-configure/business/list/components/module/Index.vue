@@ -78,6 +78,13 @@
           ref="moduleInfoRef"
           :cluster-type="clusterType"
           :module-info="moduleInfo" />
+        <!-- 按层展示版本与 OS；创建后仅 OS 可改 -->
+        <ModuleVersionPanel
+          :cluster-type="clusterType"
+          :db-type="dbType"
+          :db-version-info="dbVersionInfo"
+          :module-id="moduleInfo.moduleId"
+          @updated="handleVersionInfoUpdated" />
       </DbCard>
 
       <ConfTab
@@ -125,6 +132,8 @@
   import { useRequest } from 'vue-request';
   import { useRoute, useRouter } from 'vue-router';
 
+  import type { ComponentVersionInfo } from '@services/source/cmdb';
+  import { getModules } from '@services/source/cmdb';
   import type { ParameterConfigItem } from '@services/source/configs';
   import { deleteModuleConfig, getLevelConfig } from '@services/source/configs';
 
@@ -142,6 +151,7 @@
   import MySql from './com-factory/MySql.vue';
   import SqlServer from './com-factory/SqlServer.vue';
   import TendbCluster from './com-factory/TendbCluster.vue';
+  import ModuleVersionPanel from './components/ModuleVersionPanel.vue';
 
   /** 子组件暴露的方法接口 */
   interface ModuleInfoComponentExposes {
@@ -206,6 +216,24 @@
     [DBTypes.TENDBCLUSTER]: TendbCluster,
   } as Record<DBTypes, any>;
 
+  // ============ 版本约束展示（协议第 3 节：模块列表新增 db_version_info） ============
+  /** 各组件版本展示信息；存量模块未设置时为 {}，前端兼容空对象 */
+  const dbVersionInfo = ref<Record<string, ComponentVersionInfo>>({});
+
+  /** 拉取模块列表以获取 db_version_info（当前选中模块） */
+  const { run: fetchModuleVersionInfo } = useRequest(getModules, {
+    manual: true,
+    onSuccess(result) {
+      const matched = result.find((item) => item.db_module_id === moduleInfo.moduleId);
+      dbVersionInfo.value = matched?.db_version_info ?? {};
+    },
+  });
+
+  /** OS 编辑成功后更新展示数据 */
+  const handleVersionInfoUpdated = (value: Record<string, ComponentVersionInfo>) => {
+    dbVersionInfo.value = value;
+  };
+
   /** 获取模块部署信息 */
   const { loading, run: fetchModuleConfig } = useRequest(getLevelConfig, {
     manual: true,
@@ -262,6 +290,14 @@
             meta_cluster_type: clusterType.value,
             version: 'deploy_info',
           });
+
+          // 拉取模块版本约束信息（MySQL 系列纳入版本约束的类型）
+          if ([ClusterTypes.TENDBCLUSTER, ClusterTypes.TENDBHA, ClusterTypes.TENDBSINGLE].includes(clusterType.value)) {
+            fetchModuleVersionInfo({
+              bk_biz_id: window.PROJECT_CONFIG.BIZ_ID,
+              cluster_type: clusterType.value,
+            });
+          }
         }
       }
     },

@@ -57,7 +57,57 @@ export const useTreeData = (treeState: TreeState) => {
   const treePrefixIcon = (data: any, type: string) => (type === 'node_action' ? 'default' : null);
 
   /**
-   * tree search
+   * SearchSelect 分字段搜索（§3.1）：默认字段模块名；可选模块名/模块 ID/字符集；多条件同时生效
+   * - 模块名、模块 ID：文本模糊包含匹配
+   * - 字符集：枚举精确等于匹配，候选取当前树数据去重（字典序）
+   */
+  const treeSearchValue = ref<Record<string, string>>({});
+
+  /** 字符集枚举候选：取当前树数据的模块第二行描述去重，按字典序排列 */
+  const charsetOptions = computed(() => {
+    const charsetSet = new Set<string>();
+    const walkNodes = (nodes: TreeData[]) => {
+      nodes.forEach((node) => {
+        if (node.levelType === ConfLevels.MODULE && node.subDescription) {
+          // subDescription 格式：`${系列}，${字符集}`
+          const parts = node.subDescription.split('，');
+          const charset = parts[parts.length - 1];
+          if (charset) charsetSet.add(charset);
+        }
+        if (node.children?.length) walkNodes(node.children);
+      });
+    };
+    walkNodes(treeState.data);
+    return Array.from(charsetSet).sort();
+  });
+
+  /** 分字段过滤树数据（返回过滤后的新树；业务节点始终保留） */
+  const filterTreeBySearch = (nodes: TreeData[]): TreeData[] => {
+    const { charset, moduleId, moduleName } = treeSearchValue.value;
+    const hasCondition = Boolean(charset || moduleId || moduleName);
+    if (!hasCondition) return nodes;
+
+    const matchNode = (node: TreeData) => {
+      if (node.levelType !== ConfLevels.MODULE) return true;
+      if (moduleName && !node.name.includes(moduleName)) return false;
+      if (moduleId && String(node.id) !== moduleId) return false;
+      if (charset) {
+        const nodeCharset = node.subDescription?.split('，').pop() ?? '';
+        if (nodeCharset !== charset) return false;
+      }
+      return true;
+    };
+
+    return nodes
+      .filter((node) => node.levelType !== ConfLevels.MODULE || matchNode(node))
+      .map((node) => ({
+        ...node,
+        children: node.children ? filterTreeBySearch(node.children) : node.children,
+      }));
+  };
+
+  /**
+   * tree search（保留原 BkTree 搜索配置，用于名称兜底匹配）
    */
   const treeSearchConfig = computed<SearchOption>(() => ({
     match: treeSearchMatch,
@@ -337,20 +387,38 @@ export const useTreeData = (treeState: TreeState) => {
           levelType: item.obj_id,
           name: item.instance_name,
           parentId,
+          subDescription: isModule ? buildModuleSubDescription(item) : undefined,
           tag: confLevelInfos[item.obj_id].tagText,
           treeId,
         };
       });
   }
 
+  /**
+   * 模块节点第二行描述：`${存储层系列}，${字符集}`（§3.1 树节点展示查重组合）
+   * TODO: 树接口 extra 暂无字符集字段；当前系列取 extra.version（模块配置的 db_version），
+   * 字符集待树接口补充（预期 extra.charset）后替换，现阶段无值时第二行只展示系列
+   */
+  const buildModuleSubDescription = (item: BizConfTopoTreeModel) => {
+    const series = item.extra?.version || '';
+    const charset = (item.extra as { charset?: string } | undefined)?.charset || '';
+    if (series && charset) {
+      return `${series}，${charset}`;
+    }
+    return series || charset;
+  };
+
   return {
+    charsetOptions,
     cloneModule,
     createModule,
     fetchBusinessTopoTree,
+    filterTreeBySearch,
     handleSelectedTreeNode,
     treePrefixIcon,
     treeRef,
     treeSearchConfig,
+    treeSearchValue,
     treeState,
   };
 };

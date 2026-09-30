@@ -18,14 +18,14 @@
     :z-index="12">
     <div class="config-tree">
       <div class="config-tree-search">
-        <BkInput
-          v-model="treeState.search"
-          :placeholder="t('请输入模块名')"
-          type="search" />
+        <DbQuickSearch
+          v-model="treeSearchValue"
+          :data="searchSelectData"
+          @change="handleSearchChange" />
       </div>
       <BkTree
         ref="treeRef"
-        :data="treeState.data"
+        :data="displayTreeData"
         :indent="16"
         label="name"
         :node-content-action="['click']"
@@ -37,32 +37,49 @@
         virtual-render
         @node-click="handleSelectedTreeNode">
         <template #node="item">
-          <div class="config-tree-node">
-            <span class="config-tree-tag">
-              {{ getIconText(item) }}
-            </span>
-            <span
-              v-overflow-tips="{ content: item.name, placement: 'right' }"
-              class="config-tree-name text-overflow">
-              {{ item.name }}
-            </span>
-            <AuthButton
-              v-if="item.levelType === ConfLevels.APP && isShowAddBtn"
-              v-bk-tooltips="t('新建DB模块')"
-              action-id="dbconfig_edit"
-              class="config-tree-add-btn"
-              :resource="dbType"
-              size="small"
-              theme="primary"
-              @click.stop="createModule">
-              <DbIcon type="add" />
-            </AuthButton>
+          <div
+            class="config-tree-node"
+            :class="{ 'is-module-node': item.levelType === ConfLevels.MODULE }">
+            <div class="node-main-row">
+              <span class="config-tree-tag">
+                {{ getIconText(item) }}
+              </span>
+              <span
+                v-overflow-tips="{ content: item.name, placement: 'right' }"
+                class="config-tree-name text-overflow">
+                {{ item.name }}
+              </span>
+              <!-- 模块节点右端：关联集群数（灰底小方块，≥1000 显示 999+，纯展示） -->
+              <span
+                v-if="item.levelType === ConfLevels.MODULE"
+                class="cluster-count-tag">
+                {{ formatClusterCount(item.clusters?.length ?? 0) }}
+              </span>
+              <AuthButton
+                v-if="item.levelType === ConfLevels.APP && isShowAddBtn"
+                v-bk-tooltips="t('新建DB模块')"
+                action-id="dbconfig_edit"
+                class="config-tree-add-btn"
+                :resource="dbType"
+                size="small"
+                theme="primary"
+                @click.stop="createModule">
+                <DbIcon type="add" />
+              </AuthButton>
+            </div>
+            <!-- 模块节点第二行：`${存储层系列}，${字符集}` -->
+            <div
+              v-if="item.levelType === ConfLevels.MODULE && item.subDescription"
+              v-overflow-tips="{ content: item.subDescription, placement: 'right' }"
+              class="node-sub-row text-overflow">
+              {{ item.subDescription }}
+            </div>
           </div>
         </template>
         <template #empty>
           <EmptyStatus
             :is-anomalies="treeState.isAnomalies"
-            :is-searching="!!treeState.search"
+            :is-searching="isSearching"
             @clear-search="handleClearSearch"
             @refresh="handleRefresh" />
         </template>
@@ -78,6 +95,7 @@
   import { clusterTypeInfos, ClusterTypes, ConfLevels, DBTypes } from '@common/const';
 
   import AuthButton from '@components/auth-component/button.vue';
+  import DbQuickSearch from '@components/db-quick-search/Index.vue';
   import EmptyStatus from '@components/empty-status/EmptyStatus.vue';
 
   import type { TreeData, TreeState } from '@views/db-configure/common/types';
@@ -93,8 +111,68 @@
     search: '',
   });
 
-  const { createModule, fetchBusinessTopoTree, handleSelectedTreeNode, treePrefixIcon, treeRef, treeSearchConfig } =
-    useTreeData(treeState);
+  const {
+    charsetOptions,
+    createModule,
+    fetchBusinessTopoTree,
+    filterTreeBySearch,
+    handleSelectedTreeNode,
+    treePrefixIcon,
+    treeRef,
+    treeSearchConfig,
+    treeSearchValue,
+  } = useTreeData(treeState);
+
+  /** SearchSelect 分字段搜索条件（§3.1）：默认模块名；可选模块名/模块 ID/字符集；多条件同时生效 */
+  const searchSelectData = computed(() => [
+    {
+      id: 'moduleName',
+      name: t('模块名'),
+      type: 'multiple-input',
+    },
+    {
+      id: 'moduleId',
+      name: t('模块 ID'),
+      type: 'multiple-input',
+    },
+    {
+      id: 'charset',
+      list: charsetOptions.value.map((item) => ({
+        label: item,
+        value: item,
+      })),
+      name: t('字符集'),
+      type: 'multiple',
+    },
+  ]);
+
+  /** 应用分字段过滤后的树数据 */
+  const displayTreeData = computed(() => filterTreeBySearch(treeState.data));
+
+  /** 是否处于搜索态（含原关键字搜索与分字段条件） */
+  const isSearching = computed(
+    () => Boolean(treeState.search) || Object.values(treeSearchValue.value).some((v) => Boolean(v)),
+  );
+
+  /** 分字段搜索变化（多条件同时生效） */
+  const handleSearchChange = () => {
+    // 分字段条件即时过滤 displayTreeData；原关键字搜索兜底保留
+  };
+
+  /** 关联集群数：≥1000 显示 999+（口径同详情，纯展示） */
+  const formatClusterCount = (count: number) => (count >= 1000 ? '999+' : String(count));
+
+  const handleClearSearch = () => {
+    treeState.search = '';
+    treeSearchValue.value = {};
+  };
+
+  const handleRefresh = () => {
+    const { dbType } = clusterTypeInfos[clusterType.value as ClusterTypes];
+    if (dbType) {
+      fetchBusinessTopoTree(dbType);
+    }
+  };
 
   const clusterType = computed(() => (route.params.clusterType as ClusterTypes) || ClusterTypes.TENDBSINGLE);
   const dbType = computed(() => clusterTypeInfos[clusterType.value as ClusterTypes]?.dbType || DBTypes.MYSQL);
@@ -111,17 +189,6 @@
       return '模';
     }
     return '集';
-  };
-
-  const handleClearSearch = () => {
-    treeState.search = '';
-  };
-
-  const handleRefresh = () => {
-    const { dbType } = clusterTypeInfos[clusterType.value as ClusterTypes];
-    if (dbType) {
-      fetchBusinessTopoTree(dbType);
-    }
   };
 
   defineExpose({
@@ -155,8 +222,34 @@
 
     .config-tree-node {
       display: flex;
-      align-items: center;
-      padding: 0 4px;
+      padding: 2px 4px;
+      flex-direction: column;
+
+      .node-main-row {
+        display: flex;
+        align-items: center;
+        width: 100%;
+      }
+
+      .node-sub-row {
+        padding-left: 28px;
+        font-size: 12px;
+        line-height: 16px;
+        color: #979ba5;
+      }
+
+      .cluster-count-tag {
+        min-width: 20px;
+        padding: 0 4px;
+        margin-right: 4px;
+        font-size: 11px;
+        line-height: 16px;
+        color: #63656e;
+        text-align: center;
+        background-color: #f0f1f5;
+        border-radius: 2px;
+        flex-shrink: 0;
+      }
     }
 
     .config-tree-tag {
@@ -200,6 +293,12 @@
 
         .config-tree-tag {
           background-color: #3a84ff;
+        }
+
+        // 选中行集群数方块随主色（§3.1）
+        .cluster-count-tag {
+          color: @primary-color;
+          background-color: rgb(225 236 255);
         }
       }
 

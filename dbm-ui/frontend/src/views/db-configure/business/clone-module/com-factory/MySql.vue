@@ -54,9 +54,9 @@
         </FormItemWithHint>
         <!-- 数据库信息 -->
         <BkFormItem
-          :label="t('数据库信息')"
+          :label="t('数据库类型')"
           required>
-          <div class="db-config-row">
+          <div class="db-type-row">
             <DbTag
               class="db-type-tag"
               theme="info"
@@ -66,49 +66,63 @@
               </template>
               {{ clusterTypeInfos[clusterType]?.name }}
             </DbTag>
-            <FormItemWithHint
-              class="version-form-item"
-              property="db_version"
-              required
-              :show-label="false">
-              <DbVersionSelect
-                v-model="formData.db_version"
-                class="version-select-inline"
-                :db-type="DBTypes.MYSQL"
-                :prefix="t('存储层版本')"
-                :source-version="String(route.query.confFile || '')"
-                @change="handleValidate" />
-            </FormItemWithHint>
-            <FormItemWithHint
-              class="charset-form-item"
-              property="charset"
-              required
-              :show-label="false">
-              <DbSelect
-                v-model="formData.charset"
-                class="charset-select-inline"
-                :clearable="false"
-                filterable
-                :placeholder="t('请选择字符集')"
-                :prefix="t('字符集')"
-                @change="handleValidate">
-                <DbOption
-                  v-for="(item, index) of characterSets"
-                  :key="index"
-                  :label="item"
-                  :value="item">
-                  <span>{{ item }}</span>
-                  <DbTag
-                    v-if="sourceCharset && item === sourceCharset"
-                    class="ml-5"
-                    theme="info">
-                    {{ t('源字符集') }}
-                  </DbTag>
-                </DbOption>
-              </DbSelect>
-            </FormItemWithHint>
+            <span class="db-type-lock-tip">{{ t('源模块已锁定') }}</span>
           </div>
         </BkFormItem>
+        <!-- 字符集 -->
+        <BkFormItem
+          :label="t('字符集')"
+          required>
+          <div class="charset-row">
+            <DbSelect
+              v-model="formData.charset"
+              class="charset-select-inline"
+              :clearable="false"
+              filterable
+              :placeholder="t('请选择字符集')"
+              :prefix="t('字符集')"
+              @change="handleValidate">
+              <DbOption
+                v-for="(item, index) of characterSets"
+                :key="index"
+                :label="item"
+                :value="item">
+                <span>{{ item }}</span>
+                <DbTag
+                  v-if="sourceCharset && item === sourceCharset"
+                  class="ml-5"
+                  theme="info">
+                  {{ t('源字符集') }}
+                </DbTag>
+              </DbOption>
+            </DbSelect>
+          </div>
+        </BkFormItem>
+      </div>
+
+      <!-- 存储层：三级版本选型 + OS 约束；克隆带出源发行版，可改 -->
+      <div class="layer-config-card">
+        <div class="layer-title">{{ t('存储层') }}</div>
+        <VersionOsEditor
+          ref="storageEditorRef"
+          :db-type="DBTypes.MYSQL"
+          pkg-type="mysql"
+          @before-series-change="handleBeforeStorageSeriesChange"
+          @change="handleStorageChange" />
+      </div>
+
+      <!-- 接入层：仅 MySQL 主从（tendbha）；克隆带出源系列/版本，可改 -->
+      <div
+        v-if="clusterType === ClusterTypes.TENDBHA"
+        class="layer-config-card">
+        <div class="layer-title">{{ t('接入层') }}</div>
+        <VersionOsEditor
+          ref="proxyEditorRef"
+          :db-type="DBTypes.MYSQL"
+          default-distribution-name="DBM"
+          pkg-type="mysql-proxy"
+          @before-series-change="handleBeforeProxySeriesChange"
+          @change="handleProxyChange" />
       </div>
 
       <!-- 参数配置 Tab -->
@@ -147,8 +161,10 @@
       </div>
     </DbForm>
     <template #action>
+      <!-- §2.3 创建按钮：该层版本未选齐则不可用；指定范围已选为空亦不可用 -->
       <BkButton
         class="w-88"
+        :disabled="!isVersionSelectionComplete"
         :loading="isSubmitting"
         theme="primary"
         @click="handleSubmit">
@@ -216,6 +232,7 @@
 </template>
 
 <script setup lang="ts">
+  import InfoBox from 'bkui-vue/lib/info-box';
   import { useI18n } from 'vue-i18n';
   import { useRequest } from 'vue-request';
 
@@ -237,11 +254,11 @@
   import FormItemWithHint from '@components/form-item-with-hint/Index.vue';
 
   import DomainPreview from '@views/db-configure/components/DomainPreview.vue';
+  import VersionOsEditor, { type VersionOsValue } from '@views/db-configure/components/VersionOsEditor.vue';
   import { saveConfigureState } from '@views/db-configure/utils/configureState';
 
   import { random } from '@utils';
 
-  import DbVersionSelect from '../components/DbVersionSelect.vue';
   import LevelConfigTable from '../components/LevelConfigTable.vue';
   import ParamTable from '../components/ParamTable.vue';
 
@@ -271,6 +288,22 @@
     }
   };
 
+  /**
+   * §2.3 创建按钮可用性：各层版本选齐且指定范围模式下已选非空
+   * 存储层必备；主从（tendbha）另需接入层选齐
+   */
+  const isVersionSelectionComplete = computed(() => {
+    const storage = storageVersion.value;
+    const storageOk =
+      storage.versionId !== '' && (storage.osMode === 'follow' || storage.specifyOs.length > 0);
+    if (!storageOk) return false;
+    if (clusterType.value === ClusterTypes.TENDBHA) {
+      const proxy = proxyVersion.value;
+      return proxy.versionId !== '' && (proxy.osMode === 'follow' || proxy.specifyOs.length > 0);
+    }
+    return true;
+  });
+
   // 表单数据
   const formData = reactive({
     alias_name: '',
@@ -288,6 +321,71 @@
   const confTabs = ref<ServiceReturnType<typeof getListClusterModuleConfFiles>>([]);
 
   const characterSets = ['utf8', 'utf8mb4', 'gbk', 'latin1', 'gb2312'];
+
+  // 集群类型 → 协议组件名映射（创建模块 db_versions 的 key）
+  const clusterComponentNames: Record<string, string[]> = {
+    [ClusterTypes.TENDBHA]: ['backend', 'proxy'],
+    [ClusterTypes.TENDBSINGLE]: ['single'],
+  };
+
+  /** 存储层选型值（backend / single） */
+  const storageVersion = ref<VersionOsValue>({
+    distributionId: '',
+    osMode: 'follow',
+    seriesId: '',
+    specifyOs: [],
+    versionId: '',
+  });
+  /** 接入层选型值（proxy，仅主从） */
+  const proxyVersion = ref<VersionOsValue>({
+    distributionId: '',
+    osMode: 'follow',
+    seriesId: '',
+    specifyOs: [],
+    versionId: '',
+  });
+
+  const storageEditorRef = ref<InstanceType<typeof VersionOsEditor>>();
+  const proxyEditorRef = ref<InstanceType<typeof VersionOsEditor>>();
+
+  /** 存储层选型变化：更新 db_version（参数 Tab 依赖）并同步校验 */
+  const handleStorageChange = (value: VersionOsValue) => {
+    storageVersion.value = value;
+    // 参数 Tab 的版本标识取系列名（§4：同系列换版本号不重载）
+    formData.db_version = storageEditorRef.value?.getSeriesName() ?? '';
+    handleValidate();
+  };
+
+  const handleProxyChange = (value: VersionOsValue) => {
+    proxyVersion.value = value;
+  };
+
+  /**
+   * §4 重载确认：换存储层系列会重载 mysql 存储 Tab（克隆场景为 dbconf 对比 Tab）；
+   * 已有审查结果时弹 InfoBox 二次确认（对象写「存储层」），取消则版本下拉回滚
+   */
+  const handleBeforeStorageSeriesChange = (next: () => void) => {
+    const changedCount = totalCounts.value.changed + totalCounts.value.custom;
+    if (changedCount === 0) {
+      next();
+      return;
+    }
+    InfoBox({
+      cancelText: t('取消'),
+      confirmText: t('确定'),
+      content: t('存储层系列变更将重载参数配置_n_项审查内容将被丢弃_是否继续_', { n: changedCount }),
+      headerAlign: 'center',
+      onConfirm: () => {
+        next();
+      },
+      title: t('确认重载存储层参数_'),
+    });
+  };
+
+  /** §4：MySQL 主从无 proxy 参数 Tab，仅更新部署默认，直接放行 */
+  const handleBeforeProxySeriesChange = (next: () => void) => {
+    next();
+  };
 
   /** 触发表单校验（版本或字符集 change 时） */
   const handleValidate = () => {
@@ -564,6 +662,29 @@
 
       isSubmitting.value = true;
 
+      // 前端补齐校验：后端只校验 db_versions 必传，不校验各层齐全，提交前须确保该集群类型的所有组件都传上来
+      const componentNames = clusterComponentNames[clusterType.value] || [];
+      const validateResults = [
+        { componentName: 'backend', result: storageEditorRef.value?.validate() },
+        ...(clusterType.value === ClusterTypes.TENDBHA
+          ? [{ componentName: 'proxy', result: proxyEditorRef.value?.validate() }]
+          : []),
+      ];
+      const invalid = validateResults.find((item) => item.result && !item.result.ok);
+      if (invalid?.result) {
+        console.warn(`${invalid.componentName}: ${invalid.result.message}`);
+        return;
+      }
+
+      // 组装 db_versions：{组件名: {db_version_id, permit_os_type, permit_os}}
+      const dbVersions: Record<string, { db_version_id: number; permit_os: string[]; permit_os_type: string }> = {};
+      if (componentNames.includes('single') || componentNames.includes('backend')) {
+        dbVersions[componentNames[0]] = storageEditorRef.value!.getWriteValue();
+      }
+      if (componentNames.includes('proxy')) {
+        dbVersions.proxy = proxyEditorRef.value!.getWriteValue();
+      }
+
       // 创建模块
       const dbModuleName = `${formData.alias_name}-${formData.db_version}-${formData.charset}`;
       const createResult = await createModules({
@@ -571,6 +692,7 @@
         biz_id: Number(bizId),
         cluster_type: clusterType.value,
         db_module_name: dbModuleName,
+        db_versions: Object.keys(dbVersions).length > 0 ? dbVersions : undefined,
       });
 
       // 绑定部署信息
@@ -645,6 +767,41 @@
     .module-name-input {
       width: 371px;
       flex-shrink: 0;
+    }
+  }
+
+  .layer-config-card {
+    padding: 16px 24px 20px;
+    margin-top: 16px;
+    background: #fff;
+    border-radius: 2px;
+    box-shadow: 0 2px 4px 0 rgb(25 25 41 / 5%);
+
+    .layer-title {
+      padding-bottom: 12px;
+      margin-bottom: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #313238;
+      border-bottom: 1px solid #dcdee5;
+    }
+  }
+
+  .charset-row {
+    .charset-select-inline {
+      width: auto;
+      min-width: 160px;
+    }
+  }
+
+  .db-type-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .db-type-lock-tip {
+      font-size: 12px;
+      color: #979ba5;
     }
   }
 

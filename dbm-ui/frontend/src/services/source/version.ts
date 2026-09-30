@@ -118,6 +118,20 @@ export function getDbVersionList(params: { version_series__in: string }) {
 }
 
 /**
+ * 获取介质版本可选的操作系统
+ * 返回该版本下已启用介质包支持的操作系统，按 OS 类型分组合并去重；
+ * 无已启用介质包时返回 []，版本不存在时返回 404
+ */
+export function getDbVersionPermitOs(params: { db_version_id: number }) {
+  return http.get<
+    {
+      permit_os: string[];
+      permit_os_type: string;
+    }[]
+  >(`${path}/dbversion/${params.db_version_id}/permit_os/`);
+}
+
+/**
  * 新增介质版本
  */
 export function createDbVersion(params: {
