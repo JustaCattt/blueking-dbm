@@ -1,0 +1,1847 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DBM - 克隆模块</title>
+  <!--
+    克隆模块原型（§3.8 版本迁移场景）
+    ================================================================
+    定位：克隆 ≠ 复制，本质是"版本迁移"——用户的核心任务是审查迁移合并结果，
+          而不是配参数。所以本页面参数表纯只读，编辑能力放到创建后（§3.4）。
+    与新建模块的关系：CSS / HTML 骨架大量借鉴 新建模块.html，但 JS 只保留只读所需，
+          再叠加克隆专属组件（兼容性概览 banner、参数值列双层信息、弃参数抽屉、4 类统计 chip）。
+
+    5 分类合并算法见下方 mergeModule 注释。
+  -->
+  <style>
+    :root {
+      --ui-primary: #3a84ff; --ui-primary-hover: #5594fa; --ui-primary-active: #2c77f4; --ui-primary-light: #e1ecff;
+      --ui-success: #2dcb56; --ui-success-light: #f2fff4; --ui-warning: #ff9c01; --ui-warning-light: #fff4e2;
+      --ui-danger: #ea3636; --ui-danger-light: #ffeded; --ui-text-primary: #313238; --ui-text-secondary: #63656e;
+      --ui-text-placeholder: #979ba5; --ui-text-disabled: #c4c6cc; --ui-text-anti: #ffffff; --ui-text-link: #3a84ff;
+      --ui-bg: #ffffff; --ui-bg-page: #fafbfd; --ui-bg-subtle: #f9fafd; --ui-bg-hover: #f5f7fa;
+      --ui-bg-active: #f0f1f5; --ui-bg-component: #eaebf0; --ui-border: #dcdee5; --ui-border-light: #eaebf0;
+      --ui-radius-sm: 2px; --ui-radius-md: 3px; --ui-radius-lg: 4px; --ui-radius-circle: 50%; --ui-space-1: 4px; --ui-space-2: 8px;
+      --ui-space-3: 12px; --ui-space-4: 16px; --ui-space-5: 20px; --ui-control-md: 32px; --ui-font-sm: 12px; --ui-font-md: 14px;
+      --ui-line-md: 20px; --ui-line-lg: 22px;
+      --ui-duration: .2s; --ui-ease: cubic-bezier(.38, 0, .24, 1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      height: 100vh;
+      overflow: hidden;
+      background: #f5f7fa;
+      color: #313238;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 13px;
+    }
+    /* ========== 主壳：与新建模块一致，保证 DBM 系列认知统一 ========== */
+    .top-nav { height: 52px; background: #0e1525; color: #fff; display: flex; align-items: center; padding: 0 20px; position: relative; z-index: 100; }
+    .logo { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; margin-right: 32px; white-space: nowrap; }
+    .nav-tabs { display: flex; flex: 1; height: 52px; }
+    .nav-tab { height: 52px; line-height: 52px; padding: 0 20px; color: rgba(255,255,255,.7); cursor: pointer; position: relative; white-space: nowrap; font-size: 14px; }
+    .nav-tab:hover { color: #fff; }
+    .nav-tab.active { color: #fff; background: rgba(58,132,255,.2); }
+    .nav-tab.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: #3a84ff; }
+    .nav-right { display: flex; align-items: center; gap: 16px; margin-left: auto; }
+    .search-box { width: 220px; height: 32px; border: none; border-radius: 2px; background: rgba(255,255,255,.1); color: rgba(255,255,255,.5); padding: 0 12px; outline: none; font-size: 12px; }
+    .user-avatar { width: 28px; height: 28px; border-radius: 50%; background: #3a84ff; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+
+    .main-layout { display: flex; height: calc(100vh - 52px); }
+    .left-nav { width: 220px; background: #182121; color: #acb5c6; overflow-y: auto; flex-shrink: 0; }
+    .biz-selector { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,.08); cursor: pointer; }
+    .biz-name { color: #d3d9e4; font-weight: 500; }
+    .biz-arrow { color: #979ba5; font-size: 12px; }
+    .nav-group { margin-top: 8px; }
+    .nav-group-title { padding: 8px 20px; font-size: 11px; color: rgba(255,255,255,.35); text-transform: uppercase; letter-spacing: 1px; }
+    .nav-item { height: 36px; padding: 0 20px; display: flex; align-items: center; gap: 8px; color: #acb5c6; cursor: pointer; position: relative; }
+    .nav-item:hover { background: rgba(255,255,255,.05); color: #d3d9e4; }
+    .nav-item.active { background: rgba(59,133,255,.15); color: #fff; }
+    .nav-item.active::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: #3b85ff; border-radius: 0 2px 2px 0; }
+    .nav-icon-svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+    .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; background: #f5f7fa; }
+    .page-head { height: 56px; background: #fff; border-bottom: 1px solid #dcdee5; display: flex; align-items: center; padding: 0 24px; gap: 10px; flex-shrink: 0; }
+    .back { color: #3a84ff; font-size: 20px; cursor: pointer; }
+    .page-title { font-size: 15px; color: #313238; }
+    .page-separator { color: #dcdee5; }
+    .page-meta { display: flex; align-items: center; gap: 12px; min-width: 0; font-size: 12px; }
+    .page-meta-label { color: #979ba5; }
+    .page-meta-value { color: #63656e; }
+    .page-head .db-type-tag {
+      height: 28px;
+      padding: 0 10px;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+    .page-head .db-type-tag .db-type-icon { width: 12px; height: 12px; }
+
+    .page-body { flex: 1; padding: 16px 24px 12px; overflow: auto; }
+    .notice { display: flex; align-items: flex-start; gap: 8px; padding: 9px 12px; margin-bottom: 12px; border: 1px solid #c6e2ff; background: #f0f8ff; color: #63656e; line-height: 1.5; }
+    .notice-icon { width: 16px; height: 16px; border-radius: 50%; border: 1px solid #3a84ff; color: #3a84ff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; line-height: 1; flex-shrink: 0; margin-top: 1px; }
+
+    .card { background: #fff; border: 1px solid #eaebf0; }
+    .card + .card { margin-top: 12px; }
+
+    /* ========== 模块信息卡：4 字段，仅模块名 + 版本可改；类型/字符集 disabled ========== */
+    .form-card { padding: 0; }
+    .form-body { padding: 16px 24px; }
+    .form-row { display: flex; align-items: center; gap: 12px; }
+    .form-row + .form-row { margin-top: 14px; }
+    .form-label { width: 96px; flex-shrink: 0; text-align: right; font-size: 14px; color: #63656e; display: inline-flex; align-items: center; justify-content: flex-end; gap: 2px; white-space: nowrap; }
+    .form-label .req { color: #ea3636; margin-left: 2px; }
+    .form-controls { width: min(980px, calc(100% - 108px)); }
+    .form-row-versions { align-items: flex-start; }
+    .form-row-versions > .form-label { align-self: center; }
+    .form-controls.form-controls-inline-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .form-controls-inline-group > .version-row-fields {
+      flex: 1 1 320px;
+      min-width: 0;
+    }
+    .field-group-divider { width: 1px; height: 20px; background: #dcdee5; flex-shrink: 0; margin: 0 2px; }
+    .inline-field-label {
+      flex-shrink: 0;
+      font-size: 14px;
+      color: #63656e;
+      white-space: nowrap;
+    }
+    .inline-field-label .req { color: #ea3636; margin-left: 2px; }
+    .inline-field-control { flex: 0 0 200px; width: 200px; min-width: 0; }
+    .inline-field-control .form-select,
+    .inline-field-control .input-group { width: 100%; height: 32px; }
+    .version-row-fields {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .version-row-fields .field-edition { flex: 0 0 200px; width: 200px; }
+    .version-row-fields .field-series { flex: 1 1 180px; min-width: 160px; }
+    .version-row-fields .field-patch { flex: 1 1 180px; min-width: 160px; }
+    .version-row-fields .field-charset { flex: 0 0 200px; width: 200px; }
+    .version-row-fields .form-select,
+    .version-row-fields .input-group { height: 32px; min-width: 0; }
+    .version-row-fields .input-group { overflow: visible; }
+    [hidden] { display: none !important; }
+    .layer-block {
+      margin-top: var(--ui-space-4);
+      padding: var(--ui-space-3);
+      background: var(--ui-bg-subtle);
+      border: 1px solid var(--ui-border-light);
+      border-radius: var(--ui-radius-md);
+    }
+    .layer-block + .layer-block { margin-top: var(--ui-space-3); }
+    /* 层名回退自身内边距，与表单其他 label 同列右对齐；块内字段整体缩进 */
+    .layer-block__title {
+      width: 96px;
+      margin-left: calc(-1 * (var(--ui-space-3) + 1px));
+      margin-bottom: var(--ui-space-3);
+      color: var(--ui-text-primary);
+      font-size: var(--ui-font-md);
+      font-weight: var(--ui-font-weight-medium);
+      text-align: right;
+    }
+    .layer-block .form-row { padding-left: var(--ui-space-5); }
+    .layer-block .form-row + .form-row { margin-top: var(--ui-space-3); }
+    .layer-block .form-label { align-self: flex-start; min-height: var(--ui-control-md); }
+    .layer-block .form-row-versions > .form-label { align-self: center; }
+    .form-controls-layer { display: flex; align-items: center; min-width: 0; flex: 1; }
+    .form-controls-layer .version-row-fields { flex: 1 1 auto; }
+    .form-row-os { align-items: flex-start; }
+    /* 模式与取值同一行：Radio 定宽不压缩，取值盒吃剩余宽度，标签换行只在盒内发生 */
+    .form-controls-os { display: flex; align-items: flex-start; gap: var(--ui-space-4); min-width: 0; flex: 1; }
+    .form-controls-os .ui-radio-group { flex-shrink: 0; min-height: var(--ui-control-md); }
+    .form-controls-os .ui-radio { margin-right: var(--ui-space-1); }
+    .os-info + .ui-radio { margin-left: var(--ui-space-4); }
+    .os-info { display: inline-flex; align-items: center; color: var(--ui-text-placeholder); cursor: help; }
+    .os-info:hover { color: var(--ui-text-secondary); }
+    .os-mode-value { flex: 1 1 auto; min-width: 0; max-width: 640px; }
+    .os-mode-value .input-group { width: 100%; height: auto; min-height: var(--ui-control-md); overflow: visible; }
+    .os-follow-value {
+      display: flex;
+      flex-wrap: wrap;
+      min-height: var(--ui-control-md);
+      align-items: center;
+      gap: var(--ui-space-1);
+      padding: var(--ui-space-1) var(--ui-space-2);
+      background: var(--ui-bg);
+      border: 1px solid var(--ui-border);
+      border-radius: var(--ui-radius-sm);
+    }
+    .os-follow-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 0 var(--ui-space-2);
+      color: var(--ui-text-secondary);
+      font-size: var(--ui-font-sm);
+      line-height: var(--ui-line-lg);
+      background: var(--ui-bg-component);
+      border-radius: var(--ui-radius-sm);
+    }
+    .os-mode-hint { color: var(--ui-text-placeholder); font-size: var(--ui-font-sm); line-height: var(--ui-line-md); }
+    .ui-radio-group { display: inline-flex; align-items: center; }
+    .ui-radio { display: inline-flex; align-items: center; margin-right: var(--ui-space-4); color: var(--ui-text-secondary); font-size: var(--ui-font-md); cursor: pointer; }
+    .ui-radio__native { position: absolute; width: 0; height: 0; opacity: 0; }
+    .ui-radio__input { display: inline-flex; }
+    .ui-radio__inner {
+      box-sizing: border-box;
+      width: 14px;
+      height: 14px;
+      background: var(--ui-bg);
+      border: 1px solid var(--ui-border);
+      border-radius: var(--ui-radius-circle);
+      transition: border-color var(--ui-duration) var(--ui-ease);
+    }
+    .ui-radio__label { padding-left: var(--ui-space-2); }
+    .ui-radio__native:checked ~ .ui-radio__input .ui-radio__inner { background: var(--ui-primary); border-color: var(--ui-primary); box-shadow: inset 0 0 0 3px var(--ui-bg); }
+    .ui-radio__native:checked ~ .ui-radio__label { color: var(--ui-primary); }
+    .ui-radio__native:focus-visible ~ .ui-radio__input .ui-radio__inner { border-color: var(--ui-primary); }
+    .version-stack { flex: 1; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+    .recommend-tag { display: inline-flex; align-items: center; height: 16px; padding: 0 6px; border-radius: 8px; background: #e1ecff; color: #3a84ff; font-size: 11px; font-weight: 500; line-height: 1; margin-left: auto; }
+    .form-row-name .form-controls { display: flex; flex-direction: column; gap: 4px; }
+    .form-row-name .form-label { align-self: flex-start; margin-top: 4px; }
+    .form-row-name .form-input-row { display: flex; align-items: center; gap: 12px; }
+    .form-row-name .form-input { flex: 1; min-width: 0; }
+    .domain-preview { flex-shrink: 0; color: #63656e; font-size: 12px; white-space: nowrap; }
+    .domain-preview .domain-module { color: #3a84ff; }
+    .domain-preview .domain-placeholder { color: #979ba5; }
+    .domain-tag { display: inline-flex; align-items: center; height: 18px; padding: 0 5px; border-radius: 2px; font-size: 11px; white-space: nowrap; background: #f0f1f5; color: #63656e; }
+    .form-select:disabled, .form-input:disabled { background: #f5f7fa; color: #63656e; cursor: not-allowed; border-color: #dcdee5; }
+    .db-type-tag { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border: 1px solid #c4c6cc; border-radius: 2px; color: #63656e; font-size: 14px; background: #fafbfd; cursor: not-allowed; user-select: none; justify-content: center; }
+    .db-type-tag .db-type-icon { color: #979ba5; flex-shrink: 0; }
+    .input-group { display: flex; align-items: stretch; height: 32px; border: 1px solid #c4c6cc; border-radius: 2px; overflow: hidden; background: #fff; min-width: 0; }
+    .input-group:focus-within { border-color: #3a84ff; }
+    .input-group.locked { background: #fafbfd; cursor: not-allowed; border-color: #dcdee5; }
+    .input-group.locked .input-group-prefix { background: #f0f1f5; color: #979ba5; }
+    .input-group.locked .form-select { color: #63656e; cursor: not-allowed; }
+    .input-group-prefix { display: flex; align-items: center; padding: 0 12px; background: #fafbfd; color: #63656e; font-size: 13px; border-right: 1px solid #dcdee5; flex-shrink: 0; }
+    .input-group .form-select { border: none; flex: 1; min-width: 0; height: 100%; padding: 0 10px; background: transparent; color: #313238; outline: none; }
+    .form-input { height: 32px; border: 1px solid #c4c6cc; border-radius: 2px; padding: 0 10px; outline: none; color: #313238; background: #fff; font-size: 13px; }
+    .form-input:focus { border-color: #3a84ff; }
+    .form-input.invalid { border-color: #ea3636; }
+    .form-row .form-tip { margin-left: 4px; color: #979ba5; font-size: 12px; }
+    .form-row .form-tip.error { color: #ea3636; }
+
+    /* 自定义下拉：源标注仅在选项列表展示，回显（trigger）只显示纯值 */
+    .custom-select { position: relative; flex: 1; min-width: 0; display: flex; }
+    .custom-select-trigger { width: 100%; height: 100%; padding: 0 24px 0 10px; border: 0; background: transparent; color: #313238; font-size: 13px; text-align: left; cursor: pointer; display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; position: relative; }
+    .custom-select-trigger.ph { color: #c4c6cc; }
+    .custom-select-trigger::after { content: ''; position: absolute; right: 10px; top: 50%; width: 6px; height: 6px; border-right: 1.5px solid #979ba5; border-bottom: 1.5px solid #979ba5; transform: translateY(-70%) rotate(45deg); transition: transform .15s; }
+    .custom-select.open .custom-select-trigger::after { transform: translateY(-30%) rotate(-135deg); }
+    .custom-select-trigger:disabled { color: #c4c6cc; cursor: not-allowed; }
+    .custom-select-menu { display: none; position: fixed; min-width: 100%; z-index: 600; background: #fff; border: 1px solid #dcdee5; border-radius: 2px; box-shadow: 0 2px 8px rgba(0,0,0,.12); padding: 6px 0; }
+    .custom-select.open .custom-select-menu { display: block; }
+    .custom-select-option { min-height: 32px; padding: 0 12px; display: flex; align-items: center; gap: 6px; cursor: pointer; color: #63656e; white-space: nowrap; }
+    .custom-select-option:hover { background: #f0f5ff; color: #3a84ff; }
+    .custom-select-option.selected { color: #3a84ff; }
+    .custom-select-option .src-tag { color: #979ba5; font-size: 12px; }
+    .custom-select.locked .custom-select-trigger { color: #63656e; cursor: not-allowed; }
+    .custom-select.locked .custom-select-trigger::after { border-color: #c4c6cc; }
+    /* 多选：选中态用右侧对勾，不用 checkbox */
+    .custom-select-option .option-check { margin-left: auto; width: 12px; height: 12px; flex-shrink: 0; position: relative; }
+    .custom-select-option.selected .option-check::after {
+      content: '';
+      position: absolute;
+      left: 1px;
+      top: 2px;
+      width: 9px;
+      height: 5px;
+      border-left: 1.5px solid currentColor;
+      border-bottom: 1.5px solid currentColor;
+      transform: rotate(-45deg);
+    }
+
+    /* 模块名：所有辅助信息（合法字符规则 + 错误反馈）统一收口到 helper text
+       不使用 ⓘ icon——helper text 已承载全部信息，icon 是视觉冗余；文案见《命名校验规范》标识类 */
+
+    /* ========== 工具栏：左侧 chip（统计+过滤一体）/ 右侧搜索框 ========== */
+    .toolbar { display: flex; align-items: center; gap: 16px; padding: 12px 24px 10px; min-height: 52px; }
+    .toolbar-left { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .toolbar-right { margin-left: auto; }
+    .search { width: 320px; height: 32px; border: 1px solid #dcdee5; border-radius: 2px; padding: 0 10px; color: #313238; outline: none; font-size: 13px; }
+    .search:focus { border-color: #3a84ff; }
+
+    /* ========== 工具栏 chip：统计 + 过滤入口一体 ==========
+       与底部 chip 共享徽标视觉，但加上胶囊背景 + 边框 + 可 active 高亮，明确"可交互"
+         · filter chip：点击 toggle 过滤主表；多选 OR 关系
+         · 已废弃 chip：link 风格（橙色 + 末尾 ›）；点击打开抽屉
+       为何分两种交互：废弃参数不在主表，无法"过滤进来"；其它 3 类是主表行的子集，可被过滤 */
+    .tb-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 14px; border: 1px solid transparent; background: #f5f7fa; color: #63656e; font-size: 13px; cursor: pointer; user-select: none; transition: background .15s, border-color .15s, color .15s; }
+    .tb-chip:hover { background: #ebeef5; color: #313238; }
+    .tb-chip .stat-num { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; color: #fff; font-size: 11px; font-weight: 600; line-height: 1; }
+    /* filter 类型 active：类别色描边 + 浅类别色背景 + 类别色文字 */
+    .tb-chip.chip-default .stat-num { background: #3a84ff; }
+    .tb-chip.chip-default.active { border-color: #3a84ff; background: #e1ecff; color: #1768ef; }
+    .tb-chip.chip-custom .stat-num { background: #e5a829; }
+    .tb-chip.chip-custom.active { border-color: #e5a829; background: #fff4d6; color: #b8801f; }
+    /* link 类型（已废弃）：橙红警告色，末尾 › 暗示"打开" */
+    .tb-chip.chip-deprecated { background: #fff4ec; color: #d97706; }
+    .tb-chip.chip-deprecated:hover { background: #ffe0c2; color: #b45309; }
+    .tb-chip.chip-deprecated .stat-num { background: #ea3636; }
+    .tb-chip.chip-deprecated::after { content: "›"; font-size: 14px; line-height: 1; opacity: 0.7; margin-left: 2px; }
+
+    /* ========== 多 Tab：与新建模块同款，无 dot（克隆无 dirty 状态）========== */
+    .param-tabs { display: flex; align-items: stretch; gap: 0; padding: 0 24px; border-bottom: 1px solid #eaebf0; background: #fff; overflow-x: auto; }
+    .param-tab { position: relative; height: 42px; padding: 0 18px; border: 0; background: transparent; color: #63656e; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+    .param-tab:hover { color: #313238; }
+    .param-tab.active { color: #3a84ff; border-bottom-color: #3a84ff; font-weight: 500; }
+
+    /* ========== 按钮 ========== */
+    .btn { height: 32px; padding: 0 14px; border: 1px solid #c4c6cc; border-radius: 2px; background: #fff; color: #63656e; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+    .btn:hover { border-color: #979ba5; color: #313238; }
+    .btn-primary { background: #3a84ff; border-color: #3a84ff; color: #fff; }
+    .btn-primary:hover { background: #2b6fd9; border-color: #2b6fd9; color: #fff; }
+    .btn[disabled] { background: #fafbfd; color: #c4c6cc; border-color: #dcdee5; cursor: not-allowed; }
+    .btn[disabled]:hover { background: #fafbfd; color: #c4c6cc; border-color: #dcdee5; }
+
+    /* ========== 表格 ========== */
+    .table-wrap { overflow: auto; padding: 0 24px; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    th { height: 42px; padding: 0 12px; background: #f5f7fa; border-bottom: 1px solid #dcdee5; color: #313238; font-weight: 500; text-align: left; font-size: 12px; white-space: nowrap; }
+    td { height: 46px; padding: 9px 12px; border-bottom: 1px solid #eaebf0; vertical-align: middle; color: #313238; position: relative; }
+    tr:hover td { background: #f5f7fa; }
+
+    .name-cell { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; }
+    .param-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .name-cell .new-tag { display: inline-flex; align-items: center; height: 18px; padding: 0 5px; border-radius: 2px; background: #dcffe2; color: #14a568; font-size: 11px; line-height: 1; white-space: nowrap; }
+    .info-icon { width: 16px; height: 16px; border-radius: 50%; border: 1px solid #c4c6cc; color: #979ba5; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; cursor: help; position: relative; flex-shrink: 0; }
+    .info-icon:hover .popover { display: block; }
+    .popover { display: none; position: absolute; left: 20px; top: -10px; width: 300px; background: #fff; border: 1px solid #dcdee5; box-shadow: 0 2px 12px rgba(0,0,0,.12); padding: 10px 12px; color: #63656e; line-height: 1.6; z-index: 20; font-weight: 400; text-align: left; }
+
+    .value-view { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; position: relative; }
+    .value-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #313238; font-weight: 500; }
+
+    .tag { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; border-radius: 2px; font-size: 12px; white-space: nowrap; }
+    .tag-yellow { background: #fdf4d3; color: #a98a17; }
+    .tag-gray { background: #f0f1f5; color: #63656e; }
+    .muted { color: #979ba5; }
+
+    /* 参数值列的"辅层"——同列灰色文本，承担"原值对比 / 新增" 等次要信息
+       视觉权重 << 主值，让"绝大多数行只有一个干净值"的常规分布保持简洁 */
+    .value-secondary { color: #979ba5; font-size: 12px; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
+
+    .allowed-cell { display: flex; align-items: center; max-width: 100%; min-width: 0; position: relative; }
+    .allowed-cell .tag { flex-shrink: 0; margin-right: 6px; }
+    .allowed-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #63656e; }
+    .black-tip { display: none; position: absolute; left: 0; top: 28px; z-index: 40; max-width: 420px; padding: 7px 10px; border-radius: 2px; background: rgba(0,0,0,.82); color: #fff; line-height: 1.5; white-space: normal; word-break: break-word; box-shadow: 0 2px 8px rgba(0,0,0,.18); font-family: -apple-system, sans-serif; font-size: 12px; }
+    .black-tip::before { content: ""; position: absolute; top: -5px; left: 14px; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 5px solid rgba(0,0,0,.82); }
+    .allowed-cell:hover .black-tip, .value-view:hover .black-tip { display: block; }
+
+    .table-footer { height: 44px; border-top: 1px solid #eaebf0; display: flex; align-items: center; gap: 8px; padding: 0 24px; color: #63656e; font-size: 12px; }
+    .empty-tip { padding: 60px 0; text-align: center; color: #c4c6cc; }
+
+    /* 参数表占位态（版本未选）——视觉权重高于普通空状态，强引导"选版本"动作 */
+    .params-awaiting { padding: 100px 0; text-align: center; color: #979ba5; }
+    .params-awaiting .awaiting-svg { display: block; margin: 0 auto 16px; color: #c4c6cc; }
+    .params-awaiting .awaiting-title { font-size: 16px; font-weight: 500; color: #63656e; }
+
+    /* ========== sticky 底部操作条 + 4 类统计 chip ========== */
+    .page-foot { height: 56px; background: #fff; border-top: 1px solid #dcdee5; display: flex; align-items: center; padding: 0 24px; gap: 8px; flex-shrink: 0; }
+    .page-foot .foot-meta { margin-left: 16px; display: inline-flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 12px; }
+    .page-foot .foot-meta:empty { display: none; }
+    .stat-chip { display: inline-flex; align-items: center; gap: 4px; color: #63656e; white-space: nowrap; }
+    .stat-chip .stat-num { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; color: #fff; font-size: 11px; font-weight: 600; line-height: 1; }
+    .stat-chip.chip-deprecated .stat-num { background: #ea3636; }
+    .stat-chip.chip-default .stat-num { background: #3a84ff; }
+    .stat-chip.chip-custom .stat-num { background: #e5a829; }
+    .stat-chip.zero { color: #c4c6cc; }
+    .stat-chip.zero .stat-num { background: #dcdee5; }
+    .stat-chip.clickable { cursor: pointer; }
+    .stat-chip.clickable:hover { color: #313238; }
+    .page-foot .foot-hint { color: #979ba5; font-size: 12px; white-space: nowrap; margin-left: auto; }
+
+    /* ========== 弃参数抽屉 ========== */
+    .drawer-mask { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: stretch; justify-content: flex-end; z-index: 280; opacity: 0; visibility: hidden; transition: opacity .18s; }
+    .drawer-mask.open { opacity: 1; visibility: visible; }
+    .drawer { width: 600px; height: 100%; background: #fff; box-shadow: -2px 0 12px rgba(0,0,0,.12); display: flex; flex-direction: column; transform: translateX(100%); transition: transform .22s; }
+    .drawer-mask.open .drawer { transform: translateX(0); }
+    .drawer-header { height: 52px; padding: 0 20px; border-bottom: 1px solid #f0f1f5; display: flex; align-items: center; gap: 10px; }
+    .drawer-title { font-size: 15px; font-weight: 600; color: #313238; }
+    .drawer-subtitle { color: #979ba5; font-size: 12px; }
+    .drawer-close { margin-left: auto; border: none; background: transparent; color: #979ba5; font-size: 22px; cursor: pointer; line-height: 1; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; }
+    .drawer-close:hover { color: #313238; }
+    .drawer-body { flex: 1; overflow: auto; padding: 16px 20px; }
+    /* 弃参数抽屉表格：与主表 thead/tbody 风格一致，传达"等同的数据视图"
+       纯展示——废弃参数是留档信息，没有后续操作场景，因此无操作列 */
+    .deprecated-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .deprecated-table th { height: 36px; padding: 0 12px; background: #f5f7fa; border-bottom: 1px solid #dcdee5; color: #313238; font-weight: 500; text-align: left; font-size: 12px; white-space: nowrap; }
+    .deprecated-table td { height: 40px; padding: 8px 12px; border-bottom: 1px solid #eaebf0; vertical-align: middle; color: #313238; font-family: Consolas, "SF Mono", Monaco, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 0; }
+    .deprecated-table tr:last-child td { border-bottom: none; }
+    .deprecated-table tr:hover td { background: #f5f7fa; }
+    .drawer-foot { padding: 12px 20px; border-top: 1px solid #f0f1f5; text-align: right; }
+
+    /* ========== InfoBox（离开 / 创建确认）========== */
+    .infobox-mask { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; z-index: 300; }
+    .infobox-mask.show { display: flex; }
+    .infobox { width: 460px; background: #fff; border-radius: 2px; box-shadow: 0 2px 16px rgba(0,0,0,.18); padding: 28px 32px 24px; text-align: center; }
+    .warning-icon { width: 46px; height: 46px; margin: 0 auto 16px; border-radius: 50%; background: #ff9c01; color: #fff; font-size: 28px; font-weight: 700; line-height: 46px; }
+    .infobox-title { font-size: 20px; margin-bottom: 12px; }
+    .infobox-desc { background: #f5f7fa; color: #63656e; text-align: left; padding: 12px 14px; line-height: 1.6; margin-bottom: 22px; }
+    .infobox-actions { display: flex; justify-content: center; gap: 10px; }
+
+    /* ========== Message ========== */
+    .message { position: fixed; top: 58px; left: 50%; transform: translateX(-50%); z-index: 400; min-width: 720px; max-width: 90%; height: 52px; padding: 0 18px 0 22px; border: 1px solid #dcffe2; background: #f0fff3; color: #63656e; display: none; align-items: center; gap: 10px; box-shadow: 0 2px 8px rgba(45,203,86,.16); font-size: 14px; }
+    .message.show { display: flex; }
+    .message-icon { width: 18px; height: 18px; border-radius: 50%; background: #2dcb56; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+    .message-text { flex: 1; }
+    .message-close { border: none; background: transparent; color: #c4c6cc; font-size: 18px; line-height: 1; cursor: pointer; padding: 4px; }
+    .message-close:hover { color: #979ba5; }
+  </style>
+</head>
+<body>
+  <!-- ========== 主壳：顶部导航 + 左侧导航（与新建模块一致）========== -->
+  <div class="top-nav">
+    <div class="logo">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <rect x="2" y="3" width="20" height="5" rx="2.5" stroke="#3A84FF" stroke-width="1.5"/>
+        <rect x="2" y="9" width="20" height="5" rx="2.5" stroke="#3A84FF" stroke-width="1.5"/>
+        <rect x="2" y="15" width="20" height="5" rx="2.5" stroke="#3A84FF" stroke-width="1.5"/>
+        <circle cx="6" cy="5.5" r="1" fill="#3A84FF"/><circle cx="6" cy="11.5" r="1" fill="#3A84FF"/><circle cx="6" cy="17.5" r="1" fill="#3A84FF"/>
+      </svg>
+      数据库管理
+    </div>
+    <div class="nav-tabs">
+      <div class="nav-tab">数据库管理</div>
+      <div class="nav-tab">可观测</div>
+      <div class="nav-tab active">业务配置</div>
+      <div class="nav-tab">资源管理</div>
+      <div class="nav-tab">全局配置</div>
+      <div class="nav-tab">平台管理</div>
+      <div class="nav-tab">个人工作台</div>
+    </div>
+    <div class="nav-right">
+      <input class="search-box" value="搜索功能、文档..." readonly>
+      <div class="user-avatar">A</div>
+    </div>
+  </div>
+
+  <div class="main-layout">
+    <div class="left-nav">
+      <div class="biz-selector">
+        <span class="biz-name">DBA (#3, dba)</span>
+        <span class="biz-arrow">▾</span>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-title">业务配置</div>
+        <div class="nav-item active">
+          <svg class="nav-icon-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5 5h6M5 8h6M5 11h4"/></svg>
+          数据库配置
+        </div>
+      </div>
+    </div>
+
+    <main class="main-content">
+      <div class="page-head">
+        <span class="back" onclick="onLeave()">‹</span>
+        <span class="page-title" style="cursor:pointer" onclick="onLeave()">数据库配置</span>
+        <span class="page-separator">/</span>
+        <span class="page-title">克隆模块</span>
+        <span class="page-separator">|</span>
+        <div class="db-type-tag" title="数据库类型由源模块决定，不支持跨类型克隆">
+          <svg class="db-type-icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4">
+            <ellipse cx="8" cy="3.5" rx="5" ry="1.8"/>
+            <path d="M3 3.5v9c0 1 2.24 1.8 5 1.8s5-.8 5-1.8v-9"/>
+            <path d="M3 8c0 1 2.24 1.8 5 1.8s5-.8 5-1.8"/>
+          </svg>
+          <span id="dbTypeText">MySQL 主从</span>
+        </div>
+        <span class="page-separator">|</span>
+        <div class="page-meta">
+          <span><span class="page-meta-label">源模块：</span><span class="page-meta-value" id="metaSourceModule">web-mysql-prod</span></span>
+          <span><span class="page-meta-label">业务：</span><span class="page-meta-value">DBA</span></span>
+        </div>
+      </div>
+
+      <div class="page-body">
+        <div class="notice">
+          <span class="notice-icon">i</span>
+          <span>基于源模块创建新模块，常用于数据库版本升级。<b>源模块自定义值将保留</b>；<b>新版本不兼容的参数将被丢弃</b>，请审查后创建。</span>
+        </div>
+
+        <!-- ========== 模块信息卡 ==========
+             通用块：模块名、字符集；层级块：版本与该层操作系统版本 -->
+        <section class="card form-card">
+          <div class="form-body">
+            <div class="form-row form-row-name">
+              <span class="form-label">模块名<span class="req">*</span></span>
+              <div class="form-controls">
+                <div class="form-input-row">
+                  <input class="form-input" id="moduleName" maxlength="63" placeholder="请输入模块名" oninput="onNameChange()" onblur="onNameBlur()">
+                  <span class="domain-preview" id="domainPreview" style="display:none">集群域名预览： <span class="domain-module">---</span>db.<span class="domain-placeholder">{集群名}</span>.dba.db <span class="domain-tag">主</span></span>
+                </div>
+                <span class="form-tip" id="nameTip">仅支持小写字母、数字、连字符，同时会参与集群域名生成，创建后不可改</span>
+              </div>
+            </div>
+            <div class="form-row">
+              <span class="form-label">字符集<span class="req">*</span></span>
+              <div class="form-controls">
+                <div class="input-group locked field-charset" id="charsetGroup">
+                  <div class="custom-select" id="charsetWrap">
+                    <button type="button" class="custom-select-trigger" id="charsetTrigger" onclick="toggleCs(event,'charsetWrap')"></button>
+                    <div class="custom-select-menu" id="charsetMenu"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="layer-block">
+              <div class="layer-block__title">存储层</div>
+              <div class="form-row form-row-versions">
+                <span class="form-label">版本<span class="req">*</span></span>
+                <div class="form-controls form-controls-layer">
+                  <div class="version-row-fields">
+                    <div class="input-group field-edition">
+                      <span class="input-group-prefix">发行版</span>
+                      <div class="custom-select" id="storageEditionWrap">
+                        <button type="button" class="custom-select-trigger" id="storageEditionTrigger" onclick="toggleCs(event,'storageEditionWrap')"></button>
+                        <div class="custom-select-menu" id="storageEditionMenu"></div>
+                      </div>
+                    </div>
+                    <div class="input-group field-series">
+                      <span class="input-group-prefix">系列</span>
+                      <div class="custom-select" id="storageSeriesWrap">
+                        <button type="button" class="custom-select-trigger ph" id="storageSeriesTrigger" onclick="toggleCs(event,'storageSeriesWrap')">请选择</button>
+                        <div class="custom-select-menu" id="storageSeriesMenu"></div>
+                      </div>
+                    </div>
+                    <div class="input-group field-patch">
+                      <span class="input-group-prefix">版本号</span>
+                      <div class="custom-select" id="storagePatchWrap">
+                        <button type="button" class="custom-select-trigger ph" id="storagePatchTrigger" onclick="toggleCs(event,'storagePatchWrap')">请选择</button>
+                        <div class="custom-select-menu" id="storagePatchMenu"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="form-row form-row-os">
+                <span class="form-label">操作系统版本<span class="req">*</span></span>
+                <div class="form-controls form-controls-os">
+                  <div class="ui-radio-group" role="radiogroup" aria-label="存储层操作系统范围">
+                    <label class="ui-radio">
+                      <input class="ui-radio__native" type="radio" name="storageOsMode" value="follow" data-os-mode="storage">
+                      <span class="ui-radio__input"><span class="ui-radio__inner"></span></span>
+                      <span class="ui-radio__label">跟随版本包</span>
+                    </label>
+                    <span class="os-info" title="自动沿用该版本在版本包中关联的全部操作系统，关联范围变化时同步更新。">
+                      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8 7v4.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="4.9" r="0.85" fill="currentColor"/></svg>
+                    </span>
+                    <label class="ui-radio">
+                      <input class="ui-radio__native" type="radio" name="storageOsMode" value="specified" data-os-mode="storage" checked>
+                      <span class="ui-radio__input"><span class="ui-radio__inner"></span></span>
+                      <span class="ui-radio__label">指定范围</span>
+                    </label>
+                    <span class="os-info" title="沿用源模块的指定范围；换版本时仅保留新版本仍关联的操作系统。">
+                      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8 7v4.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="4.9" r="0.85" fill="currentColor"/></svg>
+                    </span>
+                  </div>
+                  <div class="os-mode-value">
+                    <div class="os-follow-value" id="storageOsFollow" hidden></div>
+                    <div class="input-group" id="storageOsCustom">
+                      <div class="custom-select" id="storageOsWrap">
+                        <button type="button" class="custom-select-trigger" id="storageOsTrigger" data-action="toggle-select" data-target="storageOsWrap"></button>
+                        <div class="custom-select-menu" id="storageOsMenu"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="layer-block">
+              <div class="layer-block__title">接入层</div>
+              <div class="form-row form-row-versions">
+                <span class="form-label">版本<span class="req">*</span></span>
+                <div class="form-controls form-controls-layer">
+                  <div class="version-row-fields">
+                    <div class="input-group field-series">
+                      <span class="input-group-prefix">系列</span>
+                      <div class="custom-select" id="accessSeriesWrap">
+                        <button type="button" class="custom-select-trigger" id="accessSeriesTrigger" onclick="toggleCs(event,'accessSeriesWrap')"></button>
+                        <div class="custom-select-menu" id="accessSeriesMenu"></div>
+                      </div>
+                    </div>
+                    <div class="input-group field-patch">
+                      <span class="input-group-prefix">版本号</span>
+                      <div class="custom-select" id="accessPatchWrap">
+                        <button type="button" class="custom-select-trigger" id="accessPatchTrigger" onclick="toggleCs(event,'accessPatchWrap')"></button>
+                        <div class="custom-select-menu" id="accessPatchMenu"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="form-row form-row-os">
+                <span class="form-label">操作系统版本<span class="req">*</span></span>
+                <div class="form-controls form-controls-os">
+                  <div class="ui-radio-group" role="radiogroup" aria-label="接入层操作系统范围">
+                    <label class="ui-radio">
+                      <input class="ui-radio__native" type="radio" name="accessOsMode" value="follow" data-os-mode="access" checked>
+                      <span class="ui-radio__input"><span class="ui-radio__inner"></span></span>
+                      <span class="ui-radio__label">跟随版本包</span>
+                    </label>
+                    <span class="os-info" title="自动沿用该版本在版本包中关联的全部操作系统，关联范围变化时同步更新。">
+                      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8 7v4.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="4.9" r="0.85" fill="currentColor"/></svg>
+                    </span>
+                    <label class="ui-radio">
+                      <input class="ui-radio__native" type="radio" name="accessOsMode" value="specified" data-os-mode="access">
+                      <span class="ui-radio__input"><span class="ui-radio__inner"></span></span>
+                      <span class="ui-radio__label">指定范围</span>
+                    </label>
+                    <span class="os-info" title="沿用源模块的指定范围；换版本时仅保留新版本仍关联的操作系统。">
+                      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8 7v4.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="4.9" r="0.85" fill="currentColor"/></svg>
+                    </span>
+                  </div>
+                  <div class="os-mode-value">
+                    <div class="os-follow-value" id="accessOsFollow"></div>
+                    <div class="input-group" id="accessOsCustom" hidden>
+                      <div class="custom-select" id="accessOsWrap">
+                        <button type="button" class="custom-select-trigger" id="accessOsTrigger" data-action="toggle-select" data-target="accessOsWrap"></button>
+                        <div class="custom-select-menu" id="accessOsMenu"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========== 参数表卡片 ==========
+             两种渲染态切换（由目标存储层系列 + 版本号是否选齐决定）：
+               · 占位态（版本未选）：整卡仅显示一个大占位——隐藏 Tab/工具栏/表格/页码
+                 让"选版本"成为视觉唯一焦点，避免半残废界面（空 Tab + 空工具栏 + 空表格）的认知负担
+               · 内容态（版本已选）：标准 Tab + 工具栏 + 表格 -->
+        <section class="card">
+          <!-- 占位态：版本未选时整块替换为引导页 -->
+          <div class="params-awaiting" id="paramsAwaiting">
+            <svg class="awaiting-svg" width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="8" y="6" width="32" height="36" rx="2"/>
+              <line x1="14" y1="16" x2="34" y2="16"/>
+              <line x1="14" y1="24" x2="34" y2="24"/>
+              <line x1="14" y1="32" x2="26" y2="32"/>
+            </svg>
+            <div class="awaiting-title">请先选择目标存储层版本</div>
+          </div>
+
+          <!-- 内容态：版本已选时显示标准 Tab + 工具栏 + 表格 -->
+          <div class="params-content" id="paramsContent">
+            <div class="param-tabs" id="paramTabs"></div>
+            <div class="toolbar">
+              <!-- 左侧 stat chip：统计 + 过滤入口一体化（数据驱动按当前 Tab 收口）
+                   · 「已废弃」点击打开抽屉（废弃不在主表）
+                   · 其它 3 类点击 toggle 过滤（多选 OR 关系；"显示所有特殊行"更符合审查心智） -->
+              <div class="toolbar-left" id="tabStats"></div>
+              <div class="toolbar-right">
+                <input class="search" id="searchInput" placeholder="搜索参数名、当前值、允许值" oninput="onSearchInput()">
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 32%">参数名</th>
+                    <th style="width: 36%">参数值</th>
+                    <th style="width: 22%">允许值</th>
+                    <th style="width: 10%">重启后生效</th>
+                  </tr>
+                </thead>
+                <tbody id="rows"></tbody>
+              </table>
+            </div>
+            <div class="table-footer">
+              <span>共计 <span id="tabTotalCount">0</span> 条（当前 Tab）</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- sticky 底部操作条：4 类统计 chip + 取消/创建 -->
+      <div class="page-foot">
+        <button class="btn btn-primary" id="createBtn" onclick="onCreate()" type="button">创建</button>
+        <button class="btn" onclick="onLeave()" type="button">取消</button>
+        <span class="foot-meta" id="footMeta"></span>
+        <span class="foot-hint" id="footHint"></span>
+      </div>
+    </main>
+  </div>
+
+  <!-- ========== 弃参数抽屉 ========== -->
+  <div class="drawer-mask" id="deprecatedDrawer" onclick="if(event.target===this) closeDeprecatedDrawer()">
+    <div class="drawer">
+      <div class="drawer-header">
+        <span class="drawer-title">废弃参数详情</span>
+        <span class="drawer-subtitle" id="deprecatedDrawerSubtitle"></span>
+        <button class="drawer-close" onclick="closeDeprecatedDrawer()" type="button">×</button>
+      </div>
+      <div class="drawer-body" id="deprecatedDrawerBody"></div>
+      <div class="drawer-foot">
+        <button class="btn" onclick="closeDeprecatedDrawer()" type="button">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 离开拦截 InfoBox -->
+  <div class="infobox-mask" id="infobox">
+    <div class="infobox">
+      <div class="warning-icon">!</div>
+      <div class="infobox-title" id="boxTitle">确认离开？</div>
+      <div class="infobox-desc" id="boxDesc">克隆配置尚未创建，离开后将丢弃当前审查结果。</div>
+      <div class="infobox-actions">
+        <button class="btn btn-primary" id="boxConfirm" onclick="confirmBox()" type="button">确认离开</button>
+        <button class="btn" onclick="closeBox()" type="button">继续审查</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Message -->
+  <div class="message" id="message">
+    <span class="message-icon">✓</span>
+    <span class="message-text">操作成功</span>
+    <button class="message-close" onclick="hideMessage()" type="button">×</button>
+  </div>
+
+  <script>
+    /* ================================================================
+     * 数据模型
+     * ================================================================
+     * 1. SOURCE_MODULE：源模块基础信息（不可变；进入此页时锁定）
+     * 2. SOURCE_PARAMS：源模块各 Tab 的参数（含 userTouched 标记，来自源模块的【自定义】契约）
+     * 3. VERSION_CATALOG：平台参数定义按版本组织——每个版本里每个参数都记录平台默认值 / 是否废弃 / 是否新增 / 业务默认可见
+     * 4. mergeModule(sourceVersion, targetVersion)：执行 §3.8.3 的 5 分类合并算法
+     */
+
+    const TABS = [
+      { id: 'mysql',      conf_file: 'my.cnf',          dynamic: true },
+      { id: 'monitor',    conf_file: 'monitor.toml',    title: '本地监控配置' },
+      { id: 'backup-cfg', conf_file: 'backup.toml',     title: '全备配置选项' },
+      { id: 'backup-ctl', conf_file: 'backup-ctl.toml', title: '全备控制选项' },
+      { id: 'binlog',     conf_file: 'binlog.toml',     title: 'Binlog 备份配置' },
+      { id: 'check',      conf_file: 'check.toml',      title: '校验配置' }
+    ];
+
+    const STORAGE_CATALOG = {
+      TXSQL: {
+        recommended: { series: 'MySQL-8.0', version: '8.0.32' },
+        series: {
+          'MySQL-8.0': { versions: ['8.0.28', '8.0.32'] },
+          'MySQL-5.7': { versions: ['5.7.36', '5.7.44'] }
+        }
+      },
+      Community: {
+        recommended: { series: 'MySQL-8.0', version: '8.0.36' },
+        series: {
+          'MySQL-8.0': { versions: ['8.0.36', '8.0.39'] },
+          'MySQL-5.7': { versions: ['5.7.44'] }
+        }
+      },
+      TMySQL: {
+        recommended: { series: 'MySQL-5.7', version: '5.7.20' },
+        series: {
+          'MySQL-8.0': { versions: ['8.0.18', '8.0.22'] },
+          'MySQL-5.7': { versions: ['5.7.18', '5.7.20'] },
+          'MySQL-5.6': { versions: ['5.6.24'] }
+        }
+      },
+      RocksDB: {
+        recommended: { series: 'MySQL-8.0', version: '8.0.32' },
+        series: {
+          'MySQL-8.0': { versions: ['8.0.28', '8.0.32'] }
+        }
+      }
+    };
+    const ACCESS_CATALOG_ROOT = {
+      recommended: { series: 'Proxy-2.x', version: '2.1.0' },
+      series: {
+        'Proxy-2.x': { versions: ['2.0.8', '2.1.0'] }
+      }
+    };
+    const ACCESS_CATALOG = ACCESS_CATALOG_ROOT.series;
+    const STORAGE_OS_CATALOG = {
+      '8.0.18': ['tlinux-2.2', 'tlinux-3.2'],
+      '8.0.22': ['tlinux-3.2'],
+      '8.0.28': ['tlinux-3.2'],
+      '8.0.32': ['tlinux-3.2', 'tlinux-4'],
+      '8.0.36': ['tlinux-3.2', 'tlinux-4'],
+      '8.0.39': ['tlinux-4'],
+      '5.7.36': ['tlinux-2.2', 'tlinux-3.2'],
+      '5.7.44': ['tlinux-3.2', 'tlinux-4'],
+      '5.7.18': ['tlinux-2.2'],
+      '5.7.20': ['tlinux-2.2', 'tlinux-3.2'],
+      '5.6.24': ['tlinux-1.2', 'tlinux-2.2']
+    };
+    const ACCESS_OS_CATALOG = {
+      '2.0.8': ['tlinux-2.2', 'tlinux-3.2'],
+      '2.1.0': ['tlinux-3.2', 'tlinux-4']
+    };
+    function getStorageEditionRecommended() {
+      return STORAGE_CATALOG[targetStorageEdition]?.recommended || null;
+    }
+    function getAccessEditionRecommended() {
+      return ACCESS_CATALOG_ROOT.recommended;
+    }
+
+    /* 源模块基础信息 */
+    const SOURCE_MODULE = {
+      name: 'web-mysql-prod',
+      dbType: 'MySQL 主从',
+      storageEdition: 'TMySQL',
+      storageSeries: 'MySQL-8.0',
+      storagePatch: '8.0.22',
+      accessSeries: 'Proxy-2.x',
+      accessPatch: '2.0.8',
+      charset: 'utf8mb4',
+      storageOsMode: 'specified',
+      accessOsMode: 'follow',
+      storageOs: ['tlinux-3.2'],
+      accessOs: ['tlinux-3.2']
+    };
+
+    /* 已存在的模块标识库（mock）——系统内部用于唯一性校验
+       标识格式：<数据库类型>-<名称>-<存储层系列>-<字符集> */
+    const EXISTING_MODULE_KEYS = new Set([
+      'MySQL 主从-web-mysql-prod-MySQL-8.0-utf8mb4',
+      'MySQL 主从-order-svc-MySQL-8.0-utf8mb4',
+      'MySQL 主从-payment-core-MySQL-5.7-utf8mb4',
+      'MySQL 主从-log-mysql-MySQL-8.0-utf8mb4',
+      'MySQL 单节点-shared-MySQL-5.7-utf8mb4',
+      'TenDBCluster-shared-MySQL-5.7-utf8mb4'
+    ]);
+    function computeModuleKey(dbType, name, storageSeries, charset) {
+      return `${dbType}-${name}-${storageSeries}-${charset}`;
+    }
+
+    function getStorageSeriesList() {
+      return Object.keys(STORAGE_CATALOG[targetStorageEdition]?.series || {});
+    }
+
+    /* 源模块各 Tab 的参数现状（保留 userTouched 标记，沿用 §3.2 "意图持有"原则） */
+    const SOURCE_PARAMS = {
+      mysql: [
+        { key: 'mysqld.binlog_format',         value: 'ROW',                                   userTouched: true  },
+        { key: 'mysqld.default_storage_engine',value: 'InnoDB',                                userTouched: false },
+        { key: 'mysqld.expire_logs_days',      value: '30',                                    userTouched: true  },
+        { key: 'mysqld.sql_mode',              value: 'STRICT_TRANS_TABLES,NO_ZERO_DATE',     userTouched: true  },
+        { key: 'mysqld.innodb_buffer_pool_size', value: '16g',                                 userTouched: true  },
+        { key: 'mysqld.max_connections',       value: '5000',                                  userTouched: false },
+        { key: 'mysqld.character_set_server',  value: 'utf8mb4',                               userTouched: false }
+      ],
+      monitor: [
+        { key: 'monitor.heartbeat_interval',   value: '60',                                    userTouched: false },
+        { key: 'monitor.report_endpoint',      value: 'https://monitor.dbm/api',               userTouched: false },
+        { key: 'monitor.enable_slowlog',       value: 'ON',                                    userTouched: false }
+      ],
+      'backup-cfg': [
+        { key: 'backup.storage_type',          value: 'cos',                                   userTouched: false },
+        { key: 'backup.compress_level',        value: '6',                                     userTouched: false },
+        { key: 'backup.parallel_workers',      value: '8',                                     userTouched: true  }
+      ],
+      'backup-ctl': [
+        { key: 'backup_ctl.full_window',       value: '02:00-06:00',                           userTouched: false },
+        { key: 'backup_ctl.max_concurrency',   value: '2',                                     userTouched: false }
+      ],
+      binlog: [
+        { key: 'binlog.backup_storage',        value: 'cos',                                   userTouched: false },
+        { key: 'binlog.retention_days',        value: '7',                                     userTouched: false }
+      ],
+      check: [
+        { key: 'check.cron',                   value: '0 4 * * *',                             userTouched: false },
+        { key: 'check.chunk_size',             value: '1000',                                  userTouched: false }
+      ]
+    };
+
+    /* 平台参数版本目录：每个版本里每个参数都记录元数据
+     *   - defaultValue：平台默认值（缺失视为该版本没有此参数 = 废弃 / 未引入）
+     *   - deprecated：true 表示该参数在此版本已废弃（仅用于 ① 弃 分类的明示标记）
+     *   - deprecatedReason：废弃说明
+     *   - defaultVisible：业务默认可见，false 时新版本新增参数不自动带入克隆（沿用 §3.6）
+     *   - constraint / allowed / restart / editable / desc：元信息
+     */
+    const VERSION_CATALOG = {
+      'MySQL-5.7': {
+        mysql: {
+          'mysqld.binlog_format':         { defaultValue: 'STATEMENT', constraint: 'ENUM', allowed: 'ROW|MIXED|STATEMENT', restart: '否', editable: true, desc: 'binlog 记录格式。' },
+          'mysqld.default_storage_engine':{ defaultValue: 'InnoDB',    constraint: 'ENUM', allowed: 'InnoDB',              restart: '是', editable: false, desc: '' },
+          'mysqld.expire_logs_days':      { defaultValue: '10',        constraint: 'RANGE', allowed: '[0,99]',             restart: '是', editable: true,  desc: '' },
+          'mysqld.sql_mode':              { defaultValue: 'STRICT_TRANS_TABLES', constraint: 'ENUMS', allowed: 'STRICT_TRANS_TABLES,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION', restart: '否', editable: true, desc: 'SQL 模式。' },
+          'mysqld.query_cache_type':      { defaultValue: 'OFF',       constraint: 'ENUM',  allowed: 'OFF|ON|DEMAND',      restart: '是', editable: true,  desc: '查询缓存类型。' },
+          'mysqld.query_cache_size':      { defaultValue: '0',         constraint: 'BYTES', allowed: '[0,4g]',             restart: '是', editable: true,  desc: '查询缓存大小。' },
+          'mysqld.innodb_buffer_pool_size':{ defaultValue: '1g',       constraint: 'BYTES', allowed: '[1024,128g]',        restart: '是', editable: true,  desc: 'InnoDB Buffer Pool。' },
+          'mysqld.max_connections':       { defaultValue: '5000',      constraint: 'RANGE', allowed: '[100,100000]',       restart: '否', editable: true,  desc: '' },
+          'mysqld.character_set_server':  { defaultValue: 'utf8',      constraint: 'ENUM',  allowed: 'utf8|utf8mb4|latin1',restart: '是', editable: true,  desc: '' }
+        },
+        monitor:     { 'monitor.heartbeat_interval': { defaultValue: '60', constraint: 'RANGE', allowed: '[10,3600]', restart: '否', editable: true, desc: '心跳间隔（秒）。' },
+                       'monitor.report_endpoint':    { defaultValue: 'https://monitor.dbm/api', constraint: '无约束', allowed: '', restart: '否', editable: true, desc: '上报地址。' },
+                       'monitor.enable_slowlog':     { defaultValue: 'ON', constraint: 'ENUM', allowed: 'ON|OFF', restart: '否', editable: true, desc: '' } },
+        'backup-cfg':{ 'backup.storage_type':        { defaultValue: 'cos', constraint: 'ENUM', allowed: 'cos|local|nfs', restart: '是', editable: true, desc: '' },
+                       'backup.compress_level':      { defaultValue: '6', constraint: 'RANGE', allowed: '[0,9]', restart: '否', editable: true, desc: '' },
+                       'backup.parallel_workers':    { defaultValue: '4', constraint: 'RANGE', allowed: '[1,32]', restart: '否', editable: true, desc: '' } },
+        'backup-ctl':{ 'backup_ctl.full_window':     { defaultValue: '02:00-06:00', constraint: '无约束', allowed: '', restart: '否', editable: true, desc: '' },
+                       'backup_ctl.max_concurrency': { defaultValue: '2', constraint: 'RANGE', allowed: '[1,10]', restart: '否', editable: true, desc: '' } },
+        binlog:      { 'binlog.backup_storage':      { defaultValue: 'cos', constraint: 'ENUM', allowed: 'cos|local', restart: '是', editable: true, desc: '' },
+                       'binlog.retention_days':      { defaultValue: '7', constraint: 'RANGE', allowed: '[1,90]', restart: '否', editable: true, desc: '' } },
+        check:       { 'check.cron':                 { defaultValue: '0 4 * * *', constraint: '无约束', allowed: '', restart: '否', editable: true, desc: '' },
+                       'check.chunk_size':           { defaultValue: '1000', constraint: 'RANGE', allowed: '[100,100000]', restart: '否', editable: true, desc: '' } }
+      },
+      'MySQL-8.0': {
+        mysql: {
+          'mysqld.binlog_format':         { defaultValue: 'ROW',       constraint: 'ENUM', allowed: 'ROW|MIXED|STATEMENT', restart: '否', editable: true, desc: 'binlog 记录格式。8.0 默认改为 ROW。' },
+          'mysqld.default_storage_engine':{ defaultValue: 'InnoDB',    constraint: 'ENUM', allowed: 'InnoDB',              restart: '是', editable: false, desc: '' },
+          'mysqld.expire_logs_days':      { defaultValue: '30',        constraint: 'RANGE', allowed: '[0,99]',             restart: '是', editable: true,  desc: '8.0 默认改为 30 天。' },
+          'mysqld.sql_mode':              { defaultValue: 'STRICT_TRANS_TABLES,NO_ZERO_DATE', constraint: 'ENUMS', allowed: 'STRICT_TRANS_TABLES,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION', restart: '否', editable: true, desc: 'SQL 模式。' },
+          /* query_cache_* 在 8.0 完全移除 → 不出现在 catalog 中 */
+          'mysqld.innodb_buffer_pool_size':{ defaultValue: '8g',       constraint: 'BYTES', allowed: '[1024,128g]',        restart: '是', editable: true,  desc: 'InnoDB Buffer Pool。' },
+          'mysqld.max_connections':       { defaultValue: '5000',      constraint: 'RANGE', allowed: '[100,100000]',       restart: '否', editable: true,  desc: '' },
+          'mysqld.character_set_server':  { defaultValue: 'utf8mb4',   constraint: 'ENUM',  allowed: 'utf8mb4|latin1',     restart: '是', editable: true,  desc: '8.0 默认改为 utf8mb4。' },
+          /* 8.0 新增参数 */
+          'mysqld.default_authentication_plugin': { defaultValue: 'caching_sha2_password', constraint: 'ENUM', allowed: 'caching_sha2_password|mysql_native_password', restart: '是', editable: true, defaultVisible: true,  desc: '8.0 新增：默认认证插件。' },
+          'mysqld.binlog_expire_logs_seconds':    { defaultValue: '2592000',                constraint: 'RANGE', allowed: '[0,4294967295]',                            restart: '否', editable: true, defaultVisible: true,  desc: '8.0 新增：替代 expire_logs_days 的秒级精度版本。' },
+          'mysqld.innodb_dedicated_server':       { defaultValue: 'OFF',                    constraint: 'ENUM',  allowed: 'OFF|ON',                                    restart: '是', editable: true, defaultVisible: false, desc: '8.0 新增：默认不可见。' }
+        },
+        monitor:     { 'monitor.heartbeat_interval': { defaultValue: '60', constraint: 'RANGE', allowed: '[10,3600]', restart: '否', editable: true, desc: '' },
+                       'monitor.report_endpoint':    { defaultValue: 'https://monitor.dbm/api', constraint: '无约束', allowed: '', restart: '否', editable: true, desc: '' },
+                       'monitor.enable_slowlog':     { defaultValue: 'ON', constraint: 'ENUM', allowed: 'ON|OFF', restart: '否', editable: true, desc: '' } },
+        'backup-cfg':{ 'backup.storage_type':        { defaultValue: 'cos', constraint: 'ENUM', allowed: 'cos|local|nfs', restart: '是', editable: true, desc: '' },
+                       'backup.compress_level':      { defaultValue: '6', constraint: 'RANGE', allowed: '[0,9]', restart: '否', editable: true, desc: '' },
+                       'backup.parallel_workers':    { defaultValue: '4', constraint: 'RANGE', allowed: '[1,32]', restart: '否', editable: true, desc: '' } },
+        'backup-ctl':{ 'backup_ctl.full_window':     { defaultValue: '02:00-06:00', constraint: '无约束', allowed: '', restart: '否', editable: true, desc: '' },
+                       'backup_ctl.max_concurrency': { defaultValue: '2', constraint: 'RANGE', allowed: '[1,10]', restart: '否', editable: true, desc: '' } },
+        binlog:      { 'binlog.backup_storage':      { defaultValue: 'cos', constraint: 'ENUM', allowed: 'cos|local', restart: '是', editable: true, desc: '' },
+                       'binlog.retention_days':      { defaultValue: '7', constraint: 'RANGE', allowed: '[1,90]', restart: '否', editable: true, desc: '' } },
+        check:       { 'check.cron':                 { defaultValue: '0 4 * * *', constraint: '无约束', allowed: '', restart: '否', editable: true, desc: '' },
+                       'check.chunk_size':           { defaultValue: '1000', constraint: 'RANGE', allowed: '[100,100000]', restart: '否', editable: true, desc: '' } }
+      }
+    };
+
+    const AVAILABLE_CHARSETS = ['utf8mb4', 'utf8', 'latin1', 'gbk'];
+
+    /* ================================================================
+     * 合并算法：§3.8.3 5 分类
+     * ================================================================
+     * row.category:
+     *   'deprecated'   ① 弃（不进入新模块，仅在 deprecated 抽屉显示）
+     *   'default-changed' ② 平台默认变（源继承且新默认不同 → 跟随新默认）
+     *   'custom'       ③ 自定义继承（源 userTouched=true → 保留源值）
+     *   'new-in-version' ④ 新增赠送（新版本新引入，且 defaultVisible!=false）
+     *   'transparent'  ⑤ 平稳透传（源继承 + 默认未变 → 无任何特殊标记）
+     *
+     * ②③ 交叉：源 userTouched=true 优先归为 'custom'，无论默认是否变（用户契约最高优先级）
+     */
+    function mergeModule(targetStorageSeries) {
+      const result = { keep: {}, deprecated: {} };
+      if (!targetStorageSeries) {
+        TABS.forEach(t => { result.keep[t.id] = []; result.deprecated[t.id] = []; });
+        return result;
+      }
+      const sourceVersion = SOURCE_MODULE.storageSeries;
+      const oldCatalog = VERSION_CATALOG[sourceVersion] || {};
+      const newCatalog = VERSION_CATALOG[targetStorageSeries] || {};
+
+      TABS.forEach(t => {
+        result.keep[t.id] = [];
+        result.deprecated[t.id] = [];
+        const sourceParams = SOURCE_PARAMS[t.id] || [];
+        const oldTabCat = oldCatalog[t.id] || {};
+        const newTabCat = newCatalog[t.id] || {};
+
+        sourceParams.forEach(p => {
+          const inNew = newTabCat[p.key];
+          if (!inNew) {
+            // ① 弃——仅保留 key + 源值，废弃原因对用户决策无价值（不可逆事件，用户无操作空间）
+            result.deprecated[t.id].push({ key: p.key, sourceValue: p.value });
+            return;
+          }
+          const oldDef = oldTabCat[p.key]?.defaultValue;
+          const newDef = inNew.defaultValue;
+          const defaultChanged = oldDef !== newDef;
+
+          if (p.userTouched) {
+            // ③ 自定义（最高优先级，无论默认是否变）
+            result.keep[t.id].push({
+              key: p.key,
+              value: p.value,
+              oldDefault: oldDef,
+              newDefault: newDef,
+              defaultChanged: defaultChanged,
+              userTouched: true,
+              category: 'custom',
+              isNewInVersion: false,
+              constraint: inNew.constraint,
+              allowed: inNew.allowed,
+              restart: inNew.restart,
+              editable: inNew.editable !== false,
+              desc: inNew.desc || ''
+            });
+          } else {
+            // 源继承 → 跟随新默认；按是否变标 default-changed / transparent
+            result.keep[t.id].push({
+              key: p.key,
+              value: newDef,
+              oldDefault: oldDef,
+              newDefault: newDef,
+              defaultChanged: defaultChanged,
+              userTouched: false,
+              category: defaultChanged ? 'default-changed' : 'transparent',
+              isNewInVersion: false,
+              constraint: inNew.constraint,
+              allowed: inNew.allowed,
+              restart: inNew.restart,
+              editable: inNew.editable !== false,
+              desc: inNew.desc || ''
+            });
+          }
+        });
+
+        // ④ 新增赠送：新 catalog 中存在但 source 中无；defaultVisible!==false 的才默认带入
+        Object.keys(newTabCat).forEach(key => {
+          if (sourceParams.find(p => p.key === key)) return;
+          const meta = newTabCat[key];
+          if (meta.defaultVisible === false) return;
+          result.keep[t.id].push({
+            key: key,
+            value: meta.defaultValue,
+            oldDefault: null,  // null 表示源版本无此参数
+            newDefault: meta.defaultValue,
+            defaultChanged: true,
+            userTouched: false,
+            category: 'new-in-version',
+            isNewInVersion: true,
+            constraint: meta.constraint,
+            allowed: meta.allowed,
+            restart: meta.restart,
+            editable: meta.editable !== false,
+            desc: meta.desc || ''
+          });
+        });
+
+        result.keep[t.id] = naturalSortByKey(result.keep[t.id]);
+        result.deprecated[t.id] = naturalSortByKey(result.deprecated[t.id]);
+      });
+
+      return result;
+    }
+
+    /* natural sort（§3.2.1）*/
+    const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+    function naturalSortByKey(rows) { return rows.slice().sort((a, b) => collator.compare(a.key, b.key)); }
+
+    /* ================================================================
+     * 全局状态
+     * ================================================================ */
+    let targetStorageEdition = SOURCE_MODULE.storageEdition;
+    let targetStorageSeries = '';
+    let targetStoragePatch = '';
+    let accessSeries = SOURCE_MODULE.accessSeries;
+    let accessPatch = SOURCE_MODULE.accessPatch;
+    let selectedCharset = SOURCE_MODULE.charset;
+    let storageOsMode = SOURCE_MODULE.storageOsMode;
+    let accessOsMode = SOURCE_MODULE.accessOsMode;
+    let storageOs = [];
+    let accessOs = SOURCE_MODULE.accessOs.slice();
+    let mergeResult = null;
+    let currentTabId = TABS[0].id;
+    // filter 单选互斥（'valueChanged' / 'custom' / 'newInVersion' / null）
+    // 三类审查任务在认知上分开（"看自定义"vs"看参数值变化"vs"看新增"），实际没有同时查看的需求
+    // 单选让"当前焦点"永远明确，切换 chip 旧 active 自动取消，一步到位
+    let activeFilter = null;
+    let searchKeyword = '';
+    let nameValid = false;
+    let boxMode = '';
+
+    /* ================================================================
+     * 初始化
+     * ================================================================ */
+    function isStorageTargetComplete() {
+      return !!(targetStorageSeries && targetStoragePatch);
+    }
+
+    function getTabTitle(t) {
+      if (t.id === 'mysql' && t.dynamic) {
+        return targetStorageSeries
+          ? `${SOURCE_MODULE.dbType}-${targetStorageSeries}`
+          : SOURCE_MODULE.dbType;
+      }
+      return t.title;
+    }
+
+    function init() {
+      document.getElementById('metaSourceModule').innerText = SOURCE_MODULE.name;
+      document.getElementById('dbTypeText').innerText = SOURCE_MODULE.dbType;
+      document.getElementById('moduleName').value = SOURCE_MODULE.name;
+      updateDomainPreview();
+      targetStorageEdition = SOURCE_MODULE.storageEdition;
+      targetStorageSeries = '';
+      targetStoragePatch = '';
+      accessSeries = SOURCE_MODULE.accessSeries;
+      accessPatch = SOURCE_MODULE.accessPatch;
+      selectedCharset = SOURCE_MODULE.charset;
+      storageOsMode = SOURCE_MODULE.storageOsMode;
+      accessOsMode = SOURCE_MODULE.accessOsMode;
+      storageOs = SOURCE_MODULE.storageOs.slice();
+      accessOs = SOURCE_MODULE.accessOs.slice();
+      document.querySelector(`input[name="storageOsMode"][value="${storageOsMode}"]`).checked = true;
+      document.querySelector(`input[name="accessOsMode"][value="${accessOsMode}"]`).checked = true;
+      buildStorageEditionMenu();
+      buildStorageSeriesMenu();
+      buildStoragePatchMenu();
+      buildAccessMenus();
+      buildCharsetMenu();
+      syncStorageEditionUI();
+      syncStorageSeriesUI();
+      syncStoragePatchUI();
+      syncAccessUI();
+      renderLayerOs('storage');
+      renderLayerOs('access');
+      document.getElementById('charsetTrigger').textContent = selectedCharset;
+      rebuildMergeAndRender();
+      validateName();
+    }
+
+    function rebuildMergeAndRender() {
+      const awaiting = !isStorageTargetComplete();
+      document.getElementById('paramsAwaiting').style.display = awaiting ? 'block' : 'none';
+      document.getElementById('paramsContent').style.display = awaiting ? 'none' : 'block';
+      mergeResult = mergeModule(targetStorageSeries);
+      if (!awaiting) {
+        renderTabs();
+        updateToolbar();
+        renderRows();
+      }
+      renderFooter();
+    }
+
+    function buildStorageEditionMenu() {
+      document.getElementById('storageEditionMenu').innerHTML = Object.keys(STORAGE_CATALOG).map(edition => {
+        const isSrc = edition === SOURCE_MODULE.storageEdition;
+        const sel = edition === targetStorageEdition ? ' selected' : '';
+        return `<div class="custom-select-option${sel}" onclick="pickStorageEdition('${edition}')">${escapeHtml(edition)}${isSrc ? '<span class="src-tag">源发行版</span>' : ''}</div>`;
+      }).join('');
+    }
+    function buildStorageSeriesMenu() {
+      document.getElementById('storageSeriesMenu').innerHTML = getStorageSeriesList().map(s => {
+        const isSrc = s === SOURCE_MODULE.storageSeries;
+        const sel = s === targetStorageSeries ? ' selected' : '';
+        return `<div class="custom-select-option${sel}" onclick="pickStorageSeries('${s}')">${escapeHtml(s)}${isSrc ? '<span class="src-tag">源系列</span>' : ''}</div>`;
+      }).join('');
+    }
+    function buildStoragePatchMenu() {
+      const entry = targetStorageSeries
+        ? STORAGE_CATALOG[targetStorageEdition]?.series[targetStorageSeries]
+        : null;
+      const menu = document.getElementById('storagePatchMenu');
+      if (!entry || !targetStorageSeries) {
+        menu.innerHTML = '';
+        return;
+      }
+      const rec = getStorageEditionRecommended();
+      const recommendPatch = rec && rec.series === targetStorageSeries ? rec.version : '';
+      menu.innerHTML = entry.versions.map(v => {
+        const recTag = v === recommendPatch ? '<span class="recommend-tag">推荐</span>' : '';
+        const sel = v === targetStoragePatch ? ' selected' : '';
+        return `<div class="custom-select-option${sel}" onclick="pickStoragePatch('${v}')">${escapeHtml(v)}${recTag}</div>`;
+      }).join('');
+    }
+    function buildAccessMenus() {
+      document.getElementById('accessSeriesMenu').innerHTML = Object.keys(ACCESS_CATALOG).map(s => {
+        const isSrc = s === SOURCE_MODULE.accessSeries;
+        const sel = s === accessSeries ? ' selected' : '';
+        return `<div class="custom-select-option${sel}" onclick="pickAccessSeries('${s}')">${escapeHtml(s)}${isSrc ? '<span class="src-tag">源系列</span>' : ''}</div>`;
+      }).join('');
+      const entry = ACCESS_CATALOG[accessSeries];
+      const rec = getAccessEditionRecommended();
+      const recommendPatch = rec && rec.series === accessSeries ? rec.version : '';
+      document.getElementById('accessPatchMenu').innerHTML = entry ? entry.versions.map(v => {
+        const recTag = v === recommendPatch ? '<span class="recommend-tag">推荐</span>' : '';
+        const isSrc = v === SOURCE_MODULE.accessPatch;
+        const sel = v === accessPatch ? ' selected' : '';
+        return `<div class="custom-select-option${sel}" onclick="pickAccessPatch('${v}')">${escapeHtml(v)}${recTag}${isSrc ? '<span class="src-tag">源版本</span>' : ''}</div>`;
+      }).join('') : '';
+    }
+    function syncStorageEditionUI() {
+      const trigger = document.getElementById('storageEditionTrigger');
+      trigger.textContent = targetStorageEdition || '请选择';
+      trigger.classList.toggle('ph', !targetStorageEdition);
+    }
+    function syncStorageSeriesUI() {
+      const trigger = document.getElementById('storageSeriesTrigger');
+      trigger.textContent = targetStorageSeries || '请选择';
+      trigger.classList.toggle('ph', !targetStorageSeries);
+    }
+    function syncStoragePatchUI() {
+      const trigger = document.getElementById('storagePatchTrigger');
+      trigger.textContent = targetStoragePatch || '请选择';
+      trigger.classList.toggle('ph', !targetStoragePatch);
+      const wrap = document.getElementById('storagePatchWrap');
+      if (wrap) wrap.style.opacity = targetStorageSeries ? '1' : '0.5';
+    }
+    function syncAccessUI() {
+      document.getElementById('accessSeriesTrigger').textContent = accessSeries;
+      document.getElementById('accessPatchTrigger').textContent = accessPatch;
+    }
+
+    function pickStorageEdition(edition) {
+      document.getElementById('storageEditionWrap').classList.remove('open');
+      if (edition === targetStorageEdition) return;
+      targetStorageEdition = edition;
+      const seriesMap = STORAGE_CATALOG[edition]?.series || {};
+      if (!seriesMap[targetStorageSeries]) {
+        targetStorageSeries = '';
+        targetStoragePatch = '';
+      } else if (!(seriesMap[targetStorageSeries].versions || []).includes(targetStoragePatch)) {
+        targetStoragePatch = '';
+      }
+      storageOs = SOURCE_MODULE.storageOs.slice();
+      syncStorageEditionUI();
+      syncStorageSeriesUI();
+      syncStoragePatchUI();
+      buildStorageEditionMenu();
+      buildStorageSeriesMenu();
+      buildStoragePatchMenu();
+      renderLayerOs('storage');
+      rebuildMergeAndRender();
+      validateName();
+    }
+    function pickStorageSeries(s) {
+      targetStorageSeries = s;
+      targetStoragePatch = '';
+      storageOs = SOURCE_MODULE.storageOs.slice();
+      syncStorageSeriesUI();
+      syncStoragePatchUI();
+      buildStorageSeriesMenu();
+      buildStoragePatchMenu();
+      document.getElementById('storageSeriesWrap').classList.remove('open');
+      rebuildMergeAndRender();
+      validateName();
+    }
+    function pickStoragePatch(p) {
+      targetStoragePatch = p;
+      renderLayerOs('storage');
+      syncStoragePatchUI();
+      buildStoragePatchMenu();
+      document.getElementById('storagePatchWrap').classList.remove('open');
+      rebuildMergeAndRender();
+      validateName();
+    }
+    function pickAccessSeries(s) {
+      accessSeries = s;
+      const rec = getAccessEditionRecommended();
+      accessPatch = rec && rec.series === s ? rec.version : (ACCESS_CATALOG[s]?.versions.slice(-1)[0] || '');
+      renderLayerOs('access');
+      syncAccessUI();
+      buildAccessMenus();
+      document.getElementById('accessSeriesWrap').classList.remove('open');
+    }
+    function pickAccessPatch(p) {
+      accessPatch = p;
+      renderLayerOs('access');
+      syncAccessUI();
+      buildAccessMenus();
+      document.getElementById('accessPatchWrap').classList.remove('open');
+    }
+
+    /* 操作系统版本：跟随版本包实时取全集；指定范围在版本关联范围内多选。 */
+    function renderLayerOs(layer) {
+      const isStorage = layer === 'storage';
+      const wrapId = isStorage ? 'storageOsWrap' : 'accessOsWrap';
+      const wrap = document.getElementById(wrapId);
+      if (!wrap) return;
+      const mode = isStorage ? storageOsMode : accessOsMode;
+      const available = (isStorage ? STORAGE_OS_CATALOG[targetStoragePatch] : ACCESS_OS_CATALOG[accessPatch]) || [];
+      const trigger = wrap.querySelector('.custom-select-trigger');
+      const menu = wrap.querySelector('.custom-select-menu');
+      const follow = document.getElementById(`${layer}OsFollow`);
+      const custom = document.getElementById(`${layer}OsCustom`);
+      follow.hidden = mode !== 'follow';
+      custom.hidden = mode !== 'specified';
+      if (!available.length) {
+        follow.innerHTML = '<span class="os-mode-hint">请先选择版本号</span>';
+        trigger.textContent = '请先选择版本号';
+        trigger.classList.add('ph');
+        trigger.disabled = true;
+        menu.innerHTML = '';
+        if (mode !== 'specified') {
+          if (isStorage) storageOs = [];
+          else accessOs = [];
+        }
+        updateCreateBtn();
+        return;
+      }
+      trigger.disabled = false;
+      const selected = mode === 'follow'
+        ? available.slice()
+        : (isStorage ? storageOs : accessOs).filter(item => available.includes(item));
+      if (isStorage) storageOs = selected;
+      else accessOs = selected;
+      follow.innerHTML = available.map(item => `<span class="os-follow-tag">${escapeHtml(item)}</span>`).join('');
+      trigger.textContent = selected.length ? selected.join('，') : '请选择';
+      trigger.classList.toggle('ph', !selected.length);
+      menu.innerHTML = available.map(item =>
+        `<div class="custom-select-option${selected.includes(item) ? ' selected' : ''}" data-action="toggle-os" data-layer="${layer}" data-value="${escapeAttr(item)}">${escapeHtml(item)}<span class="option-check"></span></div>`
+      ).join('');
+      updateCreateBtn();
+    }
+
+    function toggleLayerOs(layer, value) {
+      const isStorage = layer === 'storage';
+      const selected = (isStorage ? storageOs : accessOs).slice();
+      const idx = selected.indexOf(value);
+      if (idx > -1) selected.splice(idx, 1);
+      else selected.push(value);
+      if (isStorage) storageOs = selected;
+      else accessOs = selected;
+      renderLayerOs(layer);
+      // 多选：点选后菜单保持展开
+      const wrapId = isStorage ? 'storageOsWrap' : 'accessOsWrap';
+      document.getElementById(wrapId).classList.add('open');
+      positionCsMenu(wrapId);
+    }
+    function changeOsMode(layer, mode) {
+      const isStorage = layer === 'storage';
+      const prev = isStorage ? storageOsMode : accessOsMode;
+      if (isStorage) {
+        storageOsMode = mode;
+        if (mode === 'specified' && prev !== 'specified') storageOs = [];
+      } else {
+        accessOsMode = mode;
+        if (mode === 'specified' && prev !== 'specified') accessOs = [];
+      }
+      renderLayerOs(layer);
+    }
+
+    /* ================================================================
+     * 模块名校验（双层，但对用户呈现为单一字段）
+     * ================================================================
+     * 校验分层（内部）：
+     *   · 合法性：非空 / 字符集 / 长度
+     *   · 唯一性：dbType + name + version + charset 拼出的标识在系统层不能冲突（标识概念对用户不可见）
+     *
+     * 用户视角：
+     *   · 只看到「模块名」一个字段
+     *   · 冲突时 helper 红字 `该名称已被占用（${数据库类型}：${版本} / ${字符集}）`
+     *
+     * 触发：onNameChange / onNameBlur / pickVersion / pickCharset
+     * 文案：见《命名校验规范》标识类 helper + 红字分工 */
+    function onNameChange() { validateName(); updateDomainPreview(); }
+    function onNameBlur() { validateName({ markEmpty: true }); }
+
+    function buildCharsetMenu() {
+      document.getElementById('charsetMenu').innerHTML = AVAILABLE_CHARSETS.map(c => {
+        const isSrc = c === SOURCE_MODULE.charset;
+        const sel = c === selectedCharset ? ' selected' : '';
+        return `<div class="custom-select-option${sel}" onclick="pickCharset('${c}')">${escapeHtml(c)}${isSrc ? '<span class="src-tag">源字符集</span>' : ''}</div>`;
+      }).join('');
+    }
+
+    function toggleCs(e, wrapId) {
+      e.stopPropagation();
+      const wrap = document.getElementById(wrapId);
+      if (wrap.querySelector('.custom-select-trigger')?.disabled) return;
+      const willOpen = !wrap.classList.contains('open');
+      document.querySelectorAll('.custom-select.open').forEach(el => el.classList.remove('open'));
+      if (willOpen) {
+        wrap.classList.add('open');
+        positionCsMenu(wrapId);
+      }
+    }
+
+    function positionCsMenu(wrapId) {
+      const wrap = document.getElementById(wrapId);
+      const trigger = wrap && wrap.querySelector('.custom-select-trigger');
+      const menu = wrap && wrap.querySelector('.custom-select-menu');
+      if (!wrap || !trigger || !menu || !wrap.classList.contains('open')) return;
+      const rect = trigger.getBoundingClientRect();
+      menu.style.left = `${rect.left}px`;
+      menu.style.top = `${rect.bottom + 4}px`;
+      menu.style.minWidth = `${rect.width}px`;
+    }
+
+    function pickCharset(c) {
+      selectedCharset = c;
+      document.getElementById('charsetTrigger').textContent = c;
+      buildCharsetMenu();
+      document.getElementById('charsetWrap').classList.remove('open');
+      validateName();
+    }
+
+    function validateName(options = {}) {
+      const { markEmpty = false } = options;
+      const input = document.getElementById('moduleName');
+      const tip = document.getElementById('nameTip');
+      const name = input.value.trim();
+      const charset = selectedCharset;
+      const dbType = SOURCE_MODULE.dbType;
+
+      const DEFAULT_HELPER = '仅支持小写字母、数字、连字符，同时会参与集群域名生成，创建后不可改';
+      tip.classList.remove('error');
+      input.classList.remove('invalid');
+
+      if (!name) {
+        tip.innerText = DEFAULT_HELPER;
+        nameValid = false;
+        if (markEmpty) input.classList.add('invalid');
+        updateCreateBtn();
+        return;
+      }
+      if (/[^a-z0-9-]/.test(name)) {
+        tip.innerText = '格式不正确，请勿使用大写、空格、下划线或特殊符号';
+        tip.classList.add('error');
+        input.classList.add('invalid');
+        nameValid = false;
+        updateCreateBtn();
+        return;
+      }
+      if (/^-|-$/.test(name)) {
+        tip.innerText = '不能以连字符开头或结尾';
+        tip.classList.add('error');
+        input.classList.add('invalid');
+        nameValid = false;
+        updateCreateBtn();
+        return;
+      }
+      if (!isStorageTargetComplete()) {
+        tip.innerText = DEFAULT_HELPER;
+        nameValid = false;
+        updateCreateBtn();
+        return;
+      }
+      const moduleKey = computeModuleKey(dbType, name, targetStorageSeries, charset);
+      if (EXISTING_MODULE_KEYS.has(moduleKey)) {
+        tip.innerText = `该名称已被占用（${dbType}：${targetStorageSeries} / ${charset}）`;
+        tip.classList.add('error');
+        input.classList.add('invalid');
+        nameValid = false;
+      } else {
+        tip.innerText = DEFAULT_HELPER;
+        nameValid = true;
+      }
+      updateCreateBtn();
+    }
+
+    /* 域名预览：模块名加入集群域名合成 */
+    function updateDomainPreview() {
+      const input = document.getElementById('moduleName');
+      const preview = document.getElementById('domainPreview');
+      if (!input || !preview) return;
+      const name = input.value.trim();
+      if (!name) { preview.style.display = 'none'; return; }
+      preview.style.display = '';
+      preview.innerHTML =
+        '集群域名预览： <span class="domain-module">' + escHtml(name) +
+        '</span>db.<span class="domain-placeholder">{集群名}</span>.dba.db <span class="domain-tag">主</span>';
+    }
+
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function updateCreateBtn() {
+      const btn = document.getElementById('createBtn');
+      const osComplete = isStorageTargetComplete() && storageOs.length > 0 && accessOs.length > 0;
+      if (nameValid && osComplete) {
+        btn.removeAttribute('disabled');
+        btn.title = '';
+      } else {
+        btn.setAttribute('disabled', '');
+        btn.title = !isStorageTargetComplete()
+          ? '请选择目标存储层版本'
+          : (!osComplete ? '请选择操作系统版本' : '请填写合法的模块名');
+      }
+    }
+
+    /* ================================================================
+     * 兼容性概览 banner / 同版本退化提示
+     * ================================================================ */
+    function getCounts() {
+      let deprecated = 0, defaultChanged = 0, custom = 0, newInVersion = 0;
+      TABS.forEach(t => {
+        deprecated += (mergeResult.deprecated[t.id] || []).length;
+        (mergeResult.keep[t.id] || []).forEach(r => {
+          if (r.category === 'default-changed') defaultChanged++;
+          else if (r.category === 'custom') custom++;
+          else if (r.category === 'new-in-version') newInVersion++;
+        });
+      });
+      return { deprecated, defaultChanged, custom, newInVersion };
+    }
+
+    /* ================================================================
+     * Tab 渲染（带每个 Tab 的当前参数数量）
+     * ================================================================ */
+    function renderTabs() {
+      // Tab 上不挂数字——参数总数对用户的审查决策没有任何价值，反而容易被误读为"该 Tab 行数"
+      // （与新建模块"已废除数字徽标"的设计原则一脉相承）
+      const container = document.getElementById('paramTabs');
+      container.innerHTML = TABS.map(t => {
+        const isActive = t.id === currentTabId;
+        const title = getTabTitle(t);
+        return `<button class="param-tab${isActive ? ' active' : ''}" onclick="switchTab('${t.id}')" type="button">${title}</button>`;
+      }).join('');
+    }
+
+    function switchTab(tabId) {
+      currentTabId = tabId;
+      renderTabs();
+      updateToolbar();
+      renderRows();
+    }
+
+    /* ================================================================
+     * 工具栏 chip 渲染：统计 + 过滤入口一体化（按当前 Tab 数据收口）
+     * ================================================================
+     * 信息架构分层：
+     *   - 当前 Tab 视角（工具栏 chip + 抽屉）：审查时聚焦"这个 Tab 有什么"
+     *   - 全模块视角（底部 chip）：创建前最后一眼审查全局影响
+     *
+     * 设计原则：
+     *   1. 数据驱动——chip 数量 > 0 才渲染；工具栏跟随数据自适应
+     *   2. 一物多用——chip 同时是统计与过滤入口，去掉了独立的 checkbox / link
+     *   3. **chip 顺序按"用户决策强度"降序**：自定义 → 参数值变化 → 已废弃
+     *      · 自定义：用户主动持有的契约，最关心"我的东西保留了吗"
+     *      · 参数值变化（含新增）：新版本带来的变化，要决定要不要跟随
+     *      · 已废弃：不可逆事件，仅"知情"，放最右（警告色保证不被忽略）
+     *   4. **新增合并到参数值变化**：默认变和新增都是"新版本相对源版本的变化"，
+     *      审查心智同一类——「参数值」列内的辅文（"(原值：x)" vs "(新增)"）保留差异化，
+     *      参数名旁的 New tag 也保留，单行身份不损失
+     *   5. **2 个 filter chip 单选互斥**：废弃点击打开抽屉；其它点击切换过滤
+     */
+    function updateToolbar() {
+      const tabStatsEl = document.getElementById('tabStats');
+      // 注：版本未选态由外层 rebuildMergeAndRender 直接跳过本函数（参数表区整体进入占位态）
+      const tabKeep = mergeResult.keep[currentTabId] || [];
+      const tabDeprecated = mergeResult.deprecated[currentTabId] || [];
+
+      // 统计：valueChanged 合并 default-changed 与 new-in-version（同属"新版本带来的变化"）
+      const cDeprecated = tabDeprecated.length;
+      let cValueChanged = 0, cCustom = 0;
+      tabKeep.forEach(r => {
+        if (r.category === 'default-changed' || r.category === 'new-in-version') cValueChanged++;
+        else if (r.category === 'custom') cCustom++;
+      });
+
+      // 切到无对应数据的 Tab 时，重置 active filter 避免脏 state
+      if ((activeFilter === 'valueChanged' && cValueChanged === 0) ||
+          (activeFilter === 'custom' && cCustom === 0)) {
+        activeFilter = null;
+      }
+
+      // 渲染顺序：自定义 → 参数值变化 → 已废弃（按用户决策强度降序）
+      const chips = [];
+      if (cCustom > 0) {
+        chips.push(`<span class="tb-chip chip-custom${activeFilter === 'custom' ? ' active' : ''}" onclick="selectFilter('custom')" title="${activeFilter === 'custom' ? '点击取消筛选' : '点击：仅看自定义'}">
+          自定义 <span class="stat-num">${cCustom}</span>
+        </span>`);
+      }
+      if (cValueChanged > 0) {
+        chips.push(`<span class="tb-chip chip-default${activeFilter === 'valueChanged' ? ' active' : ''}" onclick="selectFilter('valueChanged')" title="${activeFilter === 'valueChanged' ? '点击取消筛选' : '点击：仅看参数值变化（含新增）'}">
+          参数值变化 <span class="stat-num">${cValueChanged}</span>
+        </span>`);
+      }
+      if (cDeprecated > 0) {
+        chips.push(`<span class="tb-chip chip-deprecated" onclick="openDeprecatedDrawer()" title="查看废弃参数明细">
+          已废弃 <span class="stat-num">${cDeprecated}</span>
+        </span>`);
+      }
+
+      tabStatsEl.innerHTML = chips.join('');
+    }
+
+    /* 单选切换：点击同一个 chip 取消；点击不同 chip 切换焦点 */
+    function selectFilter(key) {
+      activeFilter = (activeFilter === key) ? null : key;
+      updateToolbar();
+      renderRows();
+    }
+
+    /* ================================================================
+     * 筛选 / 搜索
+     * ================================================================
+     * filter 单选互斥（详见 selectFilter）：
+     *   · activeFilter === null            → 显示全部行
+     *   · activeFilter === 'custom'        → 仅 category === 'custom'
+     *   · activeFilter === 'valueChanged'  → category ∈ {'default-changed', 'new-in-version'}
+     *     （合并：默认变 + 新增 都是"新版本相对源版本的变化"）
+     * 搜索是另一维度，与 filter 是 AND 关系（先 filter 再搜）
+     */
+    function onSearchInput() {
+      searchKeyword = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+      renderRows();
+    }
+
+    /* filter key → 匹配的 category 列表（数组以支持合并语义） */
+    const FILTER_TO_CATEGORIES = {
+      custom: ['custom'],
+      valueChanged: ['default-changed', 'new-in-version']
+    };
+
+    function getVisibleRows() {
+      const all = mergeResult.keep[currentTabId] || [];
+      const targetCategories = FILTER_TO_CATEGORIES[activeFilter];
+      return all.filter(r => {
+        if (targetCategories && !targetCategories.includes(r.category)) return false;
+        if (searchKeyword) {
+          const hay = `${r.key} ${r.value} ${r.allowed || ''}`.toLowerCase();
+          if (!hay.includes(searchKeyword)) return false;
+        }
+        return true;
+      });
+    }
+
+    /* ================================================================
+     * 表格渲染
+     * ================================================================ */
+    function renderRows() {
+      const tbody = document.getElementById('rows');
+      // 注：版本未选态由外层 rebuildMergeAndRender 直接跳过本函数
+      const rows = getVisibleRows();
+      const totalAll = (mergeResult.keep[currentTabId] || []).length;
+      document.getElementById('tabTotalCount').innerText = totalAll;
+      if (rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="empty-tip">${totalAll === 0 ? '该 Tab 暂无参数' : '当前筛选条件下无匹配参数'}</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = rows.map(r => {
+        // 行不带颜色条：自定义已用黄色【自定义】tag、默认变已用灰色"(原值：xx)"辅文、新增已用灰色"(新增)"辅文
+        // 颜色条会与「参数值」列的双层信息竞争视觉权重，反而干扰主值阅读
+        return `<tr>
+          <td>
+            <span class="name-cell">
+              <span class="param-name" title="${escapeAttr(r.key)}">${escapeHtml(r.key)}</span>
+              ${r.isNewInVersion ? '<span class="new-tag">New</span>' : ''}
+              ${r.desc ? `<span class="info-icon">i<span class="popover"><b>${escapeHtml(r.key)}</b><br>${escapeHtml(r.desc)}</span></span>` : ''}
+            </span>
+          </td>
+          <td>${renderValueCell(r)}</td>
+          <td>${renderAllowed(r)}</td>
+          <td>${r.restart || '--'}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    /**
+     * 「参数值」列：同列双信息层
+     *   - 主层（黑色加粗）：参数在新模块的当前值
+     *   - 辅层（灰色，可选）：原值对比 / "新增" 标签
+     *
+     * 4 个分支：
+     *   ① 自定义（userTouched）：仅显示值 + 【自定义】tag——契约固化，平台基线变化不展示
+     *   ② 新增赠送（isNewInVersion）：值 + 灰色 (新增)
+     *   ③ 默认变（defaultChanged）：值 + 灰色 "← 源值"
+     *   ④ 透传：仅显示值
+     */
+    function renderValueCell(r) {
+      const mainVal = r.value === '' || r.value === null || r.value === undefined
+        ? '<span class="muted">空字符串</span>'
+        : escapeHtml(r.value);
+      let secondary = '';
+      let hoverTip = '';
+      if (r.userTouched) {
+        // ① 契约固化，不展示对比
+      } else if (r.isNewInVersion) {
+        secondary = '<span class="value-secondary">(新增)</span>';
+        hoverTip = `<span class="black-tip">新版本 ${targetStorageSeries} 新增参数<br>平台默认值：${escapeHtml(r.newDefault)}</span>`;
+      } else if (r.defaultChanged) {
+        secondary = `<span class="value-secondary">(原值：${escapeHtml(truncate(r.oldDefault, 16))})</span>`;
+        hoverTip = `<span class="black-tip">${SOURCE_MODULE.storageSeries} 默认：${escapeHtml(r.oldDefault)}<br>${targetStorageSeries} 默认：${escapeHtml(r.newDefault)}<br><br>源模块继承平台默认，新版本基线变化已在克隆中跟随采纳</span>`;
+      }
+      return `<span class="value-view" title="${escapeAttr(r.value)}">
+        <span class="value-text">${mainVal}</span>
+        ${r.userTouched ? '<span class="tag tag-yellow">自定义</span>' : ''}
+        ${secondary}
+        ${hoverTip}
+      </span>`;
+    }
+
+    function renderAllowed(r) {
+      if (!r.constraint || r.constraint === '无约束') return '<span class="muted">无约束</span>';
+      const full = `${r.constraint} ${r.allowed}`;
+      return `<span class="allowed-cell">
+        <span class="tag tag-gray">${escapeHtml(r.constraint)}</span>
+        <span class="allowed-value" title="${escapeAttr(r.allowed || '')}">${escapeHtml(r.allowed || '')}</span>
+        <span class="black-tip">${escapeHtml(full)}</span>
+      </span>`;
+    }
+
+    /* ================================================================
+     * 底部 4 类统计 chip + 按钮提示
+     * ================================================================ */
+    function renderFooter() {
+      const c = getCounts();
+      const same = targetStorageSeries === SOURCE_MODULE.storageSeries;
+      const meta = document.getElementById('footMeta');
+      const hint = document.getElementById('footHint');
+      if (!isStorageTargetComplete()) {
+        meta.innerHTML = '';
+        hint.innerText = '请选择目标存储层版本';
+        updateCreateBtn();
+        return;
+      }
+      if (same) {
+        meta.innerHTML = `<span class="stat-chip ${c.custom > 0 ? 'chip-custom' : 'zero'}">
+          自定义 <span class="stat-num">${c.custom}</span>
+        </span>`;
+        hint.innerText = '同版本克隆 · 等价于简单复制';
+      } else {
+        const chipClass = n => n > 0 ? '' : 'zero';
+        // 3 类与工具栏 chip 命名顺序完全统一：自定义 → 参数值变化（含新增）→ 已废弃
+        // chip 仅做统计展示，不再承担点击入口（避免与工具栏入口重复）
+        const cValueChanged = c.defaultChanged + c.newInVersion;
+        meta.innerHTML = `
+          <span class="stat-chip chip-custom ${chipClass(c.custom)}">
+            自定义 <span class="stat-num">${c.custom}</span>
+          </span>
+          <span class="stat-chip chip-default ${chipClass(cValueChanged)}">
+            参数值变化 <span class="stat-num">${cValueChanged}</span>
+          </span>
+          <span class="stat-chip chip-deprecated ${chipClass(c.deprecated)}">
+            已废弃 <span class="stat-num">${c.deprecated}</span>
+          </span>`;
+        hint.innerText = `${SOURCE_MODULE.storageSeries} → ${targetStorageSeries} 迁移`;
+      }
+      updateCreateBtn();
+    }
+
+    /* ================================================================
+     * 弃参数抽屉
+     * ================================================================ */
+    function openDeprecatedDrawer() {
+      // 入口在工具栏（按本 Tab 收口），抽屉内容口径与之严格一致——只渲染当前 Tab 的废弃
+      // 表格形式呈现，与主表 thead/tbody 风格统一；不再展示"废弃原因"——
+      // 废弃是不可逆事件，用户无决策空间，原因细节是无效信息
+      const body = document.getElementById('deprecatedDrawerBody');
+      const subtitle = document.getElementById('deprecatedDrawerSubtitle');
+      const tab = TABS.find(t => t.id === currentTabId);
+      const list = mergeResult.deprecated[currentTabId] || [];
+      subtitle.innerText = `${tab ? tab.title + ' · ' : ''}共 ${list.length} 个参数将不进入新模块`;
+      if (list.length === 0) {
+        body.innerHTML = `<div class="empty-tip">本 Tab 没有废弃参数</div>`;
+      } else {
+        body.innerHTML = `<table class="deprecated-table">
+          <thead>
+            <tr>
+              <th>参数名</th>
+              <th>参数值</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${list.map(d => `
+              <tr>
+                <td title="${escapeAttr(d.key)}">${escapeHtml(d.key)}</td>
+                <td title="${escapeAttr(d.sourceValue)}">${escapeHtml(d.sourceValue)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>`;
+      }
+      document.getElementById('deprecatedDrawer').classList.add('open');
+    }
+
+    function closeDeprecatedDrawer() {
+      document.getElementById('deprecatedDrawer').classList.remove('open');
+    }
+
+    /* ================================================================
+     * 创建 / 离开 / InfoBox
+     * ================================================================ */
+    function onCreate() {
+      validateName({ markEmpty: true });
+      if (!nameValid) {
+        showMessage('请检查模块名', true);
+        document.getElementById('moduleName').focus();
+        return;
+      }
+      const c = getCounts();
+      const name = document.getElementById('moduleName').value.trim();
+      let msg;
+      if (c.custom === 0 && c.deprecated === 0) msg = `模块「${name}」已创建`;
+      else if (c.deprecated === 0) msg = `模块「${name}」已创建，${c.custom} 个参数从源模块继承自定义`;
+      else if (c.custom === 0) msg = `模块「${name}」已创建，${c.deprecated} 个参数因新版本不兼容已丢弃`;
+      else msg = `模块「${name}」已创建，${c.custom} 个参数从源模块继承自定义；${c.deprecated} 个参数因新版本不兼容已丢弃`;
+      showMessage(msg);
+    }
+
+    function onLeave() {
+      boxMode = 'leave';
+      document.getElementById('boxTitle').innerText = '确认离开？';
+      document.getElementById('boxDesc').innerText = '克隆配置尚未创建，离开后将丢弃当前审查结果。';
+      document.getElementById('infobox').classList.add('show');
+    }
+
+    function confirmBox() {
+      if (boxMode === 'leave') {
+        closeBox();
+        showMessage('已取消创建');
+      }
+    }
+
+    function closeBox() {
+      document.getElementById('infobox').classList.remove('show');
+      boxMode = '';
+    }
+
+    /* ================================================================
+     * Message
+     * ================================================================ */
+    function showMessage(text) {
+      const m = document.getElementById('message');
+      m.querySelector('.message-text').innerText = text;
+      m.classList.add('show');
+      setTimeout(() => m.classList.remove('show'), 2500);
+    }
+    function hideMessage() { document.getElementById('message').classList.remove('show'); }
+
+    /* ================================================================
+     * 工具函数
+     * ================================================================ */
+    function escapeHtml(s) {
+      if (s === null || s === undefined) return '';
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    function escapeAttr(s) {
+      if (s === null || s === undefined) return '';
+      return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/\n/g, '&#10;');
+    }
+    function truncate(s, n) {
+      if (s === null || s === undefined) return '';
+      const str = String(s);
+      return str.length > n ? str.slice(0, n - 1) + '…' : str;
+    }
+
+    /* 下拉：外部点击收起（多选重渲染后原节点已脱离文档，不当作外部点击）*/
+    document.addEventListener('click', e => {
+      if (!e.target.isConnected) return;
+      const action = e.target.closest('[data-action]');
+      if (action?.dataset.action === 'toggle-select') {
+        toggleCs(e, action.dataset.target);
+        return;
+      }
+      if (action?.dataset.action === 'toggle-os') {
+        e.stopPropagation();
+        toggleLayerOs(action.dataset.layer, action.dataset.value);
+        return;
+      }
+      document.querySelectorAll('.custom-select.open').forEach(el => {
+        if (!el.contains(e.target)) el.classList.remove('open');
+      });
+    });
+    document.addEventListener('change', e => {
+      const input = e.target.closest('[data-os-mode]');
+      if (input) changeOsMode(input.dataset.osMode, input.value);
+    });
+    const SELECT_WRAP_IDS = [
+      'charsetWrap',
+      'storageSeriesWrap', 'storagePatchWrap', 'storageOsWrap',
+      'accessSeriesWrap', 'accessPatchWrap', 'accessOsWrap'
+    ];
+    function repositionSelectMenus() { SELECT_WRAP_IDS.forEach(id => positionCsMenu(id)); }
+    window.addEventListener('scroll', repositionSelectMenus, true);
+    window.addEventListener('resize', repositionSelectMenus);
+
+    /* 启动 */
+    init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "skill_name": "dbm-tapd-refactor",
+  "source_path": "D:\\blueking-dbm\\dbm-ui\\frontend\\output\\70a5b99e-0fae-4b9d-8a64-ce4c0b2bff96\\dbm-tapd-refactor",
+  "phase": "finalized",
+  "pending_sync": false,
+  "delegated_to": null,
+  "completed_steps": ["create", "install", "api-protocol-update"],
+  "installed_at": "2026-09-30T10:55:00+08:00",
+  "last_sync_at": "2026-09-30T10:47:00+08:00"
+}

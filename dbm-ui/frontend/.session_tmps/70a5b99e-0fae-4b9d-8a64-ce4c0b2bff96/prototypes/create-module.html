@@ -1,0 +1,2337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DBM - 新建模块</title>
+  <style>
+    :root {
+      --ui-primary: #3a84ff; --ui-primary-hover: #5594fa; --ui-primary-active: #2c77f4; --ui-primary-light: #e1ecff;
+      --ui-success: #2dcb56; --ui-success-light: #f2fff4; --ui-warning: #ff9c01; --ui-warning-light: #fff4e2;
+      --ui-danger: #ea3636; --ui-danger-light: #ffeded; --ui-text-primary: #313238; --ui-text-secondary: #63656e;
+      --ui-text-placeholder: #979ba5; --ui-text-disabled: #c4c6cc; --ui-text-anti: #ffffff; --ui-text-link: #3a84ff;
+      --ui-bg: #ffffff; --ui-bg-page: #fafbfd; --ui-bg-subtle: #f9fafd; --ui-bg-hover: #f5f7fa;
+      --ui-bg-active: #f0f1f5; --ui-bg-component: #eaebf0; --ui-border: #dcdee5; --ui-border-light: #eaebf0;
+      --ui-radius-sm: 2px; --ui-radius-md: 3px; --ui-radius-lg: 4px; --ui-radius-circle: 50%; --ui-space-1: 4px; --ui-space-2: 8px;
+      --ui-space-3: 12px; --ui-space-4: 16px; --ui-space-5: 20px; --ui-control-md: 32px; --ui-font-sm: 12px; --ui-font-md: 14px;
+      --ui-line-md: 20px; --ui-line-lg: 22px;
+      --ui-duration: .2s; --ui-ease: cubic-bezier(.38, 0, .24, 1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    [hidden] { display: none !important; }
+    body {
+      height: 100vh;
+      overflow: hidden;
+      background: #f5f7fa;
+      color: #313238;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 13px;
+    }
+    .top-nav { height: 52px; background: #0e1525; color: #fff; display: flex; align-items: center; padding: 0 20px; position: relative; z-index: 100; }
+    .logo { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; margin-right: 32px; white-space: nowrap; }
+    .nav-tabs { display: flex; flex: 1; height: 52px; }
+    .nav-tab { height: 52px; line-height: 52px; padding: 0 20px; color: rgba(255,255,255,.7); cursor: pointer; position: relative; white-space: nowrap; font-size: 14px; }
+    .nav-tab:hover { color: #fff; }
+    .nav-tab.active { color: #fff; background: rgba(58,132,255,.2); }
+    .nav-tab.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: #3a84ff; }
+    .nav-right { display: flex; align-items: center; gap: 16px; margin-left: auto; }
+    .search-box { width: 220px; height: 32px; border: none; border-radius: 2px; background: rgba(255,255,255,.1); color: rgba(255,255,255,.5); padding: 0 12px; outline: none; font-size: 12px; }
+    .user-avatar { width: 28px; height: 28px; border-radius: 50%; background: #3a84ff; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+
+    .main-layout { display: flex; height: calc(100vh - 52px); }
+    .left-nav { width: 220px; background: #182121; color: #acb5c6; overflow-y: auto; flex-shrink: 0; }
+    .biz-selector { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,.08); cursor: pointer; }
+    .biz-name { color: #d3d9e4; font-weight: 500; }
+    .biz-arrow { color: #979ba5; font-size: 12px; }
+    .nav-group { margin-top: 8px; }
+    .nav-group-title { padding: 8px 20px; font-size: 11px; color: rgba(255,255,255,.35); text-transform: uppercase; letter-spacing: 1px; }
+    .nav-item { height: 36px; padding: 0 20px; display: flex; align-items: center; gap: 8px; color: #acb5c6; cursor: pointer; position: relative; }
+    .nav-item:hover { background: rgba(255,255,255,.05); color: #d3d9e4; }
+    .nav-item.active { background: rgba(59,133,255,.15); color: #fff; }
+    .nav-item.active::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: #3b85ff; border-radius: 0 2px 2px 0; }
+    .nav-icon-svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+    .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; background: #f5f7fa; }
+    .page-head { height: 56px; background: #fff; border-bottom: 1px solid #dcdee5; display: flex; align-items: center; padding: 0 24px; gap: 10px; flex-shrink: 0; }
+    .back { color: #3a84ff; font-size: 20px; cursor: pointer; }
+    .page-title { font-size: 15px; color: #313238; }
+    .page-separator { color: #dcdee5; }
+    .page-meta { display: flex; align-items: center; gap: 12px; min-width: 0; font-size: 12px; }
+    .page-meta-label { color: #979ba5; }
+    .page-meta-value { color: #63656e; }
+    .page-head .db-type-tag {
+      height: 28px;
+      padding: 0 10px;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+    .page-head .db-type-tag .db-type-icon { width: 12px; height: 12px; }
+
+    .page-body { flex: 1; padding: 16px 24px 12px; overflow: auto; }
+    .notice { display: flex; align-items: flex-start; gap: 8px; padding: 9px 12px; margin-bottom: 12px; border: 1px solid #c6e2ff; background: #f0f8ff; color: #63656e; line-height: 1.5; }
+    .notice-icon { width: 16px; height: 16px; border-radius: 50%; border: 1px solid #3a84ff; color: #3a84ff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; line-height: 1; flex-shrink: 0; margin-top: 1px; }
+
+    .card { background: #fff; border: 1px solid #eaebf0; }
+    .card + .card { margin-top: 12px; }
+
+    .form-card { padding: 0; }
+    .form-body { padding: 16px 24px; }
+    .form-row { display: flex; align-items: center; gap: 12px; }
+    .form-row + .form-row { margin-top: 14px; }
+    .form-label { width: 96px; flex-shrink: 0; text-align: right; font-size: 14px; color: #63656e; display: inline-flex; align-items: center; justify-content: flex-end; gap: 2px; white-space: nowrap; }
+    .form-label .req { color: #ea3636; margin-left: 2px; }
+    .form-controls { width: min(980px, calc(100% - 108px)); }
+    .form-row-versions { align-items: flex-start; }
+    .form-row-versions > .form-label { align-self: center; }
+    .form-controls.form-controls-inline-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .form-controls-inline-group > .version-row-fields {
+      flex: 1 1 320px;
+      min-width: 0;
+    }
+    .field-group-divider { width: 1px; height: 20px; background: #dcdee5; flex-shrink: 0; margin: 0 2px; }
+    .inline-field-label {
+      flex-shrink: 0;
+      font-size: 14px;
+      color: #63656e;
+      white-space: nowrap;
+    }
+    .inline-field-label .req { color: #ea3636; margin-left: 2px; }
+    .inline-field-control { flex: 0 0 200px; width: 200px; min-width: 0; }
+    .inline-field-control .form-select,
+    .inline-field-control .input-group { width: 100%; height: 32px; }
+    .version-row-fields {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .version-row-fields .field-edition { flex: 0 0 200px; width: 200px; }
+    .version-row-fields .field-series { flex: 1 1 180px; min-width: 140px; }
+    .version-row-fields .field-patch { flex: 1 1 180px; min-width: 160px; }
+    .version-row-fields .form-select,
+    .version-row-fields .input-group { height: 32px; }
+    .version-row-fields .input-group { min-width: 0; overflow: visible; }
+    .layer-block {
+      margin-top: var(--ui-space-4);
+      padding: var(--ui-space-3);
+      background: var(--ui-bg-subtle);
+      border: 1px solid var(--ui-border-light);
+      border-radius: var(--ui-radius-md);
+    }
+    .layer-block + .layer-block { margin-top: var(--ui-space-3); }
+    /* 层名回退自身内边距，与表单其他 label 同列右对齐；块内字段整体缩进 */
+    .layer-block__title {
+      width: 96px;
+      margin-left: calc(-1 * (var(--ui-space-3) + 1px));
+      margin-bottom: var(--ui-space-3);
+      color: var(--ui-text-primary);
+      font-size: var(--ui-font-md);
+      font-weight: var(--ui-font-weight-medium);
+      text-align: right;
+    }
+    .layer-block .form-row { padding-left: var(--ui-space-5); }
+    .layer-block .form-row + .form-row { margin-top: var(--ui-space-3); }
+    .layer-block .form-label { align-self: flex-start; min-height: var(--ui-control-md); }
+    .layer-block .form-row-versions > .form-label { align-self: center; }
+    .form-controls-layer { display: flex; align-items: center; min-width: 0; flex: 1; }
+    .form-controls-layer .version-row-fields { flex: 1 1 auto; }
+    .form-row-os { align-items: flex-start; }
+    /* 模式与取值同一行：Radio 定宽不压缩，取值盒吃剩余宽度，标签换行只在盒内发生 */
+    .form-controls-os { display: flex; align-items: flex-start; gap: var(--ui-space-4); min-width: 0; flex: 1; }
+    .form-controls-os .ui-radio-group { flex-shrink: 0; min-height: var(--ui-control-md); }
+    .form-controls-os .ui-radio { margin-right: var(--ui-space-1); }
+    .os-info + .ui-radio { margin-left: var(--ui-space-4); }
+    .os-info { display: inline-flex; align-items: center; color: var(--ui-text-placeholder); cursor: help; }
+    .os-info:hover { color: var(--ui-text-secondary); }
+    .os-mode-value { flex: 1 1 auto; min-width: 0; max-width: 640px; }
+    .os-mode-value .input-group { width: 100%; height: auto; min-height: var(--ui-control-md); overflow: visible; }
+    .os-follow-value {
+      display: flex;
+      flex-wrap: wrap;
+      min-height: var(--ui-control-md);
+      align-items: center;
+      gap: var(--ui-space-1);
+      padding: var(--ui-space-1) var(--ui-space-2);
+      background: var(--ui-bg);
+      border: 1px solid var(--ui-border);
+      border-radius: var(--ui-radius-sm);
+    }
+    .os-follow-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 0 var(--ui-space-2);
+      color: var(--ui-text-secondary);
+      font-size: var(--ui-font-sm);
+      line-height: var(--ui-line-lg);
+      background: var(--ui-bg-component);
+      border-radius: var(--ui-radius-sm);
+    }
+    .os-mode-hint { color: var(--ui-text-placeholder); font-size: var(--ui-font-sm); line-height: var(--ui-line-md); }
+    .ui-radio-group { display: inline-flex; align-items: center; }
+    .ui-radio { display: inline-flex; align-items: center; margin-right: var(--ui-space-4); color: var(--ui-text-secondary); font-size: var(--ui-font-md); cursor: pointer; }
+    .ui-radio__native { position: absolute; width: 0; height: 0; opacity: 0; }
+    .ui-radio__input { display: inline-flex; }
+    .ui-radio__inner {
+      box-sizing: border-box;
+      width: 14px;
+      height: 14px;
+      background: var(--ui-bg);
+      border: 1px solid var(--ui-border);
+      border-radius: var(--ui-radius-circle);
+      transition: border-color var(--ui-duration) var(--ui-ease);
+    }
+    .ui-radio__label { padding-left: var(--ui-space-2); }
+    .ui-radio__native:checked ~ .ui-radio__input .ui-radio__inner { background: var(--ui-primary); border-color: var(--ui-primary); box-shadow: inset 0 0 0 3px var(--ui-bg); }
+    .ui-radio__native:checked ~ .ui-radio__label { color: var(--ui-primary); }
+    .ui-radio__native:focus-visible ~ .ui-radio__input .ui-radio__inner { border-color: var(--ui-primary); }
+    .form-row-charset .input-group { width: 200px; overflow: visible; }
+    .params-awaiting { padding: 100px 0; text-align: center; color: #979ba5; }
+    .params-awaiting .awaiting-svg { display: block; margin: 0 auto 16px; color: #c4c6cc; }
+    .params-awaiting .awaiting-title { font-size: 16px; font-weight: 500; color: #63656e; }
+    .form-row-name .form-controls { display: flex; flex-direction: column; gap: 4px; }
+    .form-row-name .form-label { align-self: flex-start; margin-top: 4px; }
+    .form-row-name .form-input-row { display: flex; align-items: center; gap: 12px; }
+    .form-row-name .form-input { flex: 1; min-width: 0; }
+    .domain-preview { flex-shrink: 0; color: #63656e; font-size: 12px; white-space: nowrap; }
+    .domain-preview .domain-module { color: #3a84ff; }
+    .domain-preview .domain-placeholder { color: #979ba5; }
+    .domain-tag { display: inline-flex; align-items: center; height: 18px; padding: 0 5px; border-radius: 2px; font-size: 11px; white-space: nowrap; background: #f0f1f5; color: #63656e; }
+    .form-select:disabled, .form-input:disabled { background: #f5f7fa; color: #63656e; cursor: not-allowed; border-color: #dcdee5; }
+    .form-input.invalid { border-color: #ea3636; }
+    .form-row .form-tip { margin-left: 4px; color: #979ba5; font-size: 12px; }
+    .form-row .form-tip.error { color: #ea3636; }
+
+    /* 模块名：所有辅助信息（用途说明 + 合法字符规则 + 错误反馈）统一收口到 helper text
+       不使用 ⓘ icon——helper text 已承载全部信息，icon 是视觉冗余 */
+    .db-type-tag { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border: 1px solid #3a84ff; border-radius: 2px; color: #3a84ff; font-size: 14px; background: #fff; cursor: default; user-select: none; justify-content: center; }
+    .db-type-tag .db-type-icon { color: #3a84ff; flex-shrink: 0; }
+    .input-group { display: flex; align-items: stretch; height: 32px; border: 1px solid #c4c6cc; border-radius: 2px; overflow: hidden; background: #fff; min-width: 0; }
+    .input-group:focus-within { border-color: #3a84ff; }
+    .input-group-prefix { display: flex; align-items: center; padding: 0 12px; background: #fafbfd; color: #63656e; font-size: 13px; border-right: 1px solid #dcdee5; flex-shrink: 0; }
+    .input-group .form-select { border: none; flex: 1; min-width: 0; height: 100%; padding: 0 10px; background: transparent; color: #313238; }
+    .input-group .form-select:focus { border: none; box-shadow: none; }
+
+    /* 自定义下拉（用于"数据库版本"：下拉里展示推荐 tag，回显仅显示值）*/
+    .custom-select { position: relative; flex: 1; min-width: 0; display: flex; }
+    .custom-select-trigger {
+      width: 100%;
+      height: 100%;
+      padding: 0 28px 0 10px;
+      border: 0;
+      background: transparent;
+      color: #313238;
+      font-size: 13px;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      position: relative;
+      border-radius: 0;
+      outline: none;
+    }
+    .custom-select-trigger::after {
+      content: '';
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      width: 6px;
+      height: 6px;
+      border-right: 1.5px solid #979ba5;
+      border-bottom: 1.5px solid #979ba5;
+      transform: translateY(-70%) rotate(45deg);
+      transition: transform 0.15s;
+    }
+    .custom-select.open .custom-select-trigger::after {
+      transform: translateY(-30%) rotate(-135deg);
+    }
+    .custom-select-trigger:disabled { color: #c4c6cc; cursor: not-allowed; }
+    .custom-select-menu {
+      display: none;
+      position: fixed;
+      /* left / top / min-width 由 positionVersionMenu 动态设置 */
+      background: #fff;
+      border: 1px solid #dcdee5;
+      border-radius: 2px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      z-index: 1000;
+      padding: 4px 0;
+    }
+    .custom-select.open .custom-select-menu { display: block; }
+    .custom-select-option {
+      padding: 0 12px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      color: #313238;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .custom-select-option:hover { background: #f0f5ff; color: #3a84ff; }
+    .custom-select-option.selected { color: #3a84ff; }
+    .custom-select-value { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .custom-select-value.is-placeholder { color: #979ba5; }
+    /* 多选：选中态用右侧对勾，不用 checkbox */
+    .custom-select-option .option-check { margin-left: auto; width: 12px; height: 12px; flex-shrink: 0; position: relative; }
+    .custom-select-option.selected .option-check::after {
+      content: '';
+      position: absolute;
+      left: 1px;
+      top: 2px;
+      width: 9px;
+      height: 5px;
+      border-left: 1.5px solid currentColor;
+      border-bottom: 1.5px solid currentColor;
+      transform: rotate(-45deg);
+    }
+    .recommend-tag {
+      display: inline-flex;
+      align-items: center;
+      height: 16px;
+      padding: 0 6px;
+      border-radius: 8px;
+      background: #e1ecff;
+      color: #3a84ff;
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 1;
+      margin-left: auto;
+    }
+    .form-input, .form-select {
+      height: 32px;
+      border: 1px solid #c4c6cc;
+      border-radius: 2px;
+      padding: 0 10px;
+      outline: none;
+      color: #313238;
+      background: #fff;
+      font-size: 13px;
+    }
+    .form-input:focus, .form-select:focus { border-color: #3a84ff; }
+
+    .toolbar { display: flex; align-items: center; gap: 8px; padding: 12px 24px 10px; }
+    .toolbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+
+    /* 修改组：「+ 添加参数」右侧的"状态 + 视图开关"气泡——只在 modifiedCount>0 时显示
+       与「+ 添加参数」按钮之间留 20px 大间距分组（动作 vs 状态/操作） */
+    .modified-group { display: flex; align-items: center; gap: 10px; margin-left: 20px; }
+    .modified-group.is-hidden { display: none; }
+
+    .modified-stat { color: #313238; font-size: 12px; white-space: nowrap; }
+    /* 数字用 #e5a829 与 Tab 黄点 / 自定义 tag / 底部 stat-badge 同源——"已偏离默认"的统一色彩语义。
+       不用圆形 badge：修改组本身有"从无到有出现"的反馈，且工具栏在编辑过程中数字频繁跳动，badge 过于抢戏。 */
+    .modified-stat b { color: #e5a829; font-weight: 600; padding: 0 2px; }
+
+    /* 仅显示已修改：复选框形态的"视图模式切换"——编辑态适用（可反复切换、不遮蔽未操作项） */
+    .modified-filter {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 12px; color: #63656e;
+      cursor: pointer; user-select: none;
+    }
+    .modified-filter input[type="checkbox"] { margin: 0; cursor: pointer; }
+    .modified-filter:hover { color: #313238; }
+
+    /* 启用"仅显示已修改"时：隐藏所有未 modified 的行（adder-row 例外，添加流程不被打断） */
+    tbody.only-modified tr:not(.modified):not(.adder-row) { display: none; }
+
+    /* 多 Tab 参数分组 */
+    .param-tabs {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      padding: 0 24px;
+      border-bottom: 1px solid #eaebf0;
+      background: #fff;
+      overflow-x: auto;
+    }
+    .param-tab {
+      position: relative;
+      height: 42px;
+      padding: 0 18px;
+      border: 0;
+      background: transparent;
+      color: #63656e;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+    }
+    .param-tab:hover { color: #313238; }
+    .param-tab.active { color: #3a84ff; border-bottom-color: #3a84ff; font-weight: 500; }
+    /* Tab 角标：黄色小圆点——"该 Tab 有过修改"。与表格内"自定义"黄色标签同源（暖色 = 已偏离默认）。
+       零阻塞模型下未确认状态已废除，不再展示数字徽标（避免被误读为"该 Tab 表格行数"） */
+    .param-tab .tab-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #e5a829;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+
+    .btn { height: 32px; padding: 0 14px; border: 1px solid #c4c6cc; border-radius: 2px; background: #fff; color: #63656e; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+    .btn:hover { border-color: #979ba5; color: #313238; }
+    .btn-primary { background: #3a84ff; border-color: #3a84ff; color: #fff; }
+    .btn-primary:hover { background: #2b6fd9; border-color: #2b6fd9; color: #fff; }
+    .btn[disabled] { background: #fafbfd; color: #c4c6cc; border-color: #dcdee5; cursor: not-allowed; }
+
+    .search { width: 320px; height: 32px; border: 1px solid #dcdee5; border-radius: 2px; padding: 0 10px; color: #313238; outline: none; }
+    .search:focus { border-color: #3a84ff; }
+
+    .table-wrap { overflow: auto; padding: 0 24px; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    th { height: 42px; padding: 0 12px; background: #f5f7fa; border-bottom: 1px solid #dcdee5; color: #313238; font-weight: 500; text-align: left; font-size: 12px; white-space: nowrap; }
+    td { height: 46px; padding: 9px 12px; border-bottom: 1px solid #eaebf0; vertical-align: middle; color: #313238; position: relative; }
+    tr:hover td { background: #f5f7fa; }
+
+    /* 已修改行：当前值单元格浅黄底（#fff5d7，#e5a829 主色的浅变体）——
+       精准标记"哪个值变了"，色彩契约与 Tab 黄点 / 自定义 tag / 底部 stat-badge / 工具栏统计同源。
+       不用行首竖条：竖条远离值（在最左边），视觉焦点应该直接落在变化的内容上。
+       排除新增行（.is-new）：新增行没有"原值"作为对照系，"值变了"无从谈起；
+       新增的身份由参数名旁「New」绿 tag 单独承担，与已修改行的黄底视觉态严格互斥（add vs modify）。 */
+    tr.modified:not(.is-new) td:nth-child(2) { background: #fff5d7; }
+    tr.modified:not(.is-new):hover td:nth-child(2) { background: #fcecae; }
+
+    .name-cell { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; }
+    .param-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .info-icon { width: 16px; height: 16px; border-radius: 50%; border: 1px solid #c4c6cc; color: #979ba5; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; cursor: help; position: relative; flex-shrink: 0; }
+    .info-icon:hover .popover { display: block; }
+    .popover { display: none; position: absolute; left: 20px; top: -10px; width: 300px; background: #fff; border: 1px solid #dcdee5; box-shadow: 0 2px 12px rgba(0,0,0,.12); padding: 10px 12px; color: #63656e; line-height: 1.6; z-index: 20; font-weight: 400; text-align: left; }
+
+    .value-view { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; }
+    .value-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .edit-icon { color: #3a84ff; cursor: pointer; opacity: 0; flex-shrink: 0; }
+    tr:hover .edit-icon { opacity: 1; }
+    tr.modified .edit-icon { opacity: .6; }
+    tr.modified:hover .edit-icon { opacity: 1; }
+
+    .tag { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; border-radius: 2px; font-size: 12px; white-space: nowrap; }
+    .tag-blue { background: #e1ecff; color: #3a84ff; }
+    .tag-gray { background: #f0f1f5; color: #63656e; }
+    .tag-green { background: #dcffe2; color: #14a568; }
+    .muted { color: #979ba5; }
+
+    .readonly-row .name-cell, .readonly-row .value-view { cursor: help; }
+
+    .allowed-cell { display: flex; align-items: center; max-width: 100%; min-width: 0; position: relative; }
+    .allowed-cell .tag { flex-shrink: 0; margin-right: 6px; }
+    .allowed-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .black-tip { display: none; position: absolute; left: 0; top: 28px; z-index: 40; max-width: 420px; padding: 7px 10px; border-radius: 2px; background: rgba(0,0,0,.82); color: #fff; line-height: 1.5; white-space: normal; word-break: break-word; box-shadow: 0 2px 8px rgba(0,0,0,.18); }
+    .black-tip::before { content: ""; position: absolute; top: -5px; left: 14px; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 5px solid rgba(0,0,0,.82); }
+    .allowed-cell:hover .black-tip { display: block; }
+
+    .op-link { color: #3a84ff; cursor: pointer; margin-right: 10px; white-space: nowrap; }
+    .op-link:hover { color: #2b6fd9; }
+    .op-disabled { color: #c4c6cc; cursor: not-allowed; }
+
+    .inline-edit { position: relative; z-index: 5; display: inline-flex; }
+    .inline-edit .editor-row { display: flex; align-items: center; gap: 6px; }
+    .inline-input, .inline-select { width: 160px; height: 30px; border: 1px solid #c4c6cc; border-radius: 2px; padding: 0 8px; outline: none; color: #313238; background: #fff; }
+    .inline-textarea { width: 320px; min-height: 96px; border: 1px solid #c4c6cc; border-radius: 2px; padding: 8px 10px; outline: none; resize: vertical; font-family: Consolas, "SF Mono", monospace; font-size: 12px; line-height: 1.6; }
+    .inline-input:focus, .inline-select:focus, .inline-textarea:focus { border-color: #3a84ff; }
+
+    .icon-btn { width: 28px; height: 28px; border: 1px solid transparent; background: none; cursor: pointer; color: #3a84ff; border-radius: 2px; font-size: 14px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+    .icon-btn.confirm { background: #3a84ff; color: #fff; border-color: #3a84ff; }
+    .icon-btn.confirm:hover { background: #2b6fd9; border-color: #2b6fd9; }
+    .icon-btn.cancel { background: #fff; color: #63656e; border-color: #dcdee5; }
+    .icon-btn.cancel:hover { background: #f5f7fa; color: #313238; border-color: #c4c6cc; }
+    .icon-btn[disabled] { background: #dcdee5 !important; color: #fff !important; cursor: not-allowed; border-color: #dcdee5 !important; }
+    .icon-btn.confirm.dim { background: #a3c5ff; border-color: #a3c5ff; }
+    .icon-btn.confirm.dim:hover { background: #8eb6f5; border-color: #8eb6f5; }
+
+    .check-select { position: relative; width: 220px; }
+    .check-select-trigger { width: 100%; height: 30px; border: 1px solid #c4c6cc; border-radius: 2px; background: #fff; color: #63656e; padding: 0 28px 0 8px; text-align: left; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; position: relative; }
+    .check-select-trigger::after { content: ""; position: absolute; right: 10px; top: 12px; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid #979ba5; }
+    .check-select.open .check-select-panel { display: block; }
+    .check-select-panel { display: none; position: absolute; left: 0; right: 0; top: 34px; z-index: 30; max-height: 170px; overflow: auto; background: #fff; border: 1px solid #dcdee5; box-shadow: 0 2px 8px rgba(0,0,0,.12); padding: 6px 0; }
+    .check-option { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 0 12px; cursor: pointer; color: #63656e; }
+    .check-option:hover { background: #f5f7fa; color: #3a84ff; }
+
+    .table-footer { height: 44px; border-top: 1px solid #eaebf0; display: flex; align-items: center; gap: 8px; padding: 0 24px; color: #63656e; font-size: 12px; }
+
+    /* sticky 底部操作条 */
+    .page-foot {
+      height: 56px;
+      background: #fff;
+      border-top: 1px solid #dcdee5;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    /* 底部 sticky meta：紧贴按钮组右侧；文案常规，数字与工具栏统计样式统一（黄色加粗文字、无胶囊） */
+    .page-foot .foot-meta { margin-left: 12px; display: inline-flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 12px; }
+    .page-foot .foot-meta:empty { display: none; }
+    .page-foot .stat-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: #313238;
+      white-space: nowrap;
+    }
+    /* 数字样式与工具栏 .modified-stat b 保持一致——同一类"已修改"统计在两处视觉完全统一，
+       不再做"形态层级化"（胶囊 vs 文字）：用户感知"同类信息" 优先于"重要度差异"，且周边语境
+       （文案、副 hint、按钮组）已足够支撑底部的视觉权重，胶囊形态是多余的视觉负担。 */
+    .page-foot .stat-badge { color: #e5a829; font-weight: 600; padding: 0 2px; }
+    .page-foot .foot-hint { color: #979ba5; font-size: 12px; white-space: nowrap; }
+
+    /* adder 行内新增态 */
+    .adder-row td { background: #f0f5ff !important; }
+    .adder-row:hover td { background: #e8f0fe !important; }
+    .adder-row td:first-child::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: #3a84ff;
+    }
+    .param-search { position: relative; width: 100%; }
+    .param-search-input {
+      width: 100%;
+      height: 32px;
+      border: 1px solid #c4c6cc;
+      border-radius: 2px;
+      padding: 0 28px 0 10px;
+      outline: none;
+      background: #fff;
+      font-size: 13px;
+    }
+    .param-search-input:focus { border-color: #3a84ff; }
+    .param-search-input::placeholder { color: #c4c6cc; }
+    .param-search::after { content: "▾"; position: absolute; right: 10px; top: 6px; color: #979ba5; pointer-events: none; }
+    /* panel 用 fixed 定位，规避表格 overflow 裁剪 */
+    .param-search-panel {
+      display: none;
+      position: fixed;
+      z-index: 500;
+      max-height: 260px;
+      overflow: auto;
+      background: #fff;
+      border: 1px solid #dcdee5;
+      box-shadow: 0 4px 14px rgba(0,0,0,.14);
+    }
+    .param-search.open .param-search-panel { display: block; }
+    .param-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 32px;
+      padding: 0 12px;
+      cursor: pointer;
+      color: #313238;
+    }
+    .param-option:hover { background: #f0f5ff; color: #3a84ff; }
+    .param-option-key { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .param-option-empty { padding: 14px; text-align: center; color: #c4c6cc; }
+    .adder-placeholder { color: #c4c6cc; font-style: italic; }
+
+    /* InfoBox */
+    .infobox-mask { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; z-index: 300; }
+    .infobox-mask.show { display: flex; }
+    .infobox { width: 460px; background: #fff; border-radius: 2px; box-shadow: 0 2px 16px rgba(0,0,0,.18); padding: 28px 32px 24px; text-align: center; }
+    .warning-icon { width: 46px; height: 46px; margin: 0 auto 16px; border-radius: 50%; background: #ff9c01; color: #fff; font-size: 28px; font-weight: 700; line-height: 46px; }
+    .infobox-title { font-size: 20px; margin-bottom: 12px; }
+    .infobox-desc { background: #f5f7fa; color: #63656e; text-align: left; padding: 12px 14px; line-height: 1.6; margin-bottom: 22px; }
+    .infobox-actions { display: flex; justify-content: center; gap: 10px; }
+
+    /* Message */
+    .message { position: fixed; top: 58px; left: 50%; transform: translateX(-50%); z-index: 400; min-width: 720px; height: 52px; padding: 0 18px 0 22px; border: 1px solid #dcffe2; background: #f0fff3; color: #63656e; display: none; align-items: center; gap: 10px; box-shadow: 0 2px 8px rgba(45,203,86,.16); font-size: 14px; }
+    .message.show { display: flex; }
+    .message-icon { width: 18px; height: 18px; border-radius: 50%; background: #2dcb56; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+    .message-text { flex: 1; }
+    .message-close { border: none; background: transparent; color: #c4c6cc; font-size: 18px; line-height: 1; cursor: pointer; padding: 4px; }
+    .message-close:hover { color: #979ba5; }
+  </style>
+</head>
+<body>
+  <div class="top-nav">
+    <div class="logo">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <rect x="2" y="3" width="20" height="5" rx="2.5" stroke="#3A84FF" stroke-width="1.5"/>
+        <rect x="2" y="9" width="20" height="5" rx="2.5" stroke="#3A84FF" stroke-width="1.5"/>
+        <rect x="2" y="15" width="20" height="5" rx="2.5" stroke="#3A84FF" stroke-width="1.5"/>
+        <circle cx="6" cy="5.5" r="1" fill="#3A84FF"/><circle cx="6" cy="11.5" r="1" fill="#3A84FF"/><circle cx="6" cy="17.5" r="1" fill="#3A84FF"/>
+      </svg>
+      数据库管理
+    </div>
+    <div class="nav-tabs">
+      <div class="nav-tab">数据库管理</div>
+      <div class="nav-tab">可观测</div>
+      <div class="nav-tab active">业务配置</div>
+      <div class="nav-tab">资源管理</div>
+      <div class="nav-tab">全局配置</div>
+      <div class="nav-tab">平台管理</div>
+      <div class="nav-tab">个人工作台</div>
+    </div>
+    <div class="nav-right">
+      <input class="search-box" value="搜索功能、文档..." readonly>
+      <div class="user-avatar">A</div>
+    </div>
+  </div>
+
+  <div class="main-layout">
+    <div class="left-nav">
+      <div class="biz-selector">
+        <span class="biz-name">DBA (#3, dba)</span>
+        <span class="biz-arrow">▾</span>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-title">业务配置</div>
+        <div class="nav-item active">
+          <svg class="nav-icon-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5 5h6M5 8h6M5 11h4"/></svg>
+          数据库配置
+        </div>
+      </div>
+    </div>
+
+    <main class="main-content">
+      <div class="page-head">
+        <span class="back" data-action="onLeave">‹</span>
+        <span class="page-title" data-action="onLeave" style="cursor:pointer">数据库配置</span>
+        <span class="page-separator">/</span>
+        <span class="page-title">新建模块</span>
+        <span class="page-separator">|</span>
+        <div class="db-type-tag" title="数据库类型由跳转入口确定，不支持在此修改">
+          <svg class="db-type-icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4">
+            <ellipse cx="8" cy="3.5" rx="5" ry="1.8"/>
+            <path d="M3 3.5v9c0 1 2.24 1.8 5 1.8s5-.8 5-1.8v-9"/>
+            <path d="M3 8c0 1 2.24 1.8 5 1.8s5-.8 5-1.8"/>
+          </svg>
+          <span id="dbTypeText">MySQL 主从</span>
+        </div>
+        <span class="page-separator">|</span>
+        <div class="page-meta">
+          <span><span class="page-meta-label">业务：</span><span class="page-meta-value">DBA</span></span>
+        </div>
+      </div>
+
+      <div class="page-body">
+        <div class="notice">
+          <span class="notice-icon">i</span>
+          <span>模块是配置管理单元，用于组织一组使用相同数据库配置（版本、字符集等）的集群。<b>新建模块的参数默认继承业务级当前值</b>。</span>
+        </div>
+
+        <!-- ========== 模块信息卡 ==========
+             通用块：模块名、字符集；层级块：版本与该层操作系统版本
+             唯一性约束：数据库类型 + 名称 + 存储层系列 + 字符集；冲突 helper 见 onNameBlur -->
+        <section class="card form-card">
+          <div class="form-body">
+            <div class="form-row form-row-name">
+              <span class="form-label">模块名<span class="req">*</span></span>
+              <div class="form-controls">
+                <div class="form-input-row">
+                  <input class="form-input" id="moduleName" maxlength="63" placeholder="请输入模块名" oninput="onNameChange()" onblur="onNameBlur()">
+                  <span class="domain-preview" id="domainPreview" style="display:none">集群域名预览： <span class="domain-module">---</span>db.<span class="domain-placeholder">{集群名}</span>.dba.db <span class="domain-tag">主</span></span>
+                </div>
+                <span class="form-tip" id="nameTip">仅支持小写字母、数字、连字符，同时会参与集群域名生成，创建后不可改</span>
+              </div>
+            </div>
+            <div class="form-row form-row-charset">
+              <span class="form-label">字符集<span class="req">*</span></span>
+              <div class="form-controls">
+                <div class="input-group field-charset">
+                  <div class="custom-select" id="charsetWrap">
+                    <button type="button" class="custom-select-trigger" id="charsetTrigger" data-action="toggleCharsetMenu"></button>
+                    <div class="custom-select-menu" id="charsetMenu"></div>
+                    <input type="hidden" id="charset" value="">
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="layer-block">
+              <div class="layer-block__title">存储层</div>
+              <div class="form-row form-row-versions">
+                <span class="form-label">版本<span class="req">*</span></span>
+                <div class="form-controls form-controls-layer">
+                  <div class="version-row-fields">
+                    <div class="input-group field-edition">
+                      <span class="input-group-prefix">发行版</span>
+                      <div class="custom-select" id="storageEditionWrap">
+                        <button type="button" class="custom-select-trigger" id="storageEditionTrigger" data-action="toggleStorageEditionMenu"></button>
+                        <div class="custom-select-menu" id="storageEditionMenu"></div>
+                        <input type="hidden" id="storageEdition" value="TXSQL">
+                      </div>
+                    </div>
+                    <div class="input-group field-series">
+                      <span class="input-group-prefix">系列</span>
+                      <div class="custom-select" id="storageSeriesWrap">
+                        <button type="button" class="custom-select-trigger" id="storageSeriesTrigger" data-action="toggleStorageSeriesMenu"></button>
+                        <div class="custom-select-menu" id="storageSeriesMenu"></div>
+                        <input type="hidden" id="storageSeries">
+                      </div>
+                    </div>
+                    <div class="input-group field-patch">
+                      <span class="input-group-prefix">版本号</span>
+                      <div class="custom-select" id="storagePatchWrap">
+                        <button type="button" class="custom-select-trigger" id="storagePatchTrigger" data-action="toggleStoragePatchMenu"></button>
+                        <div class="custom-select-menu" id="storagePatchMenu"></div>
+                        <input type="hidden" id="storagePatch" value="">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="form-row form-row-os">
+                <span class="form-label">操作系统版本<span class="req">*</span></span>
+                <div class="form-controls form-controls-os">
+                  <div class="ui-radio-group" role="radiogroup" aria-label="存储层操作系统范围">
+                    <label class="ui-radio">
+                      <input class="ui-radio__native" type="radio" name="storageOsMode" value="follow" data-change="osMode" data-layer="storage" checked>
+                      <span class="ui-radio__input"><span class="ui-radio__inner"></span></span>
+                      <span class="ui-radio__label">跟随版本包</span>
+                    </label>
+                    <span class="os-info" title="自动沿用该版本在版本包中关联的全部操作系统，关联范围变化时同步更新。">
+                      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8 7v4.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="4.9" r="0.85" fill="currentColor"/></svg>
+                    </span>
+                    <label class="ui-radio">
+                      <input class="ui-radio__native" type="radio" name="storageOsMode" value="specified" data-change="osMode" data-layer="storage">
+                      <span class="ui-radio__input"><span class="ui-radio__inner"></span></span>
+                      <span class="ui-radio__label">指定范围</span>
+                    </label>
+                    <span class="os-info" title="仅可在该版本当前关联的操作系统范围内选择。">
+                      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8 7v4.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="4.9" r="0.85" fill="currentColor"/></svg>
+                    </span>
+                  </div>
+                  <div class="os-mode-value">
+                    <div class="os-follow-value" id="storageOsFollow"></div>
+                    <div class="input-group" id="storageOsCustom" hidden>
+                      <div class="custom-select" id="storageOsWrap">
+                        <button type="button" class="custom-select-trigger" id="storageOsTrigger" data-action="toggleStorageOsMenu"></button>
+                        <div class="custom-select-menu" id="storageOsMenu"></div>
+                        <input type="hidden" id="storageOsValue" value="">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="layer-block" id="accessLayerBlock">
+              <div class="layer-block__title">接入层</div>
+              <div class="form-row form-row-versions">
+                <span class="form-label">版本<span class="req">*</span></span>
+                <div class="form-controls form-controls-layer">
+                  <div class="version-row-fields">
+                    <div class="input-group field-series">
+                      <span class="input-group-prefix">系列</span>
+                      <div class="custom-select" id="accessSeriesWrap">
+                        <button type="button" class="custom-select-trigger" id="accessSeriesTrigger" data-action="toggleAccessSeriesMenu"></button>
+                        <div class="custom-select-menu" id="accessSeriesMenu"></div>
+                        <input type="hidden" id="accessSeries">
+                      </div>
+                    </div>
+                    <div class="input-group field-patch">
+                      <span class="input-group-prefix">版本号</span>
+                      <div class="custom-select" id="accessPatchWrap">
+                        <button type="button" class="custom-select-trigger" id="accessPatchTrigger" data-action="toggleAccessPatchMenu"></button>
+                        <div class="custom-select-menu" id="accessPatchMenu"></div>
+                        <input type="hidden" id="accessPatch" value="">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="form-row form-row-os">
+                <span class="form-label">操作系统版本<span class="req">*</span></span>
+                <div class="form-controls form-controls-os">
+                  <div class="ui-radio-group" role="radiogroup" aria-label="接入层操作系统范围">
+                    <label class="ui-radio">
+                      <input class="ui-radio__native" type="radio" name="accessOsMode" value="follow" data-change="osMode" data-layer="access" checked>
+                      <span class="ui-radio__input"><span class="ui-radio__inner"></span></span>
+                      <span class="ui-radio__label">跟随版本包</span>
+                    </label>
+                    <span class="os-info" title="自动沿用该版本在版本包中关联的全部操作系统，关联范围变化时同步更新。">
+                      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8 7v4.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="4.9" r="0.85" fill="currentColor"/></svg>
+                    </span>
+                    <label class="ui-radio">
+                      <input class="ui-radio__native" type="radio" name="accessOsMode" value="specified" data-change="osMode" data-layer="access">
+                      <span class="ui-radio__input"><span class="ui-radio__inner"></span></span>
+                      <span class="ui-radio__label">指定范围</span>
+                    </label>
+                    <span class="os-info" title="仅可在该版本当前关联的操作系统范围内选择。">
+                      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8 7v4.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="4.9" r="0.85" fill="currentColor"/></svg>
+                    </span>
+                  </div>
+                  <div class="os-mode-value">
+                    <div class="os-follow-value" id="accessOsFollow"></div>
+                    <div class="input-group" id="accessOsCustom" hidden>
+                      <div class="custom-select" id="accessOsWrap">
+                        <button type="button" class="custom-select-trigger" id="accessOsTrigger" data-action="toggleAccessOsMenu"></button>
+                        <div class="custom-select-menu" id="accessOsMenu"></div>
+                        <input type="hidden" id="accessOsValue" value="">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 参数表 -->
+        <section class="card">
+          <div class="params-awaiting" id="paramsAwaiting" style="display:none">
+            <svg class="awaiting-svg" width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="8" y="6" width="32" height="36" rx="2"/>
+              <line x1="14" y1="16" x2="34" y2="16"/>
+              <line x1="14" y1="24" x2="34" y2="24"/>
+              <line x1="14" y1="32" x2="26" y2="32"/>
+            </svg>
+            <div class="awaiting-title" id="paramsAwaitingTitle">请先选择目标存储层版本</div>
+          </div>
+          <div class="params-content" id="paramsContent">
+          <!-- 多 Tab：每个 Tab 对应一份独立配置组（与平台参数定义中的 conf_file 一一对应）-->
+          <div class="param-tabs" id="paramTabs"></div>
+          <div class="toolbar">
+            <button class="btn btn-primary" id="addBtn" data-action="startAdding" type="button">添加参数</button>
+            <!-- 修改组：modifiedCount>0 时显示，归零时整组隐藏 + 自动取消勾选 -->
+            <div class="modified-group is-hidden" id="modifiedGroup">
+              <span class="modified-stat" id="modifiedStat">已修改 <b>0</b> 项</span>
+              <label class="modified-filter">
+                <input type="checkbox" id="onlyModified" onchange="onToggleOnlyModified(this)">
+                <span>仅显示已修改</span>
+              </label>
+            </div>
+            <div class="toolbar-right">
+              <input class="search" placeholder="搜索参数名、当前值、允许值">
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 27%">参数名</th>
+                  <th style="width: 23%">当前值</th>
+                  <th style="width: 28%">允许值</th>
+                  <th style="width: 10%">重启后生效</th>
+                  <th style="width: 12%">操作</th>
+                </tr>
+              </thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+          <div class="table-footer">
+            <span>共计 <span id="totalCount">0</span> 条</span>
+          </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- sticky 底部操作条 -->
+      <div class="page-foot">
+        <button class="btn btn-primary" id="submitBtn" data-action="onSubmit" type="button">提交</button>
+        <button class="btn" id="resetBtn" data-action="onReset" disabled title="重置参数表所有修改" type="button">重置</button>
+        <button class="btn" data-action="onLeave" type="button">取消</button>
+        <span class="foot-meta" id="footMeta">无修改 · 直接提交将完全继承业务配置</span>
+      </div>
+    </main>
+  </div>
+
+  <!-- 离开拦截 InfoBox -->
+  <div class="infobox-mask" id="infobox">
+    <div class="infobox">
+      <div class="warning-icon">!</div>
+      <div class="infobox-title" id="boxTitle">确认放弃创建？</div>
+      <div class="infobox-desc" id="boxDesc"></div>
+      <div class="infobox-actions">
+        <button class="btn btn-primary" id="boxConfirm" data-action="confirmBox" type="button">确认离开</button>
+        <button class="btn" data-action="closeBox" type="button">继续编辑</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Message -->
+  <div class="message" id="message">
+    <span class="message-icon">✓</span>
+    <span class="message-text">操作成功</span>
+    <button class="message-close" data-action="hideMessage" type="button">×</button>
+  </div>
+
+  <script>
+    /**
+     * 草稿态参数表（多 Tab）
+     * - 每个 Tab 一份独立 state：data / paramPool / editingIndex / editStartValue / adding
+     * - 顶层全局变量 data / paramPool / editingIndex / editStartValue / adding 始终指向当前 Tab，
+     *   通过 loadCurrentTab / saveCurrentTab 在 Tab 切换时进行引用 / 值同步；
+     *   这样原有 renderRows / startEdit / confirmAdd 等代码无需改动。
+     * - inheritedValue: 业务级当前值（不可变；进入此页时锁定）
+     * - currentValue: 当前显示值
+     * - edited: 单向门闩，一旦置 true 不再回退
+     */
+    const urlParams = new URLSearchParams(window.location.search);
+    const IS_TENDB = urlParams.get('dbType') === 'TenDBCluster';
+    const IS_SINGLE = urlParams.get('dbType') === 'MySQL 单节点';
+    const DB_TYPE = IS_TENDB ? 'TenDBCluster' : (IS_SINGLE ? 'MySQL 单节点' : 'MySQL 主从');
+    const ACCESS_LABEL = IS_TENDB ? 'Spider' : 'Proxy';
+
+    const STORAGE_CATALOG = {
+      TXSQL: {
+        recommended: { series: 'MySQL-8.0', version: '8.0.32' },
+        series: {
+          'MySQL-8.0': { versions: ['8.0.28', '8.0.32'] },
+          'MySQL-5.7': { versions: ['5.7.36', '5.7.44'] }
+        }
+      },
+      Community: {
+        recommended: { series: 'MySQL-8.0', version: '8.0.36' },
+        series: {
+          'MySQL-8.0': { versions: ['8.0.36', '8.0.39'] },
+          'MySQL-5.7': { versions: ['5.7.44'] }
+        }
+      },
+      TMySQL: {
+        recommended: { series: 'MySQL-5.7', version: '5.7.20' },
+        series: {
+          'MySQL-8.0': { versions: ['8.0.18', '8.0.22'] },
+          'MySQL-5.7': { versions: ['5.7.18', '5.7.20'] },
+          'MySQL-5.6': { versions: ['5.6.24'] }
+        }
+      },
+      RocksDB: {
+        recommended: { series: 'MySQL-8.0', version: '8.0.32' },
+        series: {
+          'MySQL-8.0': { versions: ['8.0.28', '8.0.32'] }
+        }
+      }
+    };
+    const ACCESS_CATALOG_MYSQL = {
+      recommended: { series: 'Proxy-2.x', version: '2.1.0' },
+      series: {
+        'Proxy-2.x': { versions: ['2.0.8', '2.1.0'] }
+      }
+    };
+    const ACCESS_CATALOG_SPIDER = {
+      recommended: { series: 'Spider-3.x', version: '3.2.1' },
+      series: {
+        'Spider-3.x': { versions: ['3.1.0', '3.2.1'] }
+      }
+    };
+    const ACCESS_CATALOG_ROOT = IS_TENDB ? ACCESS_CATALOG_SPIDER : ACCESS_CATALOG_MYSQL;
+    const ACCESS_CATALOG = ACCESS_CATALOG_ROOT.series;
+    const STORAGE_OS_CATALOG = {
+      '8.0.18': ['tlinux-2.2', 'tlinux-3.2'],
+      '8.0.22': ['tlinux-3.2'],
+      '8.0.28': ['tlinux-3.2'],
+      '8.0.32': ['tlinux-3.2', 'tlinux-4'],
+      '8.0.36': ['tlinux-3.2', 'tlinux-4'],
+      '8.0.39': ['tlinux-4'],
+      '5.7.36': ['tlinux-2.2', 'tlinux-3.2'],
+      '5.7.44': ['tlinux-3.2', 'tlinux-4'],
+      '5.7.18': ['tlinux-2.2'],
+      '5.7.20': ['tlinux-2.2', 'tlinux-3.2'],
+      '5.6.24': ['tlinux-1.2', 'tlinux-2.2']
+    };
+    const ACCESS_OS_CATALOG = {
+      '2.0.8': ['tlinux-2.2', 'tlinux-3.2'],
+      '2.1.0': ['tlinux-3.2', 'tlinux-4'],
+      '3.1.0': ['tlinux-3.2'],
+      '3.2.1': ['tlinux-3.2', 'tlinux-4']
+    };
+
+    function buildTabsList() {
+      const tabs = [{ id: 'mysql', conf_file: 'my.cnf', dynamic: true }];
+      if (IS_TENDB) tabs.push({ id: 'spider', conf_file: 'spider.cnf', dynamic: true });
+      tabs.push(
+        { id: 'monitor',    conf_file: 'monitor.toml',    title: '本地监控配置' },
+        { id: 'backup-cfg', conf_file: 'backup.toml',     title: '全备配置选项' },
+        { id: 'backup-ctl', conf_file: 'backup-ctl.toml', title: '全备控制选项' },
+        { id: 'binlog',     conf_file: 'binlog.toml',     title: 'Binlog 备份配置' },
+        { id: 'check',      conf_file: 'check.toml',      title: '校验配置' }
+      );
+      return tabs;
+    }
+    const TABS = buildTabsList();
+
+    /* 已存在的模块标识库（mock）——用于唯一性校验
+       格式：<数据库类型>-<名称>-<存储层系列>-<字符集>（不含发行版 / 小版本号）*/
+    const EXISTING_MODULE_KEYS = new Set([
+      'MySQL 主从-web-mysql-prod-MySQL-5.7-utf8mb4',
+      'MySQL 主从-order-svc-MySQL-8.0-utf8mb4',
+      'MySQL 主从-payment-core-MySQL-5.7-utf8mb4',
+      'MySQL 主从-log-mysql-MySQL-8.0-utf8mb4',
+      'MySQL 单节点-shared-MySQL-5.7-utf8mb4',
+      'TenDBCluster-shared-MySQL-5.7-utf8mb4'
+    ]);
+    function computeModuleKey(dbType, alias, storageSeries, charset) {
+      return `${dbType}-${alias}-${storageSeries}-${charset}`;
+    }
+    let nameValid = false;
+
+    let storageEdition = 'TXSQL';
+    let storageSeries = 'MySQL-8.0';
+    let storagePatch = '8.0.32';
+    let accessSeries = IS_TENDB ? 'Spider-3.x' : 'Proxy-2.x';
+    let accessPatch = IS_TENDB ? '3.2.1' : '2.1.0';
+    let storageOsMode = 'follow';
+    let accessOsMode = 'follow';
+    let storageOs = [];
+    let accessOs = [];
+    let prevStorageSeries = storageSeries;
+    let prevAccessSeries = accessSeries;
+    let pendingStorageSeries = '';
+    let pendingAccessSeries = '';
+
+    // mock：业务级带出的初始参数（每个 Tab 一组）
+    const INITIAL_DATA = {
+      mysql: [
+        { key: 'mysqld.binlog_format', inheritedValue: 'ROW', currentValue: 'ROW', edited: false, constraint: 'ENUM', allowed: 'ROW|MIXED|STATEMENT', restart: '否', editable: true, desc: 'binlog 记录格式，建议按业务复制需求谨慎调整。' },
+        { key: 'mysqld.default_storage_engine', inheritedValue: 'InnoDB', currentValue: 'InnoDB', edited: false, constraint: 'ENUM', allowed: 'InnoDB', restart: '是', editable: false, desc: '' },
+        { key: 'mysqld.expire_logs_days', inheritedValue: '10', currentValue: '10', edited: false, constraint: 'RANGE', allowed: '[0,99]', restart: '是', editable: true, desc: '' },
+        { key: 'mysqld.sql_mode', inheritedValue: 'STRICT_TRANS_TABLES,NO_ZERO_DATE', currentValue: 'STRICT_TRANS_TABLES,NO_ZERO_DATE', edited: false, constraint: 'ENUMS', allowed: 'STRICT_TRANS_TABLES,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION', restart: '否', editable: true, desc: 'SQL 模式支持多个选项组合。' },
+        { key: 'mysqld.audit_policy', inheritedValue: '{"slow_query":true,"ddl":false}', currentValue: '{"slow_query":true,"ddl":false}', edited: false, constraint: 'JSON', allowed: '合法的 JSON', restart: '否', editable: true, desc: '审计策略配置，保存时校验 JSON 格式。' }
+      ],
+      monitor: [
+        { key: 'monitor.heartbeat_interval', inheritedValue: '60', currentValue: '60', edited: false, constraint: 'RANGE', allowed: '[10,3600]', restart: '否', editable: true, desc: '本地监控心跳间隔（秒）。' },
+        { key: 'monitor.report_endpoint', inheritedValue: 'https://monitor.dbm/api', currentValue: 'https://monitor.dbm/api', edited: false, constraint: '无约束', allowed: '', restart: '否', editable: true, desc: '监控数据上报地址。' },
+        { key: 'monitor.enable_slowlog', inheritedValue: 'ON', currentValue: 'ON', edited: false, constraint: 'ENUM', allowed: 'ON|OFF', restart: '否', editable: true, desc: '是否上报慢日志。' }
+      ],
+      'backup-cfg': [
+        { key: 'backup.storage_type', inheritedValue: 'cos', currentValue: 'cos', edited: false, constraint: 'ENUM', allowed: 'cos|local|nfs', restart: '是', editable: true, desc: '全备落地存储类型。' },
+        { key: 'backup.compress_level', inheritedValue: '6', currentValue: '6', edited: false, constraint: 'RANGE', allowed: '[0,9]', restart: '否', editable: true, desc: '压缩等级。' },
+        { key: 'backup.parallel_workers', inheritedValue: '4', currentValue: '4', edited: false, constraint: 'RANGE', allowed: '[1,32]', restart: '否', editable: true, desc: '并行 worker 数。' }
+      ],
+      'backup-ctl': [
+        { key: 'backup_ctl.full_window', inheritedValue: '02:00-06:00', currentValue: '02:00-06:00', edited: false, constraint: '无约束', allowed: '', restart: '否', editable: true, desc: '全备执行时间窗。' },
+        { key: 'backup_ctl.max_concurrency', inheritedValue: '2', currentValue: '2', edited: false, constraint: 'RANGE', allowed: '[1,10]', restart: '否', editable: true, desc: '同业务最大并行全备数。' }
+      ],
+      binlog: [
+        { key: 'binlog.backup_storage', inheritedValue: 'cos', currentValue: 'cos', edited: false, constraint: 'ENUM', allowed: 'cos|local', restart: '是', editable: true, desc: 'Binlog 备份存储类型。' },
+        { key: 'binlog.retention_days', inheritedValue: '7', currentValue: '7', edited: false, constraint: 'RANGE', allowed: '[1,90]', restart: '否', editable: true, desc: 'Binlog 保留天数。' }
+      ],
+      check: [
+        { key: 'check.cron', inheritedValue: '0 4 * * *', currentValue: '0 4 * * *', edited: false, constraint: '无约束', allowed: '', restart: '否', editable: true, desc: '一致性校验调度。' },
+        { key: 'check.chunk_size', inheritedValue: '1000', currentValue: '1000', edited: false, constraint: 'RANGE', allowed: '[100,100000]', restart: '否', editable: true, desc: '单批校验记录数。' }
+      ],
+      spider: [
+        { key: 'spider.connect_timeout', inheritedValue: '10', currentValue: '10', edited: false, constraint: 'RANGE', allowed: '[1,3600]', restart: '否', editable: true, desc: 'Spider 连接超时（秒）。' },
+        { key: 'spider.table_mode', inheritedValue: 'shard', currentValue: 'shard', edited: false, constraint: 'ENUM', allowed: 'shard|single', restart: '是', editable: true, desc: 'Spider 表模式。' }
+      ]
+    };
+
+    // mock：候选参数池（平台已定义、未在当前表中）
+    const INITIAL_POOL = {
+      mysql: [
+        { key: 'mysqld.innodb_flush_method', inheritedValue: 'O_DIRECT', constraint: 'ENUM', allowed: 'fsync|O_DIRECT|O_DSYNC', restart: '是', editable: true, desc: 'InnoDB 刷盘方式。' },
+        { key: 'mysqld.slow_query_log_file', inheritedValue: '/data/mysql/slow.log', constraint: '无约束', allowed: '', restart: '否', editable: true, desc: '慢查询日志文件路径。' },
+        { key: 'mysqld.max_connections', inheritedValue: '5000', constraint: 'RANGE', allowed: '[100,100000]', restart: '否', editable: true, desc: '' },
+        { key: 'mysqld.tx_isolation', inheritedValue: 'REPEATABLE-READ', constraint: 'ENUM', allowed: 'READ-UNCOMMITTED|READ-COMMITTED|REPEATABLE-READ|SERIALIZABLE', restart: '否', editable: true, desc: '事务隔离级别。' },
+        { key: 'mysqld.innodb_buffer_pool_size', inheritedValue: '8g', constraint: 'BYTES', allowed: '[1024,128g]', restart: '是', editable: true, desc: 'InnoDB Buffer Pool 大小。' }
+      ],
+      monitor: [
+        { key: 'monitor.report_compression', inheritedValue: 'gzip', constraint: 'ENUM', allowed: 'none|gzip|zstd', restart: '否', editable: true, desc: '上报压缩。' },
+        { key: 'monitor.log_level', inheritedValue: 'info', constraint: 'ENUM', allowed: 'debug|info|warn|error', restart: '否', editable: true, desc: '本地监控日志等级。' }
+      ],
+      'backup-cfg': [
+        { key: 'backup.cos_bucket', inheritedValue: 'dbm-backup', constraint: '无约束', allowed: '', restart: '是', editable: true, desc: 'COS bucket。' },
+        { key: 'backup.timeout_seconds', inheritedValue: '7200', constraint: 'RANGE', allowed: '[60,86400]', restart: '否', editable: true, desc: '全备超时秒数。' }
+      ],
+      'backup-ctl': [
+        { key: 'backup_ctl.retry_on_fail', inheritedValue: 'ON', constraint: 'ENUM', allowed: 'ON|OFF', restart: '否', editable: true, desc: '失败自动重试。' }
+      ],
+      binlog: [
+        { key: 'binlog.compress', inheritedValue: 'ON', constraint: 'ENUM', allowed: 'ON|OFF', restart: '是', editable: true, desc: '是否压缩 Binlog。' }
+      ],
+      check: [
+        { key: 'check.parallel', inheritedValue: '2', constraint: 'RANGE', allowed: '[1,16]', restart: '否', editable: true, desc: '校验并行度。' }
+      ],
+      spider: [
+        { key: 'spider.max_connections', inheritedValue: '1000', constraint: 'RANGE', allowed: '[100,10000]', restart: '否', editable: true, desc: 'Spider 最大连接数。' }
+      ]
+    };
+
+    /* natural sort：等价于 Mac/Windows 文件管理器默认排序——数字按数值、大小写不敏感（§3.2.1）*/
+    const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+    function naturalSortByKey(rows) {
+      return rows.slice().sort((a, b) => collator.compare(a.key, b.key));
+    }
+
+    function buildTabStates() {
+      const states = {};
+      TABS.forEach(t => {
+        // 初始化时统一按 natural sort 排序，建立稳定全局视图；
+        // confirmAdd 时新增行走 unshift 临时置顶（本会话内有效），与 §3.2.1 一致
+        const seed = JSON.parse(JSON.stringify(INITIAL_DATA[t.id] || []));
+        const pool = JSON.parse(JSON.stringify(INITIAL_POOL[t.id] || []));
+        states[t.id] = {
+          data: naturalSortByKey(seed),
+          paramPool: naturalSortByKey(pool),
+          editingIndex: null,
+          editStartValue: '',
+          adding: null
+        };
+      });
+      return states;
+    }
+
+    const tabStates = buildTabStates();
+    let currentTabId = 'mysql';
+    let data, paramPool, editingIndex, editStartValue, adding;
+    let boxMode = '';
+
+    function isStorageComplete() {
+      return !!(storageEdition && storageSeries && storagePatch);
+    }
+    function isAccessComplete() {
+      return IS_SINGLE || !!(accessSeries && accessPatch);
+    }
+    function getAwaitingState() {
+      if (!isStorageComplete()) return { show: true, title: '请先选择目标存储层版本' };
+      if (IS_TENDB && !isAccessComplete()) return { show: true, title: '请先选择目标接入层版本' };
+      return { show: false, title: '' };
+    }
+    function updateParamsAwaiting() {
+      const state = getAwaitingState();
+      const awaitingEl = document.getElementById('paramsAwaiting');
+      const contentEl = document.getElementById('paramsContent');
+      const titleEl = document.getElementById('paramsAwaitingTitle');
+      if (!awaitingEl || !contentEl) return;
+      awaitingEl.style.display = state.show ? 'block' : 'none';
+      contentEl.style.display = state.show ? 'none' : 'block';
+      if (titleEl) titleEl.innerText = state.title;
+      updateSubmitBtn();
+    }
+    function updateSubmitBtn() {
+      const btn = document.getElementById('submitBtn');
+      if (!btn) return;
+      const charset = (document.getElementById('charset') || {}).value || '';
+      const osIncomplete = !storageOs.length || (!IS_SINGLE && !accessOs.length);
+      const blocked = getAwaitingState().show || !isAccessComplete() || !charset || osIncomplete;
+      btn.disabled = blocked;
+      btn.title = blocked
+        ? (getAwaitingState().title || (!isAccessComplete() ? '请选择接入层版本' : (!charset ? '请选择字符集' : '请选择操作系统版本')))
+        : '';
+    }
+
+    function tabHasEdits(tabId) {
+      const s = tabStates[tabId];
+      if (!s) return false;
+      return s.data.some(r => r.edited || r.isNew);
+    }
+
+    function getStorageEditionEntry(edition) {
+      return STORAGE_CATALOG[edition] || null;
+    }
+    function getStorageSeriesMap(edition) {
+      return getStorageEditionEntry(edition)?.series || {};
+    }
+    function getStorageEditionRecommended(edition) {
+      return getStorageEditionEntry(edition)?.recommended || null;
+    }
+    function getAccessEditionRecommended() {
+      return ACCESS_CATALOG_ROOT.recommended || null;
+    }
+    function defaultPatchForStorageSeries(edition, series) {
+      const rec = getStorageEditionRecommended(edition);
+      return rec && rec.series === series ? rec.version : '';
+    }
+    function defaultPatchForAccessSeries(series) {
+      const rec = getAccessEditionRecommended();
+      return rec && rec.series === series ? rec.version : '';
+    }
+
+    const CHARSET_OPTIONS = ['utf8mb4', 'utf8', 'latin1'];
+    /* 单选下拉统一渲染：发行版 / 字符集 / 系列 / 版本号 共用一套 custom-select */
+    function renderSingleSelect(wrapId, options, current, actionName) {
+      const trigger = document.querySelector(`#${wrapId} .custom-select-trigger`);
+      const menu = document.querySelector(`#${wrapId} .custom-select-menu`);
+      if (!trigger || !menu) return;
+      trigger.innerHTML = current
+        ? `<span class="custom-select-value">${current}</span>`
+        : '<span class="custom-select-value is-placeholder">请选择</span>';
+      menu.innerHTML = options.map(v =>
+        `<div class="custom-select-option${v === current ? ' selected' : ''}" data-action="${actionName}" data-value="${v}">${v}</div>`
+      ).join('');
+    }
+    function renderCharsetOptions() {
+      const charset = document.getElementById('charset').value;
+      renderSingleSelect('charsetWrap', CHARSET_OPTIONS, charset, 'pickCharset');
+    }
+    function renderStorageEditionOptions() {
+      document.getElementById('storageEdition').value = storageEdition;
+      renderSingleSelect('storageEditionWrap', Object.keys(STORAGE_CATALOG), storageEdition, 'pickStorageEdition');
+    }
+    function onCharsetPick(value) {
+      document.getElementById('charset').value = value;
+      document.getElementById('charsetWrap').classList.remove('open');
+      renderCharsetOptions();
+      onNameChange();
+    }
+    function onStorageEditionPick(value) {
+      document.getElementById('storageEditionWrap').classList.remove('open');
+      if (value === storageEdition) return;
+      onStorageEditionChange(value);
+    }
+    function renderStorageSeriesOptions() {
+      const seriesMap = getStorageSeriesMap(storageEdition);
+      document.getElementById('storageSeries').value = storageSeries;
+      renderSingleSelect('storageSeriesWrap', Object.keys(seriesMap), storageSeries, 'pickStorageSeries');
+    }
+    function renderAccessSeriesOptions() {
+      document.getElementById('accessSeries').value = accessSeries;
+      renderSingleSelect('accessSeriesWrap', Object.keys(ACCESS_CATALOG), accessSeries, 'pickAccessSeries');
+    }
+    function buildPatchMenuHtml(versions, current, actionName, showRecommendFor) {
+      if (!versions?.length) return '';
+      return versions.map(v => {
+        const rec = showRecommendFor === v ? '<span class="recommend-tag">推荐</span>' : '';
+        const sel = v === current ? ' selected' : '';
+        return `<div class="custom-select-option${sel}" data-action="${actionName}" data-value="${v}">${v}${rec}</div>`;
+      }).join('');
+    }
+    function syncStoragePatchUI() {
+      const hidden = document.getElementById('storagePatch');
+      const trigger = document.getElementById('storagePatchTrigger');
+      const menu = document.getElementById('storagePatchMenu');
+      if (!hidden || !trigger || !menu) return;
+      hidden.value = storagePatch || '';
+      trigger.innerHTML = storagePatch
+        ? `<span class="custom-select-value">${storagePatch}</span>`
+        : '<span class="custom-select-value is-placeholder">请选择</span>';
+      const entry = getStorageSeriesMap(storageEdition)[storageSeries];
+      const rec = getStorageEditionRecommended(storageEdition);
+      const recommendPatch = rec && rec.series === storageSeries ? rec.version : '';
+      menu.innerHTML = entry ? buildPatchMenuHtml(entry.versions, storagePatch, 'pickStoragePatch', recommendPatch) : '';
+    }
+    function syncAccessPatchUI() {
+      const hidden = document.getElementById('accessPatch');
+      const trigger = document.getElementById('accessPatchTrigger');
+      const menu = document.getElementById('accessPatchMenu');
+      if (!hidden || !trigger || !menu) return;
+      hidden.value = accessPatch || '';
+      trigger.innerHTML = accessPatch
+        ? `<span class="custom-select-value">${accessPatch}</span>`
+        : '<span class="custom-select-value is-placeholder">请选择</span>';
+      const entry = ACCESS_CATALOG[accessSeries];
+      const rec = getAccessEditionRecommended();
+      const recommendPatch = rec && rec.series === accessSeries ? rec.version : '';
+      menu.innerHTML = entry ? buildPatchMenuHtml(entry.versions, accessPatch, 'pickAccessPatch', recommendPatch) : '';
+    }
+    /* 操作系统版本：跟随版本包实时取全集；指定范围在版本关联范围内多选。 */
+    function renderLayerOs(layer) {
+      const isStorage = layer === 'storage';
+      const wrapId = isStorage ? 'storageOsWrap' : 'accessOsWrap';
+      const wrap = document.getElementById(wrapId);
+      if (!wrap) return;
+      const mode = isStorage ? storageOsMode : accessOsMode;
+      const available = (isStorage ? STORAGE_OS_CATALOG[storagePatch] : ACCESS_OS_CATALOG[accessPatch]) || [];
+      const trigger = wrap.querySelector('.custom-select-trigger');
+      const menu = wrap.querySelector('.custom-select-menu');
+      const follow = document.getElementById(`${layer}OsFollow`);
+      const custom = document.getElementById(`${layer}OsCustom`);
+      follow.hidden = mode !== 'follow';
+      custom.hidden = mode !== 'specified';
+      if (!available.length) {
+        follow.innerHTML = '<span class="os-mode-hint">请先选择版本号</span>';
+        trigger.innerHTML = '<span class="custom-select-value is-placeholder">请先选择版本号</span>';
+        trigger.disabled = true;
+        menu.innerHTML = '';
+        wrap.querySelector('input[type=hidden]').value = '';
+        if (mode !== 'specified') {
+          if (isStorage) storageOs = [];
+          else accessOs = [];
+        }
+        updateSubmitBtn();
+        return;
+      }
+      trigger.disabled = false;
+      let selected = mode === 'follow'
+        ? available.slice()
+        : (isStorage ? storageOs : accessOs).filter(item => available.includes(item));
+      if (isStorage) storageOs = selected;
+      else accessOs = selected;
+      follow.innerHTML = available.map(item => `<span class="os-follow-tag">${item}</span>`).join('');
+      wrap.querySelector('input[type=hidden]').value = selected.join(',');
+      trigger.innerHTML = selected.length
+        ? `<span class="custom-select-value">${selected.join('，')}</span>`
+        : '<span class="custom-select-value is-placeholder">请选择</span>';
+      menu.innerHTML = available.map(item =>
+        `<div class="custom-select-option${selected.includes(item) ? ' selected' : ''}" data-action="toggleOsOption" data-layer="${layer}" data-value="${item}">${item}<span class="option-check"></span></div>`
+      ).join('');
+      updateSubmitBtn();
+    }
+    function onOsModeChange(layer, mode) {
+      const isStorage = layer === 'storage';
+      const prev = isStorage ? storageOsMode : accessOsMode;
+      if (isStorage) {
+        storageOsMode = mode;
+        if (mode === 'specified' && prev !== 'specified') storageOs = [];
+      } else {
+        accessOsMode = mode;
+        if (mode === 'specified' && prev !== 'specified') accessOs = [];
+      }
+      renderLayerOs(layer);
+    }
+    function onLayerOsToggle(layer, value) {
+      const isStorage = layer === 'storage';
+      const selected = (isStorage ? storageOs : accessOs).slice();
+      const idx = selected.indexOf(value);
+      if (idx > -1) selected.splice(idx, 1);
+      else selected.push(value);
+      if (isStorage) storageOs = selected;
+      else accessOs = selected;
+      renderLayerOs(layer);
+      // 多选：点选后菜单保持展开
+      const wrapId = isStorage ? 'storageOsWrap' : 'accessOsWrap';
+      document.getElementById(wrapId).classList.add('open');
+      positionPatchMenu(wrapId);
+      updateSubmitBtn();
+    }
+    function initVersionForm() {
+      document.getElementById('dbTypeText').innerText = DB_TYPE;
+      document.getElementById('accessLayerBlock').hidden = IS_SINGLE;
+      renderCharsetOptions();
+      renderStorageEditionOptions();
+      renderStorageSeriesOptions();
+      renderAccessSeriesOptions();
+      syncStoragePatchUI();
+      syncAccessPatchUI();
+      renderLayerOs('storage');
+      renderLayerOs('access');
+    }
+
+    function applyStorageSeriesChange(newSeries, skipConfirm) {
+      if (newSeries === storageSeries) return;
+      discardCurrentEdit();
+      saveCurrentTab();
+      const dirty = tabHasEdits('mysql');
+      if (!skipConfirm && dirty) {
+        boxMode = 'switch-storage-series';
+        pendingStorageSeries = newSeries;
+        const modified = tabStates.mysql.data.filter(r => r.edited).length;
+        document.getElementById('boxTitle').innerText = '切换存储层版本将重置 MySQL 配置参数？';
+        document.getElementById('boxDesc').innerHTML =
+          `不同存储层系列支持的参数列表不同，需要重新加载默认参数集。<br>已修改的 <b>${modified}</b> 项将被清空，监控 / 备份等 Tab 不受影响。`;
+        document.getElementById('boxConfirm').innerText = '确认切换';
+        document.getElementById('infobox').classList.add('show');
+        return;
+      }
+      storageSeries = newSeries;
+      storagePatch = defaultPatchForStorageSeries(storageEdition, storageSeries);
+      prevStorageSeries = storageSeries;
+      renderStorageSeriesOptions();
+      syncStoragePatchUI();
+      renderLayerOs('storage');
+      resetTab('mysql');
+      renderTabs();
+      updateParamsAwaiting();
+      if (!getAwaitingState().show) renderRows();
+      validateName();
+    }
+
+    function applyAccessSeriesChange(newSeries, skipConfirm) {
+      if (newSeries === accessSeries) return;
+      if (!IS_TENDB) {
+        accessSeries = newSeries;
+        accessPatch = defaultPatchForAccessSeries(accessSeries);
+        renderAccessSeriesOptions();
+        syncAccessPatchUI();
+        renderLayerOs('access');
+        validateName();
+        updateParamsAwaiting();
+        return;
+      }
+      discardCurrentEdit();
+      saveCurrentTab();
+      const dirty = tabHasEdits('spider');
+      if (!skipConfirm && dirty) {
+        boxMode = 'switch-spider-series';
+        pendingAccessSeries = newSeries;
+        const modified = tabStates.spider.data.filter(r => r.edited).length;
+        document.getElementById('boxTitle').innerText = '切换 Spider 系列将重置 Spider 配置参数？';
+        document.getElementById('boxDesc').innerHTML =
+          `不同 Spider 系列支持的参数列表不同，需要重新加载默认参数集。<br>已修改的 <b>${modified}</b> 项将被清空，其它 Tab 不受影响。`;
+        document.getElementById('boxConfirm').innerText = '确认切换';
+        document.getElementById('infobox').classList.add('show');
+        return;
+      }
+      accessSeries = newSeries;
+      accessPatch = defaultPatchForAccessSeries(accessSeries);
+      prevAccessSeries = accessSeries;
+      renderAccessSeriesOptions();
+      syncAccessPatchUI();
+      renderLayerOs('access');
+      resetTab('spider');
+      renderTabs();
+      updateParamsAwaiting();
+      if (!getAwaitingState().show) renderRows();
+      validateName();
+    }
+
+    function onStorageEditionChange(edition) {
+      storageEdition = edition;
+      renderStorageEditionOptions();
+      const rec = getStorageEditionRecommended(edition);
+      if (rec) {
+        if (rec.series !== storageSeries) applyStorageSeriesChange(rec.series, true);
+        storagePatch = rec.version;
+      } else if (storageSeries) {
+        applyStorageSeriesChange('', true);
+        storagePatch = '';
+      } else {
+        storagePatch = '';
+      }
+      syncStoragePatchUI();
+      renderLayerOs('storage');
+      updateParamsAwaiting();
+      validateName();
+    }
+    function onStorageSeriesSelect(newSeries) {
+      document.getElementById('storageSeriesWrap').classList.remove('open');
+      applyStorageSeriesChange(newSeries, false);
+    }
+    function onStoragePatchPick(patch) {
+      storagePatch = patch;
+      syncStoragePatchUI();
+      renderLayerOs('storage');
+      document.getElementById('storagePatchWrap').classList.remove('open');
+      updateParamsAwaiting();
+      validateName();
+      if (!getAwaitingState().show) renderRows();
+    }
+    function onAccessSeriesSelect(newSeries) {
+      document.getElementById('accessSeriesWrap').classList.remove('open');
+      applyAccessSeriesChange(newSeries, false);
+    }
+    function onAccessPatchPick(patch) {
+      accessPatch = patch;
+      syncAccessPatchUI();
+      renderLayerOs('access');
+      document.getElementById('accessPatchWrap').classList.remove('open');
+      updateParamsAwaiting();
+      validateName();
+    }
+
+    function positionPatchMenu(wrapId) {
+      const wrap = document.getElementById(wrapId);
+      const trigger = wrap?.querySelector('.custom-select-trigger');
+      const menu = wrap?.querySelector('.custom-select-menu');
+      if (!wrap || !trigger || !menu || !wrap.classList.contains('open')) return;
+      const rect = trigger.getBoundingClientRect();
+      menu.style.left = rect.left + 'px';
+      menu.style.top = (rect.bottom + 2) + 'px';
+      menu.style.minWidth = rect.width + 'px';
+    }
+
+    function loadCurrentTab() {
+      const s = tabStates[currentTabId];
+      data = s.data;
+      paramPool = s.paramPool;
+      editingIndex = s.editingIndex;
+      editStartValue = s.editStartValue;
+      adding = s.adding;
+    }
+    function saveCurrentTab() {
+      const s = tabStates[currentTabId];
+      // data / paramPool 是引用类型，渲染期间已就地修改，无需再 save；
+      // 仅同步基本类型 / 对象引用赋值
+      s.editingIndex = editingIndex;
+      s.editStartValue = editStartValue;
+      s.adding = adding;
+    }
+    function switchTab(id) {
+      if (id === currentTabId) return;
+      // 零阻塞：切 Tab 前先隐式丢弃当前 Tab 的编辑/新增
+      discardCurrentEdit();
+      saveCurrentTab();
+      currentTabId = id;
+      loadCurrentTab();
+      renderTabs();
+      renderRows();
+    }
+    function getTabTitle(t) {
+      if (t.id === 'mysql') {
+        return storageSeries ? `${DB_TYPE}-${storageSeries}` : DB_TYPE;
+      }
+      if (t.id === 'spider') {
+        return accessSeries ? `${ACCESS_LABEL}-${accessSeries}` : `${ACCESS_LABEL} 配置`;
+      }
+      return t.title;
+    }
+    function tabStat(id) {
+      const s = tabStates[id];
+      return { modified: s.data.filter(r => r.edited).length, total: s.data.length };
+    }
+    function globalStat() {
+      saveCurrentTab();
+      let modified = 0, total = 0;
+      TABS.forEach(t => {
+        const s = tabStat(t.id);
+        modified += s.modified;
+        total += s.total;
+      });
+      return { modified, total };
+    }
+    function renderTabs() {
+      const wrap = document.getElementById('paramTabs');
+      if (!wrap) return;
+      wrap.innerHTML = TABS.map(t => {
+        const s = tabStat(t.id);
+        const active = t.id === currentTabId ? ' active' : '';
+        const dot   = s.modified > 0 ? '<span class="tab-dot" title="该 Tab 有过修改"></span>' : '';
+        return `<button type="button" class="param-tab${active}" data-action="switchTab" data-tab="${t.id}">${getTabTitle(t)}${dot}</button>`;
+      }).join('');
+    }
+    loadCurrentTab();
+
+    /**
+     * "仅显示已修改"复选框切换处理
+     *
+     * 设计选择：用 change 事件而非 data-action 委托——
+     *   data-action 在 mousedown 阶段触发，此时 checkbox.checked 还未翻转，
+     *   会拿到旧值；change 事件由浏览器在状态翻转后才派发，状态一定正确。
+     *
+     * 仅切换 tbody 的 .only-modified class，过滤由 CSS 选择器完成——零 JS 状态。
+     */
+    function onToggleOnlyModified(checkbox) {
+      document.getElementById('rows').classList.toggle('only-modified', checkbox.checked);
+    }
+
+    function renderRows() {
+      document.getElementById('totalCount').innerText = data.length;
+      const modifiedCount = data.filter(r => r.edited).length;
+      document.getElementById('modifiedStat').innerHTML = `已修改 <b>${modifiedCount}</b> 项`;
+
+      // 修改组：仅当本 Tab 有修改时显示；归零时整组隐藏，并联动复位"仅显示已修改"
+      // 联动复位的意义：避免用户切回未修改 Tab 后，过滤态残留导致后续编辑场景行为异常
+      const group = document.getElementById('modifiedGroup');
+      const checkbox = document.getElementById('onlyModified');
+      const tbody = document.getElementById('rows');
+      if (modifiedCount > 0) {
+        group.classList.remove('is-hidden');
+      } else {
+        group.classList.add('is-hidden');
+        if (checkbox && checkbox.checked) {
+          checkbox.checked = false;
+          tbody.classList.remove('only-modified');
+        }
+      }
+
+      // 底部 sticky：跨 Tab 全局聚合；零阻塞模型下未确认状态已废除，只展示"已修改"
+      const gs = globalStat();
+      const footMeta = document.getElementById('footMeta');
+      if (gs.modified > 0) {
+        footMeta.innerHTML = `<span class="stat-item">总计已修改 <span class="stat-badge">${gs.modified}</span> 项</span>`
+          + `<span class="foot-hint">提交后将固化为【自定义】，不再随业务变化</span>`;
+      } else {
+        footMeta.innerHTML = '';
+      }
+
+      // 重置按钮：仅当任意 Tab 有修改时启用（零阻塞模型下"未确认"不存在）
+      document.getElementById('resetBtn').disabled = gs.modified === 0;
+
+      // Tab 栏角标实时刷新
+      renderTabs();
+
+      // 零阻塞模型：「添加参数」始终可点击；点击时若处于编辑/新增态会先隐式丢弃
+      const addBtn = document.getElementById('addBtn');
+      addBtn.disabled = false;
+      addBtn.removeAttribute('title');
+
+      const adderHtml = adding ? renderAdderRow() : '';
+      const rowsHtml = data.map((row, index) => {
+        const modifiedClass = row.edited ? ' modified' : '';
+        // is-new 与 modified 同时输出（新增行必然 edited=true），但 CSS 用 :not(.is-new) 排除黄底
+        // 保留 .modified 类：其他依赖（如 .edit-icon 透明度）对新增行也成立
+        const newRowClass = row.isNew ? ' is-new' : '';
+        const readonlyClass = row.editable ? '' : ' readonly-row';
+        const readonlyTitle = row.editable ? '' : ' title="该参数不允许业务编辑，如需变更请联系平台管理员"';
+        return `
+          <tr class="${modifiedClass}${newRowClass}${readonlyClass}"${readonlyTitle}>
+            <td>
+              <span class="name-cell">
+                <span class="param-name">${row.key}</span>
+                ${row.isNew ? '<span class="tag tag-green" style="margin-left:4px">New</span>' : ''}
+                ${row.desc ? `<span class="info-icon">i<span class="popover"><b>${row.key}</b><br>${row.desc}</span></span>` : ''}
+              </span>
+            </td>
+            <td>${renderValue(row, index)}</td>
+            <td>${renderAllowed(row)}</td>
+            <td>${row.restart}</td>
+            <td>${renderOps(row, index)}</td>
+          </tr>`;
+      }).join('');
+      document.getElementById('rows').innerHTML = adderHtml + rowsHtml;
+      positionParamPanel();
+    }
+
+    /* 把 panel 定位到输入框正下方（fixed 定位，规避表格 overflow 裁剪）*/
+    function positionParamPanel() {
+      requestAnimationFrame(() => {
+        const panel = document.querySelector('.param-search-panel');
+        const input = document.getElementById('paramSearchInput');
+        if (!panel || !input) return;
+        if (!adding || !adding.panelOpen) return;
+        const rect = input.getBoundingClientRect();
+        const panelWidth = Math.max(rect.width, 320);
+        panel.style.left = rect.left + 'px';
+        panel.style.top = (rect.bottom + 2) + 'px';
+        panel.style.width = panelWidth + 'px';
+      });
+    }
+
+    /* 窗口滚动/缩放时重新定位 panel */
+    window.addEventListener('scroll', positionParamPanel, true);
+    window.addEventListener('resize', positionParamPanel);
+
+    /* 行内新增态渲染 */
+    function renderAdderRow() {
+      const usedKeys = new Set(data.map(r => r.key));
+      const candidates = paramPool.filter(p => !usedKeys.has(p.key));
+      const selected = adding.preset;
+      const openClass = adding.panelOpen && !selected ? ' open' : '';
+      const canConfirm = selected && isAddingValueValid();
+      const placeholder = candidates.length === 0 ? '已无可添加参数' : '请选择要添加的参数...';
+
+      // ✓ 永远 enabled；点击时校验并提示具体原因，避免"点了没反应"的困惑
+      const buttons = `
+        <button class="icon-btn confirm${canConfirm ? '' : ' dim'}" title="确认添加" data-action="confirmAdd" type="button">✓</button>
+        <button class="icon-btn cancel" title="取消添加" data-action="cancelAdd" type="button">✕</button>
+      `;
+      return `
+        <tr class="adder-row">
+          <td>
+            <div class="param-search${openClass}" id="paramSearch">
+              <input class="param-search-input" id="paramSearchInput" placeholder="${placeholder}"
+                value="${selected ? selected.key : (adding.searchText || '')}"
+                data-focus="paramSearch"
+                data-input="paramSearch"
+                ${candidates.length === 0 ? 'disabled' : ''}>
+              <div class="param-search-panel">
+                ${renderCandidates(candidates, adding.searchText || '')}
+              </div>
+            </div>
+          </td>
+          <td>${renderAdderValue(buttons)}</td>
+          <td>${selected ? renderAllowed(selected) : ''}</td>
+          <td>${selected ? selected.restart : ''}</td>
+          <td><span class="muted">--</span></td>
+        </tr>`;
+    }
+
+    function renderCandidates(candidates, keyword) {
+      const filtered = keyword
+        ? candidates.filter(p => p.key.toLowerCase().includes(keyword.toLowerCase()))
+        : candidates;
+      if (filtered.length === 0) return '<div class="param-option-empty">无匹配参数</div>';
+      return filtered.map(p => `
+        <div class="param-option" role="option" tabindex="0" data-action="selectCandidate" data-key="${p.key}">
+          <span class="param-option-key">${p.key}</span>
+        </div>`).join('');
+    }
+
+    function renderAdderValue(buttons) {
+      const sel = adding.preset;
+      if (!sel) {
+        return `
+          <span class="inline-edit">
+            <span class="editor-row">
+              <span class="adder-placeholder">请先选择参数</span>
+              ${buttons}
+            </span>
+          </span>`;
+      }
+      return renderAddingEditor(sel, buttons);
+    }
+
+    function renderAddingEditor(row, buttons) {
+      if (row.constraint === 'ENUM') {
+        const options = row.allowed.split('|').filter(Boolean);
+        return `
+          <span class="inline-edit">
+            <span class="editor-row">
+              <select class="inline-select" id="addingValue" data-change="addingValue">
+                ${options.map(item => `<option ${item === adding.currentValue ? 'selected' : ''}>${item}</option>`).join('')}
+              </select>
+              ${buttons}
+            </span>
+          </span>`;
+      }
+      if (row.constraint === 'ENUMS') {
+        const options = row.allowed.split(',').filter(Boolean);
+        const selected = (adding.currentValue || '').split(',').filter(Boolean);
+        return `
+          <span class="inline-edit">
+            <span class="editor-row">
+              <span class="check-select" id="multiEditor">
+                <button class="check-select-trigger" data-action="toggleMulti" type="button">${adding.currentValue || '请选择'}</button>
+                <span class="check-select-panel">
+                  ${options.map(item => `<label class="check-option"><input type="checkbox" value="${item}" ${selected.includes(item) ? 'checked' : ''} data-change="syncAddingMulti"> ${item}</label>`).join('')}
+                </span>
+              </span>
+              ${buttons}
+            </span>
+          </span>`;
+      }
+      if (row.constraint === 'RANGE') {
+        return `
+          <span class="inline-edit">
+            <span class="editor-row">
+              <input class="inline-input" id="addingValue" type="number" placeholder="${row.allowed}" value="${adding.currentValue || row.inheritedValue}" data-input="addingValue">
+              ${buttons}
+            </span>
+          </span>`;
+      }
+      if (['JSON', 'MAP', 'LIST'].includes(row.constraint)) {
+        return `
+          <span class="inline-edit">
+            <span class="editor-row">
+              <textarea class="inline-textarea" id="addingValue" data-input="addingValue">${adding.currentValue || row.inheritedValue}</textarea>
+              ${buttons}
+            </span>
+          </span>`;
+      }
+      return `
+        <span class="inline-edit">
+          <span class="editor-row">
+            <input class="inline-input" id="addingValue" value="${adding.currentValue !== null ? adding.currentValue : row.inheritedValue}" data-input="addingValue">
+            ${buttons}
+          </span>
+        </span>`;
+    }
+
+    function isAddingValueValid() {
+      if (!adding.preset) return false;
+      // 默认带入业务级当前值，永远非空
+      return adding.currentValue !== null && adding.currentValue !== undefined;
+    }
+
+    function startAdding() {
+      // 零阻塞：进入新增前先隐式丢弃当前编辑（新增态也算"当前编辑"，再点添加 = 重置草稿行）
+      discardCurrentEdit();
+      adding = { preset: null, currentValue: null, searchText: '', panelOpen: true };
+      renderRows();
+      setTimeout(() => {
+        const input = document.getElementById('paramSearchInput');
+        if (input) input.focus();
+      }, 0);
+    }
+
+    /* 零阻塞模型：隐式丢弃当前编辑/新增（不改 edited / currentValue / data）*/
+    function discardCurrentEdit() {
+      if (editingIndex !== null) {
+        editingIndex = null;
+        editStartValue = '';
+      }
+      if (adding !== null) {
+        adding = null;
+      }
+    }
+
+    function onParamSearchFocus() {
+      adding.panelOpen = true;
+      renderRows();
+      setTimeout(() => {
+        const input = document.getElementById('paramSearchInput');
+        if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
+      }, 0);
+    }
+
+    function onParamSearchInput(v) {
+      adding.searchText = v;
+      adding.preset = null;
+      adding.currentValue = null;
+      adding.panelOpen = true;
+      renderRows();
+      setTimeout(() => {
+        const input = document.getElementById('paramSearchInput');
+        if (input) input.focus();
+      }, 0);
+    }
+
+    function selectCandidate(key) {
+      const preset = paramPool.find(p => p.key === key);
+      if (!preset) return;
+      adding.preset = preset;
+      adding.searchText = preset.key;
+      adding.panelOpen = false;
+      adding.currentValue = preset.inheritedValue;
+      renderRows();
+    }
+
+    function onAddingValueChange(v) {
+      adding.currentValue = v;
+      // 不全量 renderRows（会让输入失焦），只更新 ✓ 按钮 dim 视觉态
+      const confirmBtn = document.querySelector('.adder-row .icon-btn.confirm');
+      if (confirmBtn) confirmBtn.classList.toggle('dim', !isAddingValueValid());
+    }
+
+    function syncAddingMulti() {
+      const values = Array.from(document.querySelectorAll('#multiEditor input:checked')).map(input => input.value);
+      adding.currentValue = values.join(',');
+      const trigger = document.querySelector('#multiEditor .check-select-trigger');
+      if (trigger) trigger.innerText = values.length ? values.join(',') : '请选择';
+      const confirmBtn = document.querySelector('.adder-row .icon-btn.confirm');
+      if (confirmBtn) confirmBtn.classList.toggle('dim', !isAddingValueValid());
+    }
+
+    function confirmAdd() {
+      if (!adding.preset) {
+        showMessage('请先选择要添加的参数', true);
+        const input = document.getElementById('paramSearchInput');
+        if (input) input.focus();
+        return;
+      }
+      if (!isAddingValueValid()) {
+        showMessage('请输入合法的参数值', true);
+        return;
+      }
+      const p = adding.preset;
+      const newRow = {
+        key: p.key,
+        inheritedValue: p.inheritedValue,
+        currentValue: adding.currentValue,
+        edited: true,
+        isNew: true,
+        constraint: p.constraint,
+        allowed: p.allowed,
+        restart: p.restart,
+        editable: p.editable,
+        desc: p.desc
+      };
+      data.unshift(newRow);
+      adding = null;
+      renderRows();
+    }
+
+    function cancelAdd() {
+      adding = null;
+      renderRows();
+    }
+
+    function renderValue(row, index) {
+      if (editingIndex === index) return renderEditor(row, index);
+      const displayValue = row.currentValue || '<span class="muted">--</span>';
+      return `
+        <span class="value-view">
+          <span class="value-text">${displayValue}</span>
+          ${row.editable ? `<span class="edit-icon" data-action="startEdit" data-idx="${index}">✎</span>` : ''}
+        </span>`;
+    }
+
+    function renderAllowed(row) {
+      if (!row.constraint || row.constraint === '无约束') return '<span class="muted">无约束</span>';
+      // 表达式+模板组 显示灰色占位
+      const placeholderMap = { REGEX: '合法的正则表达式', GOVALIDATE: '合法的 validator 标签', JSON: '合法的 JSON', MAP: '合法的 JSON 对象', LIST: '合法的 JSON 数组' };
+      if (placeholderMap[row.constraint]) {
+        return `<span class="allowed-cell"><span class="tag tag-gray">${row.constraint}</span><span class="allowed-value muted">${placeholderMap[row.constraint]}</span></span>`;
+      }
+      const full = `${row.constraint} ${row.allowed}`;
+      return `<span class="allowed-cell"><span class="tag tag-gray">${row.constraint}</span><span class="allowed-value">${row.allowed}</span><span class="black-tip">${full}</span></span>`;
+    }
+
+    function renderOps(row, index) {
+      if (editingIndex === index) return '<span class="muted">--</span>';
+      if (!row.editable) return '<span class="op-disabled">--</span>';
+      // 零阻塞：其它行编辑入口始终可点击；点击会先隐式丢弃当前编辑/新增
+      return `<span class="op-link" data-action="startEdit" data-idx="${index}">编辑</span>`;
+    }
+
+    function renderEditor(row, index) {
+      const confirmBtns = `
+        <button class="icon-btn confirm" data-action="confirmEdit" data-idx="${index}" type="button">✓</button>
+        <button class="icon-btn cancel" data-action="cancelEdit" type="button">✕</button>
+      `;
+      if (row.constraint === 'ENUM') {
+        const options = row.allowed.split('|').filter(Boolean);
+        return `
+          <span class="inline-edit">
+            <span class="editor-row">
+              <select class="inline-select" id="editValue">${options.map(item => `<option ${item === row.currentValue ? 'selected' : ''}>${item}</option>`).join('')}</select>
+              ${confirmBtns}
+            </span>
+          </span>`;
+      }
+      if (row.constraint === 'ENUMS') {
+        const options = row.allowed.split(',').filter(Boolean);
+        const selected = row.currentValue.split(',');
+        return `
+          <span class="inline-edit">
+            <span class="editor-row">
+              <span class="check-select" id="multiEditor">
+                <button class="check-select-trigger" data-action="toggleMulti" type="button">${row.currentValue}</button>
+                <span class="check-select-panel">
+                  ${options.map(item => `<label class="check-option"><input type="checkbox" value="${item}" ${selected.includes(item) ? 'checked' : ''} data-change="syncEditingMulti"> ${item}</label>`).join('')}
+                </span>
+              </span>
+              ${confirmBtns}
+            </span>
+          </span>`;
+      }
+      if (row.constraint === 'RANGE') {
+        return `
+          <span class="inline-edit">
+            <span class="editor-row">
+              <input class="inline-input" id="editValue" type="number" placeholder="${row.allowed}" value="${row.currentValue}">
+              ${confirmBtns}
+            </span>
+          </span>`;
+      }
+      if (['JSON', 'MAP', 'LIST'].includes(row.constraint)) {
+        return `
+          <span class="inline-edit">
+            <span class="editor-row">
+              <textarea class="inline-textarea" id="editValue">${row.currentValue}</textarea>
+              ${confirmBtns}
+            </span>
+          </span>`;
+      }
+      return `
+        <span class="inline-edit">
+          <span class="editor-row">
+            <input class="inline-input" id="editValue" value="${row.currentValue}">
+            ${confirmBtns}
+          </span>
+        </span>`;
+    }
+
+    function startEdit(index) {
+      if (!data[index].editable) return;
+      // 零阻塞：进入编辑前先隐式丢弃当前编辑/新增（保留 edited / currentValue）
+      discardCurrentEdit();
+      if (editingIndex === index) return; // 已是该行的编辑态，不必重入
+      editingIndex = index;
+      editStartValue = data[index].currentValue;
+      renderRows();
+      setTimeout(() => {
+        const el = document.getElementById('editValue');
+        if (el) el.focus();
+      }, 0);
+    }
+
+    function getEditorValue(row) {
+      if (row.constraint === 'ENUMS') {
+        return Array.from(document.querySelectorAll('#multiEditor input:checked')).map(input => input.value).join(',');
+      }
+      const input = document.getElementById('editValue');
+      return input ? input.value : row.currentValue;
+    }
+
+    function confirmEdit(index) {
+      const row = data[index];
+      const newValue = getEditorValue(row);
+      row.currentValue = newValue;
+      // 单向门闩：点 ✓ 即固化，与业务侧 §3.4 持久态"编辑保存=自定义"语义一致；
+      // 不再依据"值是否变化"做误点保护，误点回退由 ✗ / ESC 承担
+      row.edited = true;
+      editingIndex = null;
+      renderRows();
+    }
+
+    function cancelEdit() {
+      editingIndex = null;
+      renderRows();
+    }
+
+    function toggleMulti(event) {
+      event.stopPropagation();
+      document.getElementById('multiEditor').classList.toggle('open');
+    }
+
+    function syncMultiText() {
+      const values = Array.from(document.querySelectorAll('#multiEditor input:checked')).map(input => input.value);
+      document.querySelector('#multiEditor .check-select-trigger').innerText = values.length ? values.join(',') : '请选择';
+    }
+
+    // ========= 全局事件委托：替代所有 inline onclick / oninput / onfocus / onchange =========
+    // 原因：某些环境（浏览器扩展、严格 CSP、file:// 协议）会屏蔽 inline event handler，
+    // 改用事件委托后任何环境都能稳定触发
+    const ACTION_HANDLERS = {
+      onLeave: () => onLeave(),
+      startAdding: () => startAdding(),
+      onSubmit: () => onSubmit(),
+      onReset: () => onReset(),
+      confirmBox: () => confirmBox(),
+      closeBox: () => closeBox(),
+      hideMessage: () => hideMessage(),
+      confirmAdd: () => confirmAdd(),
+      cancelAdd: () => cancelAdd(),
+      toggleMulti: (el, e) => { e.stopPropagation(); document.getElementById('multiEditor').classList.toggle('open'); },
+      startEdit: (el) => startEdit(parseInt(el.dataset.idx, 10)),
+      confirmEdit: (el) => confirmEdit(parseInt(el.dataset.idx, 10)),
+      cancelEdit: () => cancelEdit(),
+      selectCandidate: (el) => selectCandidate(el.dataset.key),
+      switchTab: (el) => switchTab(el.dataset.tab),
+      toggleStoragePatchMenu: (el, e) => {
+        e.stopPropagation();
+        const wrap = document.getElementById('storagePatchWrap');
+        wrap.classList.toggle('open');
+        if (wrap.classList.contains('open')) positionPatchMenu('storagePatchWrap');
+      },
+      toggleAccessPatchMenu: (el, e) => {
+        e.stopPropagation();
+        const wrap = document.getElementById('accessPatchWrap');
+        wrap.classList.toggle('open');
+        if (wrap.classList.contains('open')) positionPatchMenu('accessPatchWrap');
+      },
+      toggleStorageSeriesMenu: (el, e) => {
+        e.stopPropagation();
+        const wrap = document.getElementById('storageSeriesWrap');
+        wrap.classList.toggle('open');
+        if (wrap.classList.contains('open')) positionPatchMenu('storageSeriesWrap');
+      },
+      toggleAccessSeriesMenu: (el, e) => {
+        e.stopPropagation();
+        const wrap = document.getElementById('accessSeriesWrap');
+        wrap.classList.toggle('open');
+        if (wrap.classList.contains('open')) positionPatchMenu('accessSeriesWrap');
+      },
+      toggleCharsetMenu: (el, e) => {
+        e.stopPropagation();
+        const wrap = document.getElementById('charsetWrap');
+        wrap.classList.toggle('open');
+        if (wrap.classList.contains('open')) positionPatchMenu('charsetWrap');
+      },
+      toggleStorageEditionMenu: (el, e) => {
+        e.stopPropagation();
+        const wrap = document.getElementById('storageEditionWrap');
+        wrap.classList.toggle('open');
+        if (wrap.classList.contains('open')) positionPatchMenu('storageEditionWrap');
+      },
+      toggleStorageOsMenu: (el, e) => {
+        e.stopPropagation();
+        const wrap = document.getElementById('storageOsWrap');
+        wrap.classList.toggle('open');
+        if (wrap.classList.contains('open')) positionPatchMenu('storageOsWrap');
+      },
+      toggleAccessOsMenu: (el, e) => {
+        e.stopPropagation();
+        const wrap = document.getElementById('accessOsWrap');
+        wrap.classList.toggle('open');
+        if (wrap.classList.contains('open')) positionPatchMenu('accessOsWrap');
+      },
+      pickCharset: (el) => onCharsetPick(el.dataset.value),
+      pickStorageEdition: (el) => onStorageEditionPick(el.dataset.value),
+      pickStorageSeries: (el) => onStorageSeriesSelect(el.dataset.value),
+      pickAccessSeries: (el) => onAccessSeriesSelect(el.dataset.value),
+      toggleOsOption: (el, e) => {
+        e.stopPropagation();
+        onLayerOsToggle(el.dataset.layer, el.dataset.value);
+      },
+      pickStoragePatch: (el) => onStoragePatchPick(el.dataset.value),
+      pickAccessPatch: (el) => onAccessPatchPick(el.dataset.value)
+    };
+
+    const SELECT_WRAP_IDS = [
+      'charsetWrap', 'storageEditionWrap',
+      'storageSeriesWrap', 'storagePatchWrap', 'storageOsWrap',
+      'accessSeriesWrap', 'accessPatchWrap', 'accessOsWrap'
+    ];
+    function repositionSelectMenus() { SELECT_WRAP_IDS.forEach(positionPatchMenu); }
+    window.addEventListener('scroll', repositionSelectMenus, true);
+    window.addEventListener('resize', repositionSelectMenus);
+
+    function validateName(options = {}) {
+      const { markEmpty = false } = options;
+      const input = document.getElementById('moduleName');
+      const tip = document.getElementById('nameTip');
+      if (!input || !tip) return;
+      const name = input.value.trim();
+      const charset = (document.getElementById('charset') || {}).value || '';
+      const dbType = DB_TYPE;
+      const series = storageSeries || '';
+
+      const DEFAULT_HELPER = '仅支持小写字母、数字、连字符，同时会参与集群域名生成，创建后不可改';
+      tip.classList.remove('error');
+      input.classList.remove('invalid');
+
+      if (!name) {
+        tip.innerText = DEFAULT_HELPER;
+        nameValid = false;
+        if (markEmpty) input.classList.add('invalid');
+        updateSubmitBtn();
+        return;
+      }
+      if (/[^a-z0-9-]/.test(name)) {
+        tip.innerText = '格式不正确，请勿使用大写、空格、下划线或特殊符号';
+        tip.classList.add('error');
+        input.classList.add('invalid');
+        nameValid = false;
+        updateSubmitBtn();
+        return;
+      }
+      if (/^-|-$/.test(name)) {
+        tip.innerText = '不能以连字符开头或结尾';
+        tip.classList.add('error');
+        input.classList.add('invalid');
+        nameValid = false;
+        updateSubmitBtn();
+        return;
+      }
+
+      if (!isStorageComplete() || !charset || !isAccessComplete()) {
+        tip.innerText = DEFAULT_HELPER;
+        nameValid = false;
+        updateSubmitBtn();
+        return;
+      }
+
+      const moduleKey = computeModuleKey(dbType, name, series, charset);
+      if (EXISTING_MODULE_KEYS.has(moduleKey)) {
+        tip.innerText = `该名称已被占用（${dbType}：${series} / ${charset}）`;
+        tip.classList.add('error');
+        input.classList.add('invalid');
+        nameValid = false;
+      } else {
+        tip.innerText = DEFAULT_HELPER;
+        nameValid = true;
+      }
+      updateSubmitBtn();
+    }
+
+    function onNameChange() { validateName(); updateDomainPreview(); }
+    function onNameBlur() { validateName({ markEmpty: true }); }
+
+    /* 域名预览：模块名加入集群域名合成 */
+    function updateDomainPreview() {
+      const input = document.getElementById('moduleName');
+      const preview = document.getElementById('domainPreview');
+      if (!input || !preview) return;
+      const name = input.value.trim();
+      if (!name) { preview.style.display = 'none'; return; }
+      preview.style.display = '';
+      preview.innerHTML =
+        '集群域名预览： <span class="domain-module">' + escHtml(name) +
+        '</span>db.<span class="domain-placeholder">{集群名}</span>.dba.db <span class="domain-tag">主</span>';
+    }
+
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // action 派发函数：100ms 防重复（mousedown + click 都可能触发，取最先的）
+    let lastDispatchTime = 0;
+    function dispatchAction(event) {
+      const trigger = event.target.closest('[data-action]');
+      if (!trigger || trigger.hasAttribute('disabled')) return false;
+      const handler = ACTION_HANDLERS[trigger.dataset.action];
+      if (!handler) return false;
+      const now = Date.now();
+      if (now - lastDispatchTime < 200) return true; // 200ms 内吞掉重复触发
+      lastDispatchTime = now;
+      try { handler(trigger, event); } catch (err) { console.error('[action] handler error:', err); }
+      return true;
+    }
+
+    // mousedown 优先触发（绕过 click 被屏蔽的场景）
+    document.addEventListener('mousedown', event => {
+      // 1) 参数候选选择（mousedown 阶段触发，阻止 input 失焦）
+      const opt = event.target.closest('.param-option');
+      if (opt) {
+        event.preventDefault();
+        if (opt.dataset.key) selectCandidate(opt.dataset.key);
+        return;
+      }
+      // 2) 其他 action 在 mousedown 立即触发
+      if (dispatchAction(event)) {
+        // 不 preventDefault：保留 input focus 等默认行为
+      }
+    });
+
+    // click 作为兜底：mousedown 未处理时仍能触发 action
+    document.addEventListener('click', event => {
+      // 1) action 兜底派发（200ms 防重复，mousedown 已处理过则会被吞掉）
+      dispatchAction(event);
+      // 2) 多选 panel 外点击收起
+      const editor = document.getElementById('multiEditor');
+      if (editor && !editor.contains(event.target)) editor.classList.remove('open');
+      // 3) 新增态：参数下拉外点关闭（豁免 adder-row 内）
+      const inAddBtn = event.target.closest('#addBtn');
+      const inAdderRow = event.target.closest('.adder-row');
+      const inPanel = event.target.closest('.param-search-panel') || event.target.closest('.param-option');
+      if (!inAddBtn && !inAdderRow && !inPanel && adding && adding.panelOpen) {
+        adding.panelOpen = false;
+        renderRows();
+      }
+      // 4) 下拉菜单：外部点击收起（多选重渲染后原节点已脱离文档，不当作外部点击）
+      if (!event.target.isConnected) return;
+      SELECT_WRAP_IDS.forEach(id => {
+        const wrap = document.getElementById(id);
+        if (wrap && !wrap.contains(event.target)) wrap.classList.remove('open');
+      });
+    });
+
+    // input / focus / change 事件委托
+    document.addEventListener('input', event => {
+      const el = event.target.closest('[data-input]');
+      if (!el) return;
+      const action = el.dataset.input;
+      if (action === 'paramSearch') onParamSearchInput(el.value);
+      else if (action === 'addingValue') onAddingValueChange(el.value);
+      else if (action === 'editingValue') onEditingValueChange(el.value);
+    });
+
+    document.addEventListener('focusin', event => {
+      const el = event.target.closest('[data-focus]');
+      if (!el) return;
+      if (el.dataset.focus === 'paramSearch') onParamSearchFocus();
+    });
+
+    document.addEventListener('change', event => {
+      const el = event.target.closest('[data-change]');
+      if (!el) return;
+      const action = el.dataset.change;
+      if (action === 'addingValue') onAddingValueChange(el.value);
+      else if (action === 'editingValue') onEditingValueChange(el.value);
+      else if (action === 'syncAddingMulti') syncAddingMulti();
+      else if (action === 'syncEditingMulti') syncMultiText();
+      else if (action === 'osMode') onOsModeChange(el.dataset.layer, el.value);
+    });
+
+    /* ============ 跨 Tab 工具：重置 / 跳转高亮 ============ */
+    function resetAllTabs() {
+      Object.keys(tabStates).forEach(id => {
+        const s = tabStates[id];
+        for (let i = s.data.length - 1; i >= 0; i--) {
+          if (s.data[i].isNew) s.data.splice(i, 1);
+        }
+        s.data.forEach(r => { r.currentValue = r.inheritedValue; r.edited = false; });
+        s.editingIndex = null;
+        s.editStartValue = '';
+        s.adding = null;
+      });
+      // 切回 mysql Tab 作为视觉锚点
+      currentTabId = 'mysql';
+      loadCurrentTab();
+    }
+    function resetTab(id) {
+      const s = tabStates[id];
+      for (let i = s.data.length - 1; i >= 0; i--) {
+        if (s.data[i].isNew) s.data.splice(i, 1);
+      }
+      s.data.forEach(r => { r.currentValue = r.inheritedValue; r.edited = false; });
+      s.editingIndex = null;
+      s.editStartValue = '';
+      s.adding = null;
+      if (id === currentTabId) loadCurrentTab();
+    }
+
+    function onSubmit() {
+      discardCurrentEdit();
+      validateName({ markEmpty: true });
+      if (getAwaitingState().show) {
+        showMessage(getAwaitingState().title, true);
+        return;
+      }
+      if (!nameValid) {
+        showMessage('请检查模块名', true);
+        document.getElementById('moduleName').focus();
+        return;
+      }
+      const charset = (document.getElementById('charset') || {}).value;
+      if (!charset) { showMessage('请选择字符集', true); return; }
+
+      const gs = globalStat();
+      const text = gs.modified > 0
+        ? `模块已创建，${gs.modified} 个参数设为自定义`
+        : '模块已创建';
+      showMessage(text);
+    }
+
+    function onLeave() {
+      discardCurrentEdit();
+      const gs = globalStat();
+      const nameFilled = document.getElementById('moduleName').value.trim();
+      if (gs.modified === 0 && !nameFilled) {
+        showMessage('已退出新建模块');
+        return;
+      }
+      boxMode = 'leave';
+      const parts = [];
+      if (nameFilled) parts.push('模块基础信息已填写');
+      if (gs.modified > 0) parts.push(`累计已修改 <b>${gs.modified}</b> 项参数`);
+      document.getElementById('boxTitle').innerText = '确认放弃创建？';
+      document.getElementById('boxDesc').innerHTML = `${parts.join('；')}<br>离开后将全部丢弃。`;
+      document.getElementById('boxConfirm').innerText = '确认离开';
+      document.getElementById('infobox').classList.add('show');
+    }
+
+    function onReset() {
+      discardCurrentEdit();
+      renderRows();
+      const gs = globalStat();
+      if (gs.modified === 0) return;
+      boxMode = 'reset';
+      document.getElementById('boxTitle').innerText = '确认重置参数表？';
+      document.getElementById('boxDesc').innerHTML =
+        `累计 <b>${gs.modified}</b> 项修改将被清空（覆盖全部 ${TABS.length} 个 Tab），新增行也会移除，全部回到继承业务配置的初始状态。<br>模块名、数据库类型等基础信息保留不动。`;
+      document.getElementById('boxConfirm').innerText = '确认重置';
+      document.getElementById('infobox').classList.add('show');
+    }
+
+    function confirmBox() {
+      if (boxMode === 'leave') {
+        resetAllTabs();
+        document.getElementById('moduleName').value = '';
+        validateName();
+        closeBox();
+        renderTabs();
+        renderRows();
+        showMessage('已放弃创建并清空内容');
+      } else if (boxMode === 'reset') {
+        resetAllTabs();
+        closeBox();
+        renderTabs();
+        renderRows();
+        showMessage('已重置全部参数表');
+      } else if (boxMode === 'switch-storage-series') {
+        applyStorageSeriesChange(pendingStorageSeries, true);
+        pendingStorageSeries = '';
+        closeBox();
+        showMessage('MySQL 配置参数已按新系列重新加载');
+      } else if (boxMode === 'switch-spider-series') {
+        applyAccessSeriesChange(pendingAccessSeries, true);
+        pendingAccessSeries = '';
+        closeBox();
+        showMessage('Spider 配置参数已按新系列重新加载');
+      }
+    }
+
+    function closeBox() {
+      if (boxMode === 'switch-storage-series') {
+        document.getElementById('storageSeries').value = prevStorageSeries;
+        pendingStorageSeries = '';
+      } else if (boxMode === 'switch-spider-series') {
+        document.getElementById('accessSeries').value = prevAccessSeries;
+        pendingAccessSeries = '';
+      }
+      document.getElementById('infobox').classList.remove('show');
+      boxMode = '';
+    }
+
+    function showMessage(text, isError) {
+      const message = document.getElementById('message');
+      message.querySelector('.message-text').innerText = text;
+      const icon = message.querySelector('.message-icon');
+      icon.style.background = isError ? '#ea3636' : '#2dcb56';
+      icon.innerText = isError ? '!' : '✓';
+      message.style.borderColor = isError ? '#fde6e6' : '#dcffe2';
+      message.style.background = isError ? '#fff3f3' : '#f0fff3';
+      message.classList.add('show');
+      clearTimeout(window.__msgTimer);
+      window.__msgTimer = setTimeout(() => message.classList.remove('show'), 2000);
+    }
+    function hideMessage() {
+      document.getElementById('message').classList.remove('show');
+    }
+
+    initVersionForm();
+    updateParamsAwaiting();
+    renderTabs();
+    if (!getAwaitingState().show) renderRows();
+    validateName();
+  </script>
+</body>
+</html>

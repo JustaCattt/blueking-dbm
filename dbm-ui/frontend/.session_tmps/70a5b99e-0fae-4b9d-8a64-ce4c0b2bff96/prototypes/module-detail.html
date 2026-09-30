@@ -1,0 +1,1709 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DBM - 模块详情</title>
+  <style>
+    :root {
+      --ui-primary: #3a84ff;
+      --ui-primary-hover: #5594fa;
+      --ui-primary-active: #2c77f4;
+      --ui-primary-light: #e1ecff;
+      --ui-primary-disabled: #a3c5fd;
+      --ui-success: #2dcb56;
+      --ui-success-hover: #45e35f;
+      --ui-success-active: #1ab943;
+      --ui-success-light: #f2fff4;
+      --ui-warning: #ff9c01;
+      --ui-warning-hover: #ffb848;
+      --ui-warning-active: #eb9000;
+      --ui-warning-light: #fff4e2;
+      --ui-danger: #ea3636;
+      --ui-danger-hover: #ff5656;
+      --ui-danger-active: #db2626;
+      --ui-danger-light: #ffeded;
+      --ui-info: #63656e;
+      --ui-info-light: #f5f6fa;
+      --ui-text-primary: #313238;
+      --ui-text-secondary: #63656e;
+      --ui-text-placeholder: #979ba5;
+      --ui-text-disabled: #c4c6cc;
+      --ui-text-anti: #ffffff;
+      --ui-text-link: #3a84ff;
+      --ui-bg: #ffffff;
+      --ui-bg-page: #fafbfd;
+      --ui-bg-subtle: #f9fafd;
+      --ui-bg-hover: #f5f7fa;
+      --ui-bg-active: #f0f1f5;
+      --ui-bg-component: #eaebf0;
+      --ui-mask: rgba(0, 0, 0, 0.6);
+      --ui-border: #dcdee5;
+      --ui-border-light: #eaebf0;
+      --ui-radius-sm: 2px;
+      --ui-radius-md: 3px;
+      --ui-radius-lg: 4px;
+      --ui-radius-round: 999px;
+      --ui-radius-circle: 50%;
+      --ui-space-1: 4px;
+      --ui-space-2: 8px;
+      --ui-space-3: 12px;
+      --ui-space-4: 16px;
+      --ui-space-5: 20px;
+      --ui-space-6: 24px;
+      --ui-space-8: 32px;
+      --ui-control-sm: 26px;
+      --ui-control-md: 32px;
+      --ui-control-lg: 40px;
+      --ui-btn-width-sm: 48px;
+      --ui-btn-width-md: 64px;
+      --ui-btn-width-lg: 80px;
+      --ui-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+      --ui-font-sm: 12px;
+      --ui-font-md: 14px;
+      --ui-font-lg: 16px;
+      --ui-font-title: 18px;
+      --ui-font-heading: 20px;
+      --ui-line-sm: 16px;
+      --ui-line-md: 20px;
+      --ui-line-lg: 22px;
+      --ui-font-weight-medium: 500;
+      --ui-font-weight-bold: 600;
+      --ui-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+      --ui-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.05);
+      --ui-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.06);
+      --ui-ease: cubic-bezier(0.38, 0, 0.24, 1);
+      --ui-duration: 0.2s;
+      --ui-shell-top: color-mix(in srgb, var(--ui-text-primary) 92%, black);
+      --ui-shell-side: color-mix(in srgb, var(--ui-text-primary) 88%, black);
+      --ui-shell-text: color-mix(in srgb, var(--ui-text-anti) 72%, transparent);
+      --ui-shell-text-active: var(--ui-text-anti);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      height: 100vh;
+      overflow: hidden;
+      color: var(--ui-text-primary);
+      background: var(--ui-bg-page);
+      font-family: var(--ui-font-family);
+      font-size: var(--ui-font-md);
+    }
+    button, input { font: inherit; }
+    [hidden] { display: none !important; }
+
+    .app-shell__top {
+      height: 52px;
+      display: flex;
+      align-items: center;
+      padding: 0 var(--ui-space-5);
+      color: var(--ui-shell-text-active);
+      background: var(--ui-shell-top);
+    }
+    .app-shell__logo {
+      display: flex;
+      align-items: center;
+      gap: var(--ui-space-2);
+      margin-right: var(--ui-space-8);
+      font-weight: var(--ui-font-weight-bold);
+      white-space: nowrap;
+    }
+    .app-shell__logo svg { color: var(--ui-primary); }
+    .app-shell__tabs { display: flex; flex: 1; height: 52px; }
+    .app-shell__tab {
+      position: relative;
+      height: 52px;
+      padding: 0 var(--ui-space-5);
+      color: var(--ui-shell-text);
+      line-height: 52px;
+      cursor: pointer;
+    }
+    .app-shell__tab:hover { color: var(--ui-shell-text-active); }
+    .app-shell__tab.is-active {
+      color: var(--ui-shell-text-active);
+      background: color-mix(in srgb, var(--ui-primary) 20%, transparent);
+    }
+    .app-shell__tab.is-active::after {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      height: 2px;
+      background: var(--ui-primary);
+      content: "";
+    }
+    .app-shell__right { display: flex; align-items: center; gap: var(--ui-space-4); }
+    .app-shell__user { color: var(--ui-shell-text); font-size: var(--ui-font-sm); }
+    .app-shell__body { display: flex; height: calc(100vh - 52px); }
+    .app-shell__side {
+      width: 168px;
+      flex-shrink: 0;
+      color: var(--ui-shell-text);
+      background: var(--ui-shell-side);
+    }
+    .app-shell__biz {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 44px;
+      padding: 0 var(--ui-space-4);
+      border-bottom: 1px solid color-mix(in srgb, var(--ui-text-anti) 10%, transparent);
+    }
+    .app-shell__nav-label {
+      padding: var(--ui-space-4) var(--ui-space-4) var(--ui-space-2);
+      color: color-mix(in srgb, var(--ui-text-anti) 36%, transparent);
+      font-size: var(--ui-font-sm);
+    }
+    .app-shell__nav-item {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: var(--ui-space-2);
+      height: 38px;
+      padding: 0 var(--ui-space-4);
+      cursor: pointer;
+    }
+    .app-shell__nav-item.is-active {
+      color: var(--ui-shell-text-active);
+      background: color-mix(in srgb, var(--ui-primary) 15%, transparent);
+    }
+    .app-shell__nav-item.is-active::before {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 3px;
+      background: var(--ui-primary);
+      content: "";
+    }
+    .app-shell__main {
+      display: flex;
+      min-width: 0;
+      flex: 1;
+      flex-direction: column;
+      background: var(--ui-bg-page);
+    }
+
+    .ui-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: var(--ui-btn-width-md);
+      height: var(--ui-control-md);
+      padding: 0 var(--ui-space-4);
+      color: var(--ui-text-anti);
+      font-size: var(--ui-font-md);
+      white-space: nowrap;
+      background: var(--ui-primary);
+      border: 1px solid transparent;
+      border-radius: var(--ui-radius-md);
+      cursor: pointer;
+      transition: background var(--ui-duration) var(--ui-ease),
+        border-color var(--ui-duration) var(--ui-ease),
+        color var(--ui-duration) var(--ui-ease);
+    }
+    .ui-button:hover { background: var(--ui-primary-hover); }
+    .ui-button:active { background: var(--ui-primary-active); }
+    .ui-button:disabled { background: var(--ui-primary-disabled); cursor: not-allowed; }
+    .ui-button--default {
+      color: var(--ui-text-primary);
+      background: var(--ui-bg);
+      border-color: var(--ui-border);
+    }
+    .ui-button--default:hover { color: var(--ui-primary); border-color: var(--ui-primary); background: var(--ui-bg); }
+    .ui-button--default:active { color: var(--ui-primary-active); border-color: var(--ui-primary-active); }
+    .ui-button--danger { color: var(--ui-text-anti); background: var(--ui-danger); }
+    .ui-button--danger:hover { background: var(--ui-danger-hover); }
+    .ui-button--danger:active { background: var(--ui-danger-active); }
+    .is-text {
+      min-width: auto;
+      padding-right: var(--ui-space-2);
+      padding-left: var(--ui-space-2);
+      color: var(--ui-primary);
+      background: transparent;
+      border-color: transparent;
+    }
+    .is-text:hover { background: var(--ui-primary-light); }
+    .ui-button.is-danger-text { color: var(--ui-danger); }
+    .ui-button.is-danger-text:hover { background: var(--ui-danger-light); }
+
+    .ui-input { display: inline-flex; width: 220px; }
+    .ui-input__inner {
+      width: 100%;
+      height: var(--ui-control-md);
+      padding: 0 var(--ui-space-3);
+      color: var(--ui-text-primary);
+      font-size: var(--ui-font-md);
+      background: var(--ui-bg);
+      border: 1px solid var(--ui-border);
+      border-radius: var(--ui-radius-md);
+      outline: none;
+      transition: border-color var(--ui-duration) var(--ui-ease);
+    }
+    .ui-input__inner::placeholder { color: var(--ui-text-placeholder); }
+    .ui-input__inner:focus { border-color: var(--ui-primary); }
+
+    .ui-card {
+      background: var(--ui-bg);
+      border-radius: var(--ui-radius-md);
+      box-shadow: var(--ui-shadow-sm);
+    }
+    .ui-card__header { padding: var(--ui-space-4) var(--ui-space-6); }
+    .ui-card__title {
+      color: var(--ui-text-primary);
+      font-size: var(--ui-font-title);
+      font-weight: var(--ui-font-weight-bold);
+    }
+    .ui-card__body { padding: var(--ui-space-4) var(--ui-space-6) var(--ui-space-6); color: var(--ui-text-secondary); }
+
+    .ui-tabs__nav {
+      display: flex;
+      gap: var(--ui-space-5);
+      padding: 0 var(--ui-space-6);
+      overflow-x: auto;
+      border-bottom: 1px solid var(--ui-border-light);
+    }
+    .ui-tabs__tab {
+      padding: var(--ui-space-3) 0;
+      color: var(--ui-text-primary);
+      font-size: var(--ui-font-md);
+      line-height: var(--ui-line-md);
+      white-space: nowrap;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      cursor: pointer;
+      transition: color var(--ui-duration) var(--ui-ease), border-color var(--ui-duration) var(--ui-ease);
+    }
+    .ui-tabs__tab:hover { color: var(--ui-primary); }
+    .ui-tabs__tab.is-active { color: var(--ui-primary); border-bottom-color: var(--ui-primary); }
+    .ui-tabs__content { color: var(--ui-text-primary); font-size: var(--ui-font-md); line-height: var(--ui-line-md); }
+
+    .ui-table {
+      width: 100%;
+      color: var(--ui-text-secondary);
+      font-size: var(--ui-font-md);
+      border-collapse: collapse;
+    }
+    .ui-table__cell {
+      padding: var(--ui-space-3) var(--ui-space-4);
+      text-align: left;
+      border-bottom: 1px solid var(--ui-border-light);
+    }
+    .ui-table__header .ui-table__cell { color: var(--ui-text-primary); font-weight: normal; }
+    .ui-table__header--filled .ui-table__cell { background: var(--ui-bg-page); }
+    .ui-table__row:hover .ui-table__cell { background: var(--ui-bg-hover); }
+    .ui-table__wrapper { overflow: auto; }
+    .ui-table__wrapper .ui-table__header .ui-table__cell {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .ui-pagination {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--ui-space-1);
+      color: var(--ui-text-primary);
+      font-size: var(--ui-font-md);
+    }
+    .ui-pagination__arrow,
+    .ui-pagination__page {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: var(--ui-control-md);
+      height: var(--ui-control-md);
+      padding: 0 var(--ui-space-2);
+      color: inherit;
+      font: inherit;
+      background: transparent;
+      border: none;
+      border-radius: var(--ui-radius-md);
+      cursor: pointer;
+      transition: background var(--ui-duration) var(--ui-ease), color var(--ui-duration) var(--ui-ease);
+    }
+    .ui-pagination__page:hover,
+    .ui-pagination__arrow:hover:not(:disabled) { color: var(--ui-primary); background: var(--ui-primary-light); }
+    .ui-pagination__page.is-active { color: var(--ui-text-anti); background: var(--ui-primary); }
+    .ui-pagination__arrow { color: var(--ui-text-secondary); }
+    .ui-pagination__arrow:disabled { color: var(--ui-text-disabled); cursor: not-allowed; }
+    .ui-pagination__more {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: var(--ui-control-md);
+      height: var(--ui-control-md);
+      color: var(--ui-text-placeholder);
+    }
+    .ui-pagination__total { margin-right: var(--ui-space-2); color: var(--ui-text-secondary); }
+
+    .ui-dialog {
+      width: 680px;
+      max-width: calc(100vw - 48px);
+      margin: 15vh auto auto;
+      padding: 0;
+      background: var(--ui-bg);
+      border: none;
+      border-radius: var(--ui-radius-lg);
+      box-shadow: var(--ui-shadow-lg);
+    }
+    .ui-dialog::backdrop { background: var(--ui-mask); }
+    .ui-dialog__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--ui-space-4) var(--ui-space-5);
+    }
+    .ui-dialog__title { color: var(--ui-text-primary); font-size: var(--ui-font-title); }
+    .ui-dialog__close {
+      color: var(--ui-text-placeholder);
+      line-height: 1;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+    .ui-dialog__body { padding: 0 var(--ui-space-5) var(--ui-space-5); color: var(--ui-text-secondary); }
+    .ui-dialog__footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--ui-space-2);
+      padding: var(--ui-space-3) var(--ui-space-5) var(--ui-space-5);
+    }
+
+    .module-page__header {
+      display: flex;
+      align-items: center;
+      height: 54px;
+      flex-shrink: 0;
+      padding: 0 var(--ui-space-6);
+      background: var(--ui-bg);
+      border-bottom: 1px solid var(--ui-border-light);
+    }
+    .module-page__title { font-size: var(--ui-font-lg); font-weight: var(--ui-font-weight-medium); }
+    .module-page__demo { position: relative; margin-left: auto; }
+    .spec-popover {
+      position: absolute;
+      top: calc(100% + var(--ui-space-2));
+      right: 0;
+      z-index: 20;
+      width: 360px;
+      padding: var(--ui-space-4);
+      color: var(--ui-text-secondary);
+      line-height: var(--ui-line-md);
+      background: var(--ui-bg);
+      border: 1px solid var(--ui-border);
+      border-radius: var(--ui-radius-md);
+      box-shadow: var(--ui-shadow-md);
+    }
+    .spec-popover__title {
+      margin-bottom: var(--ui-space-2);
+      color: var(--ui-text-primary);
+      font-weight: var(--ui-font-weight-medium);
+    }
+    .spec-popover li { margin-left: var(--ui-space-5); }
+
+    .module-page__db-tabs {
+      display: flex;
+      height: 42px;
+      flex-shrink: 0;
+      padding: 0 var(--ui-space-6);
+      overflow-x: auto;
+      background: var(--ui-bg);
+      border-bottom: 1px solid var(--ui-border);
+    }
+    .module-page__db-tab {
+      position: relative;
+      display: flex;
+      align-items: center;
+      padding: 0 var(--ui-space-4);
+      color: var(--ui-text-secondary);
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .module-page__db-tab.is-active { color: var(--ui-primary); }
+    .module-page__db-tab.is-active::after {
+      position: absolute;
+      right: var(--ui-space-4);
+      bottom: 0;
+      left: var(--ui-space-4);
+      height: 2px;
+      background: var(--ui-primary);
+      content: "";
+    }
+
+    .module-workspace {
+      display: flex;
+      min-height: 0;
+      flex: 1;
+      gap: var(--ui-space-3);
+      padding: var(--ui-space-3);
+    }
+    .module-tree {
+      display: flex;
+      width: 300px;
+      min-width: 260px;
+      flex-shrink: 0;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--ui-bg);
+      border: 1px solid var(--ui-border-light);
+    }
+    .module-tree__search {
+      position: relative;
+      padding: var(--ui-space-3);
+      border-bottom: 1px solid var(--ui-border-light);
+    }
+    .list-search-select {
+      position: relative;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--ui-space-1);
+      min-height: var(--ui-control-md);
+      padding: var(--ui-space-1) var(--ui-space-2);
+      background: var(--ui-bg);
+      border: 1px solid var(--ui-border);
+      border-radius: var(--ui-radius-sm);
+      cursor: text;
+    }
+    .list-search-select:focus-within { border-color: var(--ui-primary); }
+    .search-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--ui-space-1);
+      max-width: 100%;
+      padding: var(--ui-space-1) var(--ui-space-2);
+      color: var(--ui-text-primary);
+      font-size: var(--ui-font-sm);
+      background: var(--ui-bg-component);
+      border-radius: var(--ui-radius-sm);
+    }
+    .search-field-label {
+      flex-shrink: 0;
+      color: var(--ui-text-placeholder);
+      font-size: var(--ui-font-sm);
+      line-height: var(--ui-line-md);
+    }
+    .tag-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tag-remove { margin-left: var(--ui-space-1); color: var(--ui-text-disabled); cursor: pointer; }
+    .tag-remove:hover { color: var(--ui-danger); }
+    .search-input-inner {
+      flex: 1;
+      min-width: 72px;
+      height: var(--ui-control-sm);
+      border: none;
+      outline: none;
+      font-size: var(--ui-font-sm);
+      color: var(--ui-text-primary);
+      background: transparent;
+    }
+    .search-input-inner::placeholder { color: var(--ui-text-placeholder); }
+    .search-dropdown {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      z-index: 30;
+      max-height: 240px;
+      overflow: auto;
+      background: var(--ui-bg);
+      border: 1px solid var(--ui-border-light);
+      border-radius: var(--ui-radius-md);
+      box-shadow: var(--ui-shadow-md);
+    }
+    .sd-group-title {
+      padding: var(--ui-space-2) var(--ui-space-3);
+      color: var(--ui-text-placeholder);
+      font-size: var(--ui-font-sm);
+    }
+    .sd-item {
+      display: flex;
+      align-items: center;
+      padding: 0 var(--ui-space-3);
+      height: var(--ui-control-md);
+      color: var(--ui-text-secondary);
+      font-size: var(--ui-font-sm);
+      cursor: pointer;
+    }
+    .sd-item:hover { background: var(--ui-bg-hover); color: var(--ui-primary); }
+    .ui-checkbox { display: inline-flex; align-items: center; cursor: pointer; font-size: var(--ui-font-md); color: var(--ui-text-secondary); margin-right: var(--ui-space-4); }
+    .ui-checkbox__native { position: absolute; opacity: 0; width: 0; height: 0; }
+    .ui-checkbox__input { display: inline-flex; }
+    .ui-checkbox__inner {
+      position: relative;
+      width: 14px; height: 14px;
+      border: 1px solid var(--ui-border);
+      border-radius: var(--ui-radius-sm);
+      background: var(--ui-bg);
+      box-sizing: border-box;
+    }
+    .ui-checkbox__tick { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; stroke: var(--ui-text-anti); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
+    .ui-checkbox:hover .ui-checkbox__inner { border-color: var(--ui-primary); }
+    .ui-checkbox__native:checked ~ .ui-checkbox__input .ui-checkbox__inner { background: var(--ui-primary); border-color: var(--ui-primary); }
+    .ui-checkbox__native:checked ~ .ui-checkbox__input .ui-checkbox__tick { opacity: 1; }
+    .ui-checkbox__label { padding-left: var(--ui-space-2); }
+    .ui-checkbox__native:checked ~ .ui-checkbox__label { color: var(--ui-text-primary); }
+    .module-tree__body { flex: 1; overflow-y: auto; padding: var(--ui-space-2) 0; }
+    .module-tree__biz-row {
+      display: flex;
+      align-items: center;
+      height: 36px;
+      padding: 0 var(--ui-space-3);
+      color: var(--ui-text-secondary);
+      font-weight: var(--ui-font-weight-medium);
+    }
+    .module-tree__arrow { margin-right: var(--ui-space-2); color: var(--ui-text-placeholder); }
+    .module-tree__add {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--ui-control-sm);
+      height: var(--ui-control-sm);
+      margin-left: auto;
+      color: var(--ui-text-anti);
+      background: var(--ui-primary);
+      border: none;
+      border-radius: var(--ui-radius-sm);
+      cursor: pointer;
+    }
+    .module-tree__node {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: center;
+      height: 52px;
+      min-width: 0;
+      padding: 0 var(--ui-space-3) 0 var(--ui-space-8);
+      color: var(--ui-text-secondary);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      width: 100%;
+      text-align: left;
+    }
+    .module-tree__node:hover { background: var(--ui-bg-hover); }
+    .module-tree__node.is-active { color: var(--ui-primary); background: var(--ui-primary-light); }
+    .module-tree__name-row {
+      display: flex;
+      align-items: center;
+      gap: var(--ui-space-2);
+      min-width: 0;
+    }
+    .module-tree__name {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .module-tree__count {
+      display: inline-flex;
+      flex-shrink: 0;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 18px;
+      padding: 0 var(--ui-space-1);
+      color: var(--ui-text-secondary);
+      font-size: var(--ui-font-sm);
+      line-height: 1;
+      background: var(--ui-bg-component);
+      border-radius: var(--ui-radius-sm);
+    }
+    .module-tree__count.is-zero { color: var(--ui-text-disabled); }
+    .module-tree__node.is-active .module-tree__count {
+      color: var(--ui-primary);
+      background: color-mix(in srgb, var(--ui-primary) 16%, var(--ui-bg));
+    }
+    .module-tree__identity {
+      margin-top: 2px;
+      color: var(--ui-text-placeholder);
+      font-size: var(--ui-font-sm);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .module-tree__node.is-active .module-tree__identity { color: var(--ui-text-placeholder); }
+    .module-tree__empty { padding: var(--ui-space-6); color: var(--ui-text-placeholder); text-align: center; }
+    .module-tree__empty-clear {
+      display: block;
+      margin: var(--ui-space-2) auto 0;
+      padding: 0;
+      color: var(--ui-text-link);
+      font: inherit;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+
+    .module-detail {
+      display: flex;
+      min-width: 0;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--ui-space-3);
+    }
+    .module-detail__summary { flex-shrink: 0; }
+    .module-detail__summary .ui-card__body {
+      padding: var(--ui-space-4) var(--ui-space-6);
+      container-type: inline-size;
+    }
+    .module-detail__title-row {
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      flex-wrap: wrap;
+      row-gap: var(--ui-space-1);
+    }
+    .module-detail__name {
+      min-width: 0;
+      max-width: 60%;
+      flex: 0 1 auto;
+      overflow: hidden;
+      color: var(--ui-text-primary);
+      font-size: var(--ui-font-title);
+      font-weight: var(--ui-font-weight-bold);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .module-detail__actions {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      gap: var(--ui-space-1);
+      margin-left: var(--ui-space-3);
+    }
+    /* label 与值左右结构，冒号连接：ID：29 */
+    .module-detail__meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: var(--ui-space-2) var(--ui-space-6);
+      margin-top: var(--ui-space-4);
+      padding-top: var(--ui-space-4);
+      border-top: 1px solid var(--ui-border-light);
+    }
+    .module-detail__meta-item { display: flex; min-width: 0; align-items: baseline; }
+    .module-detail__meta-label { flex-shrink: 0; color: var(--ui-text-placeholder); font-size: var(--ui-font-sm); }
+    .module-detail__meta-label::after { content: "："; }
+    .module-detail__meta-value {
+      min-width: 0;
+      overflow: hidden;
+      color: var(--ui-text-secondary);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    /* 层行与模块行之间只靠间距分组，卡片内保留标题下唯一一条分割线 */
+    .module-detail__layers {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ui-space-2);
+      margin-top: var(--ui-space-3);
+    }
+    .module-detail__layer {
+      display: grid;
+      grid-template-columns: 56px minmax(260px, 1fr) minmax(240px, 1fr);
+      align-items: baseline;
+      gap: var(--ui-space-5);
+      padding: var(--ui-space-3) var(--ui-space-4);
+      background: var(--ui-bg-subtle);
+      border: 1px solid var(--ui-border-light);
+      border-radius: var(--ui-radius-md);
+    }
+    .module-detail__layer-name { color: var(--ui-text-primary); font-weight: var(--ui-font-weight-medium); }
+    .module-detail__layer-field { display: flex; min-width: 0; align-items: baseline; }
+    .module-detail__layer-label { flex-shrink: 0; color: var(--ui-text-placeholder); font-size: var(--ui-font-sm); }
+    .module-detail__layer-label::after { content: "："; }
+    .module-detail__layer-value {
+      min-width: 0;
+      overflow: hidden;
+      color: var(--ui-text-secondary);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .module-detail__mode-tag {
+      flex-shrink: 0;
+      margin-left: var(--ui-space-2);
+      padding: 0 var(--ui-space-2);
+      color: var(--ui-text-placeholder);
+      font-size: var(--ui-font-sm);
+      line-height: var(--ui-line-md);
+      background: var(--ui-bg-component);
+      border-radius: var(--ui-radius-sm);
+    }
+    .module-detail__field-edit {
+      display: inline-flex;
+      flex-shrink: 0;
+      align-items: center;
+      margin-left: var(--ui-space-2);
+      padding: 0;
+      color: var(--ui-text-placeholder);
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+    .module-detail__field-edit:hover { color: var(--ui-primary); }
+    .module-detail__field-edit:disabled { color: var(--ui-border); cursor: not-allowed; }
+    .module-detail__meta-link {
+      padding: 0;
+      color: var(--ui-text-link);
+      font: inherit;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+
+    .module-detail__params {
+      display: flex;
+      min-height: 0;
+      flex: 1;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .module-detail__params .ui-tabs { display: flex; min-height: 0; flex: 1; flex-direction: column; }
+    .module-detail__params .ui-tabs__content { min-height: 0; flex: 1; }
+    .ui-tabs__panel { height: 100%; }
+    .parameter-panel { display: flex; height: 100%; min-height: 0; flex-direction: column; }
+    .parameter-toolbar {
+      display: flex;
+      align-items: center;
+      gap: var(--ui-space-2);
+      padding: var(--ui-space-3) var(--ui-space-6);
+    }
+    .parameter-toolbar__right { margin-left: auto; }
+    .parameter-toolbar__right .ui-input { width: 320px; }
+    .parameter-table { min-height: 0; flex: 1; padding: 0 var(--ui-space-6); }
+    .parameter-table .ui-table__wrapper { height: 100%; min-height: 220px; border: 1px solid var(--ui-border-light); }
+    .parameter-table .ui-table { min-width: 900px; }
+    .parameter-table .ui-table__cell { white-space: nowrap; }
+    .parameter-table__key { color: var(--ui-text-primary); }
+    .parameter-table__tag {
+      display: inline-flex;
+      align-items: center;
+      height: 20px;
+      padding: 0 var(--ui-space-2);
+      color: var(--ui-warning);
+      font-size: var(--ui-font-sm);
+      background: var(--ui-warning-light);
+      border-radius: var(--ui-radius-round);
+    }
+    .parameter-footer {
+      display: flex;
+      justify-content: flex-end;
+      padding: var(--ui-space-3) var(--ui-space-6);
+      border-top: 1px solid var(--ui-border-light);
+    }
+    .parameter-placeholder {
+      display: flex;
+      height: 100%;
+      align-items: center;
+      justify-content: center;
+      color: var(--ui-text-placeholder);
+    }
+
+    .message {
+      position: fixed;
+      top: 68px;
+      left: 50%;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: var(--ui-space-2);
+      padding: var(--ui-space-3) var(--ui-space-5);
+      color: var(--ui-text-secondary);
+      background: var(--ui-bg);
+      border-radius: var(--ui-radius-md);
+      box-shadow: var(--ui-shadow-md);
+      transform: translateX(-50%);
+    }
+    .message__icon { color: var(--ui-success); }
+    .cluster-status { display: inline-flex; align-items: center; gap: var(--ui-space-2); }
+    .cluster-status::before {
+      width: 6px;
+      height: 6px;
+      background: var(--ui-success);
+      border-radius: var(--ui-radius-circle);
+      content: "";
+    }
+    .delete-copy { line-height: var(--ui-line-lg); }
+
+    .os-editor__version { margin-bottom: var(--ui-space-3); color: var(--ui-text-placeholder); font-size: var(--ui-font-sm); }
+    .os-editor__mode { margin-bottom: var(--ui-space-4); }
+    .os-editor__follow {
+      display: flex;
+      min-height: var(--ui-control-md);
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--ui-space-1);
+      padding: var(--ui-space-2);
+      background: var(--ui-bg-subtle);
+      border: 1px solid var(--ui-border-light);
+      border-radius: var(--ui-radius-sm);
+    }
+    .os-editor__tag {
+      padding: 0 var(--ui-space-2);
+      color: var(--ui-text-secondary);
+      font-size: var(--ui-font-sm);
+      line-height: var(--ui-line-lg);
+      background: var(--ui-bg-component);
+      border-radius: var(--ui-radius-sm);
+    }
+    .ui-radio-group { display: inline-flex; align-items: center; }
+    .ui-radio { display: inline-flex; align-items: center; margin-right: var(--ui-space-4); color: var(--ui-text-secondary); font-size: var(--ui-font-md); cursor: pointer; }
+    .ui-radio__native { position: absolute; width: 0; height: 0; opacity: 0; }
+    .ui-radio__input { display: inline-flex; }
+    .ui-radio__inner {
+      box-sizing: border-box;
+      width: 14px;
+      height: 14px;
+      background: var(--ui-bg);
+      border: 1px solid var(--ui-border);
+      border-radius: var(--ui-radius-circle);
+      transition: border-color var(--ui-duration) var(--ui-ease);
+    }
+    .ui-radio__label { padding-left: var(--ui-space-2); }
+    .ui-radio__native:checked ~ .ui-radio__input .ui-radio__inner { background: var(--ui-primary); border-color: var(--ui-primary); box-shadow: inset 0 0 0 3px var(--ui-bg); }
+    .ui-radio__native:checked ~ .ui-radio__label { color: var(--ui-primary); }
+    .ui-radio__native:focus-visible ~ .ui-radio__input .ui-radio__inner { border-color: var(--ui-primary); }
+    .os-editor__list {
+      max-height: 240px;
+      overflow-y: auto;
+      border: 1px solid var(--ui-border);
+      border-radius: var(--ui-radius-sm);
+    }
+    .os-editor__option {
+      display: flex;
+      width: 100%;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--ui-space-3);
+      color: var(--ui-text-primary);
+      font: inherit;
+      line-height: 32px;
+      text-align: left;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+    .os-editor__option:hover { background: var(--ui-bg-hover); }
+    .os-editor__option.is-selected { color: var(--ui-primary); background: var(--ui-primary-light); }
+    .os-editor__check { color: var(--ui-primary); visibility: hidden; }
+    .os-editor__option.is-selected .os-editor__check { visibility: visible; }
+    .os-editor__hint { margin-top: var(--ui-space-3); color: var(--ui-text-placeholder); font-size: var(--ui-font-sm); line-height: var(--ui-line-lg); }
+    .os-editor__error { margin-top: var(--ui-space-2); color: var(--ui-danger); font-size: var(--ui-font-sm); }
+
+    @media (max-width: 1280px) {
+      .app-shell__side { width: 140px; }
+      .module-tree { width: 270px; min-width: 240px; }
+      .module-detail__layer { grid-template-columns: 56px minmax(0, 1fr); }
+      .module-detail__layer-field:last-child { grid-column: 2; }
+    }
+    @container (max-width: 420px) {
+      .module-detail__name { max-width: 100%; flex-basis: 100%; }
+      .module-detail__actions { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-shell__top">
+    <div class="app-shell__logo">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <ellipse cx="12" cy="6" rx="8" ry="3" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+      数据库管理
+    </div>
+    <nav class="app-shell__tabs" aria-label="顶部导航">
+      <div class="app-shell__tab">数据库管理</div>
+      <div class="app-shell__tab">可观测</div>
+      <div class="app-shell__tab is-active">业务配置</div>
+      <div class="app-shell__tab">资源管理</div>
+      <div class="app-shell__tab">全局配置</div>
+      <div class="app-shell__tab">平台管理</div>
+    </nav>
+    <div class="app-shell__right">
+      <div class="ui-input"><input class="ui-input__inner" type="text" placeholder="搜索功能、文档..." readonly></div>
+      <span class="app-shell__user">admin ▾</span>
+    </div>
+  </header>
+
+  <div class="app-shell__body">
+    <aside class="app-shell__side">
+      <div class="app-shell__biz"><span>DBA (#3, dba)</span><span>⌄</span></div>
+      <div class="app-shell__nav-label">资源管理</div>
+      <div class="app-shell__nav-item">资源池</div>
+      <div class="app-shell__nav-item">资源规格</div>
+      <div class="app-shell__nav-label">业务配置</div>
+      <div class="app-shell__nav-item is-active">数据库配置</div>
+      <div class="app-shell__nav-item">备份存储配置</div>
+      <div class="app-shell__nav-label">设置</div>
+      <div class="app-shell__nav-item">DBA 管理</div>
+    </aside>
+
+    <main class="app-shell__main">
+      <div class="module-page__header">
+        <h1 class="module-page__title">数据库配置</h1>
+        <div class="module-page__demo">
+          <button class="ui-button ui-button--default" type="button" data-action="toggle-spec">📝 本次优化点（9）</button>
+          <div class="spec-popover" id="spec-popover" hidden>
+            <div class="spec-popover__title">仅原型注释，落地时整块移除</div>
+            <ul>
+              <li>模块树保持业务、模块两级。</li>
+              <li>节点上下两行：模块名（右端灰底方块显示关联集群数，选中行随主色）+ 灰色「系列，字符集」。SearchSelect 分字段搜索，默认模块名。</li>
+              <li>基础信息首行 ID、字符集、关联集群，层信息一层一行。</li>
+              <li>每层行内并列版本与操作系统版本，两行按列对齐；label 与值左右排列、冒号连接。</li>
+              <li>操作系统版本按层支持「跟随版本包 / 指定范围」；详情标识跟随状态，弹窗一次改一层。</li>
+              <li>关联服务改为关联集群数量和入口。</li>
+              <li>基础信息压缩为紧凑单卡片。</li>
+              <li>参数区占用剩余高度，表头固定。</li>
+              <li>类型由上方 Tab 表达；操作紧跟模块名，不挂类型 tag。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="module-page__db-tabs" aria-label="数据库类型">
+        <div class="module-page__db-tab is-active">MySQL 主从</div>
+        <div class="module-page__db-tab">MySQL 单节点</div>
+        <div class="module-page__db-tab">TenDBCluster</div>
+        <div class="module-page__db-tab">RedisCluster</div>
+        <div class="module-page__db-tab">TendisPlus 集群版</div>
+        <div class="module-page__db-tab">Doris</div>
+        <div class="module-page__db-tab">Kafka</div>
+      </div>
+
+      <div class="module-workspace">
+        <aside class="module-tree" aria-label="模块树">
+          <div class="module-tree__search">
+            <div class="list-search-select" id="module-search-select">
+              <span id="module-search-tags"></span>
+              <span class="search-field-label" id="module-search-field-label" hidden></span>
+              <input class="search-input-inner" id="module-search" type="text" placeholder="搜索模块名" autocomplete="off">
+              <div class="search-dropdown" id="module-search-menu" hidden></div>
+            </div>
+          </div>
+          <div class="module-tree__body">
+            <div class="module-tree__biz-row">
+              <span class="module-tree__arrow">⌄</span>
+              <span>DBA</span>
+              <button class="module-tree__add" type="button" aria-label="新建模块" data-action="create-module">+</button>
+            </div>
+            <div id="module-tree-list"></div>
+            <div class="module-tree__empty" id="module-tree-empty" hidden>
+              <div>未找到匹配模块</div>
+              <button class="module-tree__empty-clear" id="module-tree-clear" type="button" data-action="clear-tree-search" hidden>清空搜索</button>
+            </div>
+          </div>
+        </aside>
+
+        <section class="module-detail">
+          <section class="ui-card module-detail__summary">
+            <div class="ui-card__body">
+              <div class="module-detail__title-row">
+                <h2 class="module-detail__name" id="detail-name">order-service</h2>
+                <div class="module-detail__actions">
+                  <button class="ui-button is-text" type="button" data-action="clone-module">克隆</button>
+                  <button class="ui-button is-text is-danger-text" type="button" data-dialog-open="delete-dialog">删除</button>
+                </div>
+              </div>
+              <div class="module-detail__meta">
+                <div class="module-detail__meta-item">
+                  <span class="module-detail__meta-label">ID</span>
+                  <span class="module-detail__meta-value" id="detail-id">29</span>
+                </div>
+                <div class="module-detail__meta-item">
+                  <span class="module-detail__meta-label">字符集</span>
+                  <span class="module-detail__meta-value" id="detail-charset">utf8mb4</span>
+                </div>
+                <div class="module-detail__meta-item">
+                  <span class="module-detail__meta-label">关联集群</span>
+                  <button class="module-detail__meta-link" id="detail-clusters" type="button" data-dialog-open="cluster-dialog">3 个集群</button>
+                </div>
+              </div>
+              <!-- 层信息：一层一行，行内版本与操作系统版本按列对齐；无接入层的 DB 类型整行隐藏 -->
+              <!-- 操作系统版本是唯一可改元数据，编辑入口跟在各层该字段值之后 -->
+              <div class="module-detail__layers">
+                <div class="module-detail__layer">
+                  <span class="module-detail__layer-name">存储层</span>
+                  <div class="module-detail__layer-field">
+                    <span class="module-detail__layer-label">版本</span>
+                    <span class="module-detail__layer-value" id="detail-storage">TXSQL / MySQL-8.0 / 8.0.32</span>
+                  </div>
+                  <div class="module-detail__layer-field">
+                    <span class="module-detail__layer-label">操作系统版本</span>
+                    <span class="module-detail__layer-value" id="detail-storage-os">tlinux-3.2、tlinux-4</span>
+                    <span class="module-detail__mode-tag" id="detail-storage-os-mode">跟随版本包</span>
+                    <button class="module-detail__field-edit" id="detail-storage-os-edit" type="button" data-action="edit-os" data-layer="storage" aria-label="编辑存储层操作系统版本" title="编辑">
+                      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                        <path d="M10.6 2.4l3 3-7.1 7.1-3.5.5.5-3.5 7.1-7.1z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div class="module-detail__layer" id="detail-access-row">
+                  <span class="module-detail__layer-name">接入层</span>
+                  <div class="module-detail__layer-field">
+                    <span class="module-detail__layer-label">版本</span>
+                    <span class="module-detail__layer-value" id="detail-access">Proxy-2.x / 2.1.0</span>
+                  </div>
+                  <div class="module-detail__layer-field">
+                    <span class="module-detail__layer-label">操作系统版本</span>
+                    <span class="module-detail__layer-value" id="detail-access-os">tlinux-3.2</span>
+                    <span class="module-detail__mode-tag" id="detail-access-os-mode" hidden>跟随版本包</span>
+                    <button class="module-detail__field-edit" id="detail-access-os-edit" type="button" data-action="edit-os" data-layer="access" aria-label="编辑接入层操作系统版本" title="编辑">
+                      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                        <path d="M10.6 2.4l3 3-7.1 7.1-3.5.5.5-3.5 7.1-7.1z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="ui-card module-detail__params">
+            <div class="ui-tabs" data-tabs>
+              <div class="ui-tabs__nav" role="tablist">
+                <button type="button" role="tab" class="ui-tabs__tab is-active" data-tab="mysql" aria-selected="true">MySQL 配置</button>
+                <button type="button" role="tab" class="ui-tabs__tab" data-tab="monitor" aria-selected="false">本地监控配置</button>
+                <button type="button" role="tab" class="ui-tabs__tab" data-tab="backup" aria-selected="false">全备配置选项</button>
+                <button type="button" role="tab" class="ui-tabs__tab" data-tab="backup-control" aria-selected="false">全备控制选项</button>
+                <button type="button" role="tab" class="ui-tabs__tab" data-tab="binlog" aria-selected="false">Binlog 备份配置</button>
+                <button type="button" role="tab" class="ui-tabs__tab" data-tab="check" aria-selected="false">校验配置</button>
+              </div>
+              <div class="ui-tabs__content">
+                <div class="ui-tabs__panel" data-panel="mysql">
+                  <div class="parameter-panel">
+                    <div class="parameter-toolbar">
+                      <button class="ui-button" type="button" data-action="add-parameter">添加参数</button>
+                      <button class="ui-button ui-button--default" type="button" data-action="restore-defaults">恢复默认</button>
+                      <div class="parameter-toolbar__right">
+                        <div class="ui-input">
+                          <input class="ui-input__inner" id="parameter-search" type="search" placeholder="搜索参数名、当前值、允许值">
+                        </div>
+                      </div>
+                    </div>
+                    <div class="parameter-table">
+                      <div class="ui-table__wrapper">
+                        <table class="ui-table">
+                          <thead class="ui-table__header ui-table__header--filled">
+                            <tr>
+                              <th class="ui-table__cell">参数名</th>
+                              <th class="ui-table__cell">当前值</th>
+                              <th class="ui-table__cell">允许值</th>
+                              <th class="ui-table__cell">重启后生效</th>
+                              <th class="ui-table__cell">操作</th>
+                            </tr>
+                          </thead>
+                          <tbody id="parameter-table-body"></tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <div class="parameter-footer">
+                      <div class="ui-pagination" data-count="12" data-limit="8" data-current="1" data-show-total></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="ui-tabs__panel" data-panel="monitor" hidden><div class="parameter-placeholder">本地监控配置沿用平台当前参数集，无系列维度</div></div>
+                <div class="ui-tabs__panel" data-panel="backup" hidden><div class="parameter-placeholder">全备配置选项沿用平台当前参数集</div></div>
+                <div class="ui-tabs__panel" data-panel="backup-control" hidden><div class="parameter-placeholder">全备控制选项沿用平台当前参数集</div></div>
+                <div class="ui-tabs__panel" data-panel="binlog" hidden><div class="parameter-placeholder">Binlog 备份配置沿用平台当前参数集</div></div>
+                <div class="ui-tabs__panel" data-panel="check" hidden><div class="parameter-placeholder">校验配置沿用平台当前参数集</div></div>
+              </div>
+            </div>
+          </section>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <dialog class="ui-dialog" id="cluster-dialog" aria-modal="true">
+    <header class="ui-dialog__header">
+      <span class="ui-dialog__title">关联集群</span>
+      <button class="ui-dialog__close" type="button" aria-label="关闭">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </header>
+    <div class="ui-dialog__body">
+      <table class="ui-table">
+        <thead class="ui-table__header ui-table__header--filled">
+          <tr>
+            <th class="ui-table__cell">ID</th>
+            <th class="ui-table__cell">集群名</th>
+            <th class="ui-table__cell">主域名</th>
+            <th class="ui-table__cell">状态</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="ui-table__row">
+            <td class="ui-table__cell">10081</td>
+            <td class="ui-table__cell"><button class="ui-button is-text" type="button" data-action="open-cluster">order-prod</button></td>
+            <td class="ui-table__cell">mysql.order-prod.dba.db</td>
+            <td class="ui-table__cell"><span class="cluster-status">正常</span></td>
+          </tr>
+          <tr class="ui-table__row">
+            <td class="ui-table__cell">10082</td>
+            <td class="ui-table__cell"><button class="ui-button is-text" type="button" data-action="open-cluster">order-gray</button></td>
+            <td class="ui-table__cell">mysql.order-gray.dba.db</td>
+            <td class="ui-table__cell"><span class="cluster-status">正常</span></td>
+          </tr>
+          <tr class="ui-table__row">
+            <td class="ui-table__cell">10083</td>
+            <td class="ui-table__cell"><button class="ui-button is-text" type="button" data-action="open-cluster">order-report</button></td>
+            <td class="ui-table__cell">mysql.order-report.dba.db</td>
+            <td class="ui-table__cell"><span class="cluster-status">正常</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <footer class="ui-dialog__footer">
+      <button class="ui-button ui-button--default" type="button" data-dialog-close>关闭</button>
+    </footer>
+  </dialog>
+
+  <dialog class="ui-dialog" id="delete-dialog" aria-modal="true">
+    <header class="ui-dialog__header">
+      <span class="ui-dialog__title">确认删除模块？</span>
+      <button class="ui-dialog__close" type="button" aria-label="关闭">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </header>
+    <div class="ui-dialog__body delete-copy">模块存在关联集群，暂不能删除。请先处理关联集群后再重试。</div>
+    <footer class="ui-dialog__footer">
+      <button class="ui-button ui-button--default" type="button" data-dialog-close>我知道了</button>
+    </footer>
+  </dialog>
+
+  <!-- 编辑操作系统版本：一次只改一层，选项来自该层当前版本关联的操作系统 -->
+  <dialog class="ui-dialog" id="os-dialog" aria-modal="true">
+    <header class="ui-dialog__header">
+      <span class="ui-dialog__title" id="os-dialog-title">编辑操作系统版本 · 存储层</span>
+      <button class="ui-dialog__close" type="button" aria-label="关闭">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </header>
+    <div class="ui-dialog__body">
+      <div class="os-editor__version" id="os-dialog-version">当前版本：TXSQL / MySQL-8.0 / 8.0.32</div>
+      <div class="os-editor__mode">
+        <div class="ui-radio-group" role="radiogroup" aria-label="操作系统范围模式">
+          <label class="ui-radio">
+            <input class="ui-radio__native" type="radio" name="osEditorMode" value="follow" data-action="os-mode">
+            <span class="ui-radio__input"><span class="ui-radio__inner"></span></span>
+            <span class="ui-radio__label">跟随版本包</span>
+          </label>
+          <label class="ui-radio">
+            <input class="ui-radio__native" type="radio" name="osEditorMode" value="specified" data-action="os-mode">
+            <span class="ui-radio__input"><span class="ui-radio__inner"></span></span>
+            <span class="ui-radio__label">指定范围</span>
+          </label>
+        </div>
+      </div>
+      <div class="os-editor__follow" id="os-dialog-follow"></div>
+      <div class="os-editor__list" id="os-dialog-list" role="listbox" aria-multiselectable="true"></div>
+      <div class="os-editor__error" id="os-dialog-error" hidden>请至少选择 1 个操作系统版本</div>
+      <div class="os-editor__hint" id="os-dialog-hint">该范围随版本包关联的操作系统自动更新。</div>
+    </div>
+    <footer class="ui-dialog__footer">
+      <button class="ui-button ui-button--default" type="button" data-action="os-cancel">取消</button>
+      <button class="ui-button" id="os-dialog-save" type="button" data-action="os-save" disabled>保存</button>
+    </footer>
+  </dialog>
+
+  <div class="message" id="message" hidden>
+    <span class="message__icon">✓</span>
+    <span id="message-text">操作成功</span>
+  </div>
+
+  <script>
+    (() => {
+      // 每层可选操作系统 = 该层已选版本关联的版本文件操作系统并集
+      const OS_BY_VERSION = {
+        "8.0.32": ["tlinux-3.2", "tlinux-4"],
+        "8.0.36": ["tlinux-3.2", "tlinux-4"],
+        "8.0.39": ["tlinux-4"],
+        "5.7.44": ["tlinux-2.2", "tlinux-3.2", "tlinux-4"],
+        "5.7.20": ["tlinux-2.2", "tlinux-3.2"],
+        "5.6.51": ["tlinux-1.2", "tlinux-2.2"],
+        "5.6.24": ["tlinux-1.2", "tlinux-2.2"],
+        "2.1.0": ["tlinux-3.2", "tlinux-4"],
+        "2.0.8": ["tlinux-2.2", "tlinux-3.2"],
+        "1.0.4": ["tlinux-1.2", "tlinux-2.2"]
+      };
+
+      const modules = [
+        { id: 29, name: "order-service", series: "MySQL-8.0", charset: "utf8mb4", storage: "TXSQL / MySQL-8.0 / 8.0.32", storageVersion: "8.0.32", storageOsMode: "follow", storageOs: [], access: "Proxy-2.x / 2.1.0", accessVersion: "2.1.0", accessOsMode: "specified", accessOs: ["tlinux-3.2"], clusters: 3, canEditOs: true },
+        { id: 31, name: "aaa", series: "MySQL-5.7", charset: "utf8", storage: "TXSQL / MySQL-5.7 / 5.7.44", storageVersion: "5.7.44", storageOsMode: "specified", storageOs: ["tlinux-3.2"], access: "Proxy-2.x / 2.0.8", accessVersion: "2.0.8", accessOsMode: "follow", accessOs: [], clusters: 0, canEditOs: true },
+        { id: 33, name: "aaa", series: "MySQL-5.7", charset: "utf8mb4", storage: "TXSQL / MySQL-5.7 / 5.7.44", storageVersion: "5.7.44", storageOsMode: "follow", storageOs: [], access: "Proxy-2.x / 2.0.8", accessVersion: "2.0.8", accessOsMode: "specified", accessOs: ["tlinux-3.2"], clusters: 2, canEditOs: true },
+        { id: 35, name: "payment-core", series: "MySQL-8.0", charset: "utf8mb4", storage: "Community / MySQL-8.0 / 8.0.36", storageVersion: "8.0.36", storageOsMode: "specified", storageOs: ["tlinux-4"], access: "Proxy-2.x / 2.1.0", accessVersion: "2.1.0", accessOsMode: "follow", accessOs: [], clusters: 6, canEditOs: true },
+        // 无权限：编辑入口置灰
+        { id: 38, name: "long-long-long-module-name-for-report", series: "MySQL-5.7", charset: "utf8", storage: "TXSQL / MySQL-5.7 / 5.7.44", storageVersion: "5.7.44", storageOsMode: "specified", storageOs: ["tlinux-3.2"], access: "Proxy-2.x / 2.0.8", accessVersion: "2.0.8", accessOsMode: "specified", accessOs: ["tlinux-3.2"], clusters: 1, canEditOs: false },
+        // 存量模块未设置操作系统版本：值展示 --
+        { id: 42, name: "log-archive", series: "MySQL-5.6", charset: "utf8", storage: "TXSQL / MySQL-5.6 / 5.6.51", storageVersion: "5.6.51", storageOsMode: null, storageOs: [], access: "Proxy-1.x / 1.0.4", accessVersion: "1.0.4", accessOsMode: "specified", accessOs: ["tlinux-2.2"], clusters: 4, canEditOs: true },
+        { id: 45, name: "legacy-report", series: "MySQL-5.7", charset: "utf8mb4", storage: "TMySQL / MySQL-5.7 / 5.7.20", storageVersion: "5.7.20", storageOsMode: "follow", storageOs: [], access: "Proxy-2.x / 2.0.8", accessVersion: "2.0.8", accessOsMode: "follow", accessOs: [], clusters: 2, canEditOs: true },
+        { id: 47, name: "analytics-rocks", series: "MySQL-8.0", charset: "utf8mb4", storage: "RocksDB / MySQL-8.0 / 8.0.32", storageVersion: "8.0.32", storageOsMode: "specified", storageOs: ["tlinux-3.2"], access: "Proxy-2.x / 2.1.0", accessVersion: "2.1.0", accessOsMode: "follow", accessOs: [], clusters: 1, canEditOs: true }
+      ];
+
+      const LAYER_META = {
+        storage: { name: "存储层", osKey: "storageOs", modeKey: "storageOsMode", versionKey: "storageVersion", versionLabel: "storage" },
+        access: { name: "接入层", osKey: "accessOs", modeKey: "accessOsMode", versionKey: "accessVersion", versionLabel: "access" }
+      };
+
+      const parameters = [
+        { key: "mysqld.binlog_format", value: "ROW", allowed: "ROW | STATEMENT | MIXED", restart: "否", custom: true },
+        { key: "mysqld.character_set_server", value: "utf8mb4", allowed: "utf8 | utf8mb4 | latin1", restart: "是", custom: false },
+        { key: "mysqld.expire_logs_days", value: "30", allowed: "0 ~ 99", restart: "否", custom: true },
+        { key: "mysqld.innodb_buffer_pool_size", value: "16G", allowed: "1G ~ 256G", restart: "是", custom: false },
+        { key: "mysqld.max_connections", value: "5000", allowed: "100 ~ 10000", restart: "否", custom: false },
+        { key: "mysqld.port", value: "{{Mysql.Port}}", allowed: "--", restart: "是", custom: false },
+        { key: "mysqld.sql_mode", value: "STRICT_TRANS_TABLES", allowed: "字符串", restart: "否", custom: true },
+        { key: "mysqld.sync_binlog", value: "1", allowed: "0 ~ 1000", restart: "否", custom: false },
+        { key: "mysqld.thread_cache_size", value: "256", allowed: "0 ~ 16384", restart: "否", custom: false },
+        { key: "mysqld.wait_timeout", value: "3600", allowed: "1 ~ 31536000", restart: "否", custom: false },
+        { key: "mysqld.max_allowed_packet", value: "1G", allowed: "1M ~ 1G", restart: "否", custom: false },
+        { key: "mysqld.slow_query_log", value: "ON", allowed: "ON | OFF", restart: "否", custom: false }
+      ];
+
+      let activeModuleId = 29;
+      const SEARCH_FIELDS = [
+        { id: "name", label: "模块名", key: "name", kind: "text" },
+        { id: "id", label: "模块 ID", key: "id", kind: "text" },
+        { id: "charset", label: "字符集", key: "charset", kind: "enum" }
+      ];
+      const treeConditions = [];
+      let pendingField = null;
+      let menuOpen = false;
+
+      // 枚举选项来源：当前树数据去重，不取版本包全量目录
+      const uniqueSorted = (key) => [...new Set(modules.map((item) => String(item[key] ?? "")).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
+      const fieldMeta = (id) => SEARCH_FIELDS.find((item) => item.id === id);
+      const hasSearch = () => treeConditions.length > 0 || document.getElementById("module-search").value.trim();
+
+      const matchItem = (item) => {
+        const draft = document.getElementById("module-search").value.trim().toLowerCase();
+        if (draft) {
+          const fieldKey = pendingField ? pendingField.key : "name";
+          if (!String(item[fieldKey] || "").toLowerCase().includes(draft)) return false;
+        }
+        return treeConditions.every((condition) => {
+          const cell = String(item[condition.key] ?? "");
+          if (condition.kind === "enum") return cell === condition.value;
+          return cell.toLowerCase().includes(condition.value.toLowerCase());
+        });
+      };
+
+      const setMenuOpen = (open) => {
+        menuOpen = open;
+        const menu = document.getElementById("module-search-menu");
+        menu.hidden = !open;
+        if (open) renderSearchMenu();
+      };
+
+      const renderSearchTags = () => {
+        document.getElementById("module-search-tags").innerHTML = treeConditions.map((condition, index) => `
+          <span class="search-tag">
+            <span class="tag-key">${escapeHtml(condition.label)}：</span>
+            <span class="tag-value">${escapeHtml(condition.value)}</span>
+            <span class="tag-remove" data-action="remove-search-tag" data-index="${index}">✕</span>
+          </span>
+        `).join("");
+        const input = document.getElementById("module-search");
+        const fieldLabel = document.getElementById("module-search-field-label");
+        if (pendingField) {
+          fieldLabel.hidden = false;
+          fieldLabel.textContent = `${pendingField.label}：`;
+          input.placeholder = "";
+        } else {
+          fieldLabel.hidden = true;
+          fieldLabel.textContent = "";
+          input.placeholder = "搜索模块名";
+        }
+      };
+
+      const renderSearchMenu = () => {
+        const menu = document.getElementById("module-search-menu");
+        const draft = document.getElementById("module-search").value.trim().toLowerCase();
+        if (pendingField && pendingField.kind === "enum") {
+          const options = uniqueSorted(pendingField.key).filter((value) => !draft || value.toLowerCase().includes(draft));
+          menu.innerHTML = `<div class="sd-group-title">${escapeHtml(pendingField.label)}</div>` + (options.length
+            ? options.map((value) => `<div class="sd-item" data-action="pick-search-value" data-value="${escapeHtml(value)}">${escapeHtml(value)}</div>`).join("")
+            : `<div class="sd-item">无匹配项</div>`);
+          return;
+        }
+        menu.innerHTML = `<div class="sd-group-title">搜索字段</div>` + SEARCH_FIELDS.map((field) =>
+          `<div class="sd-item" data-action="pick-search-field" data-field="${field.id}">${escapeHtml(field.label)}</div>`
+        ).join("");
+      };
+
+      const addCondition = (field, value) => {
+        const text = String(value).trim();
+        if (!text) return;
+        const exists = treeConditions.some((item) => item.id === field.id && item.value.toLowerCase() === text.toLowerCase());
+        if (!exists) treeConditions.push({ id: field.id, key: field.key, label: field.label, kind: field.kind, value: text });
+        pendingField = null;
+        document.getElementById("module-search").value = "";
+        renderSearchTags();
+        setMenuOpen(false);
+        renderTree();
+      };
+
+      const clearSearch = () => {
+        treeConditions.length = 0;
+        pendingField = null;
+        document.getElementById("module-search").value = "";
+        renderSearchTags();
+        setMenuOpen(false);
+        renderTree();
+      };
+
+      const formatClusterCount = (count) => (count >= 1000 ? "999+" : String(count));
+
+      const renderTree = () => {
+        const visible = modules.filter((item) => matchItem(item));
+        const list = document.getElementById("module-tree-list");
+        list.innerHTML = visible.map((item) => {
+          const identity = `${item.series}，${item.charset}`;
+          const countText = formatClusterCount(item.clusters);
+          const title = `${item.name}\n${item.series}\n${item.charset}\n关联集群 ${item.clusters}`;
+          return `
+          <button class="module-tree__node${item.id === activeModuleId ? " is-active" : ""}"
+            type="button" data-action="select-module" data-module-id="${item.id}"
+            title="${escapeHtml(title)}"
+            aria-label="${escapeHtml(item.name)}，${escapeHtml(item.series)}，${escapeHtml(item.charset)}，关联集群 ${item.clusters}">
+            <span class="module-tree__name-row">
+              <span class="module-tree__name">${escapeHtml(item.name)}</span>
+              <span class="module-tree__count${item.clusters === 0 ? " is-zero" : ""}">${escapeHtml(countText)}</span>
+            </span>
+            <span class="module-tree__identity">${escapeHtml(identity)}</span>
+          </button>
+        `;
+        }).join("");
+        const empty = document.getElementById("module-tree-empty");
+        empty.hidden = visible.length !== 0;
+        document.getElementById("module-tree-clear").hidden = visible.length !== 0 || !hasSearch();
+      };
+
+      const escapeHtml = (value) => String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+
+      const showMessage = (text) => {
+        const message = document.getElementById("message");
+        document.getElementById("message-text").textContent = text;
+        message.hidden = false;
+        window.clearTimeout(showMessage.timer);
+        showMessage.timer = window.setTimeout(() => { message.hidden = true; }, 1800);
+      };
+
+      const formatOs = (list) => (list && list.length ? list.join("，") : "--");
+
+      const renderOsValue = (layer, item) => {
+        const meta = LAYER_META[layer];
+        const mode = item[meta.modeKey];
+        const list = mode === "follow" ? (OS_BY_VERSION[item[meta.versionKey]] || []) : item[meta.osKey];
+        const element = document.getElementById(`detail-${layer}-os`);
+        element.textContent = formatOs(list);
+        // 单行展示，超长省略；悬停给完整值
+        element.title = list && list.length ? list.join("，") : "";
+        document.getElementById(`detail-${layer}-os-mode`).hidden = mode !== "follow";
+      };
+
+      const renderOsEditEntry = (layer, item) => {
+        const button = document.getElementById(`detail-${layer}-os-edit`);
+        button.disabled = !item.canEditOs;
+        button.title = item.canEditOs ? "编辑" : "你没有该业务的模块编辑权限";
+      };
+
+      const updateDetail = (id) => {
+        const item = modules.find((module) => module.id === id);
+        if (!item) return;
+        activeModuleId = id;
+        document.getElementById("detail-name").textContent = item.name;
+        document.getElementById("detail-storage").textContent = item.storage;
+        renderOsValue("storage", item);
+        // 无接入层的 DB 类型（如 MySQL 单节点）整行隐藏
+        document.getElementById("detail-access-row").hidden = !item.access;
+        document.getElementById("detail-access").textContent = item.access || "--";
+        renderOsValue("access", item);
+        renderOsEditEntry("storage", item);
+        renderOsEditEntry("access", item);
+        document.getElementById("detail-charset").textContent = item.charset;
+        document.getElementById("detail-id").textContent = item.id;
+        document.getElementById("detail-clusters").textContent = `${item.clusters} 个集群`;
+        renderTree();
+      };
+
+      const renderParameters = (keyword = "") => {
+        const normalized = keyword.trim().toLowerCase();
+        const visible = parameters.filter((item) =>
+          [item.key, item.value, item.allowed].some((value) => value.toLowerCase().includes(normalized))
+        );
+        document.getElementById("parameter-table-body").innerHTML = visible.map((item) => `
+          <tr class="ui-table__row">
+            <td class="ui-table__cell"><span class="parameter-table__key">${escapeHtml(item.key)}</span></td>
+            <td class="ui-table__cell">${escapeHtml(item.value)} ${item.custom ? '<span class="parameter-table__tag">自定义</span>' : ""}</td>
+            <td class="ui-table__cell">${escapeHtml(item.allowed)}</td>
+            <td class="ui-table__cell">${item.restart}</td>
+            <td class="ui-table__cell"><button class="ui-button is-text" type="button" data-action="edit-parameter">编辑</button></td>
+          </tr>
+        `).join("");
+      };
+
+      const initTabs = () => {
+        document.querySelectorAll("[data-tabs]").forEach((root) => {
+          const tabs = root.querySelectorAll(".ui-tabs__tab");
+          const panels = root.querySelectorAll(".ui-tabs__panel");
+          tabs.forEach((tab) => {
+            tab.addEventListener("click", () => {
+              const name = tab.dataset.tab;
+              tabs.forEach((current) => {
+                const active = current === tab;
+                current.classList.toggle("is-active", active);
+                current.setAttribute("aria-selected", String(active));
+              });
+              panels.forEach((panel) => { panel.hidden = panel.dataset.panel !== name; });
+            });
+          });
+        });
+      };
+
+      const initDialogs = () => {
+        document.querySelectorAll(".ui-dialog:not(#os-dialog)").forEach((dialog) => {
+          dialog.querySelectorAll(".ui-dialog__close, [data-dialog-close]").forEach((button) => {
+            button.addEventListener("click", () => dialog.close());
+          });
+          dialog.addEventListener("click", (event) => {
+            if (event.target === dialog) dialog.close();
+          });
+        });
+        document.querySelectorAll("[data-dialog-open]").forEach((trigger) => {
+          trigger.addEventListener("click", () => {
+            const dialog = document.getElementById(trigger.dataset.dialogOpen);
+            if (dialog) dialog.showModal();
+          });
+        });
+      };
+
+      // 操作系统版本编辑：一次一层，仅当有净变更且非空时可保存
+      const osEditor = { layer: "storage", moduleId: null, options: [], initialMode: "follow", mode: "follow", initial: [], selected: [] };
+
+      const isOsDirty = () => {
+        if (osEditor.mode !== osEditor.initialMode) return true;
+        if (osEditor.mode === "follow") return false;
+        return osEditor.selected.length !== osEditor.initial.length
+          || osEditor.selected.some((value) => !osEditor.initial.includes(value));
+      };
+
+      const renderOsEditor = () => {
+        const list = document.getElementById("os-dialog-list");
+        const follow = document.getElementById("os-dialog-follow");
+        const specified = osEditor.mode === "specified";
+        follow.hidden = specified;
+        list.hidden = !specified;
+        follow.innerHTML = osEditor.options.map((option) => `<span class="os-editor__tag">${escapeHtml(option)}</span>`).join("");
+        list.innerHTML = osEditor.options.map((option) => {
+          const selected = osEditor.selected.includes(option);
+          return `
+            <button class="os-editor__option${selected ? " is-selected" : ""}" type="button" role="option"
+              aria-selected="${selected}" data-action="os-toggle" data-os="${escapeHtml(option)}">
+              <span>${escapeHtml(option)}</span>
+              <span class="os-editor__check">✓</span>
+            </button>
+          `;
+        }).join("");
+        document.querySelector(`input[name="osEditorMode"][value="${osEditor.mode}"]`).checked = true;
+        const empty = specified && osEditor.selected.length === 0;
+        document.getElementById("os-dialog-error").hidden = !empty;
+        document.getElementById("os-dialog-hint").textContent = specified
+          ? "缩小范围后，仅影响之后按本模块新部署的集群，已部署集群不受影响。"
+          : "该范围随版本包关联的操作系统自动更新。";
+        document.getElementById("os-dialog-save").disabled = !osEditor.options.length || empty || !isOsDirty();
+      };
+
+      const openOsEditor = (layer) => {
+        const item = modules.find((module) => module.id === activeModuleId);
+        if (!item || !item.canEditOs) return;
+        const meta = LAYER_META[layer];
+        osEditor.layer = layer;
+        osEditor.moduleId = item.id;
+        osEditor.options = (OS_BY_VERSION[item[meta.versionKey]] || []).slice();
+        osEditor.initialMode = item[meta.modeKey] || "unset";
+        osEditor.mode = item[meta.modeKey] || "follow";
+        osEditor.initial = item[meta.modeKey] === "specified"
+          ? (item[meta.osKey] || []).slice()
+          : osEditor.options.slice();
+        osEditor.selected = osEditor.initial.slice();
+        document.getElementById("os-dialog-title").textContent = `编辑操作系统版本 · ${meta.name}`;
+        document.getElementById("os-dialog-version").textContent = `当前版本：${item[meta.versionLabel]}`;
+        renderOsEditor();
+        document.getElementById("os-dialog").showModal();
+      };
+
+      const closeOsEditor = (force = false) => {
+        if (!force && isOsDirty() && !window.confirm("有未保存的修改，确认离开？")) return;
+        document.getElementById("os-dialog").close();
+      };
+
+      const saveOsEditor = () => {
+        const item = modules.find((module) => module.id === osEditor.moduleId);
+        if (!item) return;
+        const meta = LAYER_META[osEditor.layer];
+        item[meta.modeKey] = osEditor.mode;
+        item[meta.osKey] = osEditor.mode === "specified" ? osEditor.selected.slice() : [];
+        document.getElementById("os-dialog").close();
+        updateDetail(item.id);
+        showMessage("操作系统版本已保存，仅影响之后新部署的集群");
+      };
+
+      const initOsEditor = () => {
+        const dialog = document.getElementById("os-dialog");
+        dialog.querySelector(".ui-dialog__close").addEventListener("click", () => closeOsEditor());
+        dialog.addEventListener("click", (event) => {
+          if (event.target === dialog) closeOsEditor();
+        });
+        dialog.addEventListener("cancel", (event) => {
+          event.preventDefault();
+          closeOsEditor();
+        });
+      };
+
+      const initPagination = () => {
+        const ARROW = {
+          prev: '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M10 3.5 5.5 8 10 12.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+          next: '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        };
+        document.querySelectorAll(".ui-pagination").forEach((root) => {
+          const render = () => {
+            const count = Number(root.dataset.count) || 0;
+            const limit = Number(root.dataset.limit) || 10;
+            const pageCount = Math.max(1, Math.ceil(count / limit));
+            const current = Math.min(Math.max(1, Number(root.dataset.current) || 1), pageCount);
+            root.innerHTML = `
+              <span class="ui-pagination__total">共计 ${count} 条</span>
+              <button class="ui-pagination__arrow" data-page="${current - 1}" ${current <= 1 ? "disabled" : ""}>${ARROW.prev}</button>
+              ${Array.from({ length: pageCount }, (_, index) => index + 1).map((page) =>
+                `<button class="ui-pagination__page${page === current ? " is-active" : ""}" data-page="${page}">${page}</button>`
+              ).join("")}
+              <button class="ui-pagination__arrow" data-page="${current + 1}" ${current >= pageCount ? "disabled" : ""}>${ARROW.next}</button>
+            `;
+          };
+          root.addEventListener("click", (event) => {
+            const target = event.target.closest("[data-page]");
+            if (!target || target.disabled) return;
+            root.dataset.current = target.dataset.page;
+            render();
+          });
+          render();
+        });
+      };
+
+      document.addEventListener("click", (event) => {
+        const actionElement = event.target.closest("[data-action]");
+        if (!actionElement) return;
+        const action = actionElement.dataset.action;
+        if (action === "select-module") updateDetail(Number(actionElement.dataset.moduleId));
+        if (action === "clear-tree-search") clearSearch();
+        if (action === "remove-search-tag") {
+          treeConditions.splice(Number(actionElement.dataset.index), 1);
+          renderSearchTags();
+          renderTree();
+        }
+        if (action === "pick-search-field") {
+          pendingField = fieldMeta(actionElement.dataset.field);
+          document.getElementById("module-search").value = "";
+          document.getElementById("module-search").focus();
+          renderSearchTags();
+          if (pendingField.kind === "text") setMenuOpen(false);
+          else setMenuOpen(true);
+        }
+        if (action === "pick-search-value") {
+          addCondition(pendingField, actionElement.dataset.value);
+        }
+        if (action === "toggle-spec") {
+          const popover = document.getElementById("spec-popover");
+          popover.hidden = !popover.hidden;
+        }
+        if (action === "create-module") showMessage("将进入新建模块页");
+        if (action === "clone-module") showMessage("将进入克隆模块页");
+        if (action === "edit-os") openOsEditor(actionElement.dataset.layer);
+        if (action === "os-toggle") {
+          const value = actionElement.dataset.os;
+          osEditor.selected = osEditor.selected.includes(value)
+            ? osEditor.selected.filter((item) => item !== value)
+            : osEditor.options.filter((item) => item === value || osEditor.selected.includes(item));
+          renderOsEditor();
+        }
+        if (action === "os-mode") {
+          const next = actionElement.value;
+          if (next === "specified" && osEditor.mode !== "specified") osEditor.selected = [];
+          osEditor.mode = next;
+          renderOsEditor();
+        }
+        if (action === "os-cancel") closeOsEditor(true);
+        if (action === "os-save") saveOsEditor();
+        if (action === "add-parameter") showMessage("已打开参数选择入口");
+        if (action === "restore-defaults") showMessage("当前参数已恢复默认");
+        if (action === "edit-parameter") showMessage("已进入参数编辑态");
+        if (action === "open-cluster") showMessage("将进入集群详情页");
+      });
+
+      document.addEventListener("DOMContentLoaded", () => {
+        renderSearchTags();
+        renderTree();
+        renderParameters();
+        initTabs();
+        initDialogs();
+        initOsEditor();
+        initPagination();
+        updateDetail(activeModuleId);
+        const searchInput = document.getElementById("module-search");
+        const searchWrap = document.getElementById("module-search-select");
+        searchWrap.addEventListener("click", () => searchInput.focus());
+        searchInput.addEventListener("focus", () => {
+          if (pendingField && pendingField.kind === "text") setMenuOpen(false);
+          else setMenuOpen(true);
+        });
+        searchInput.addEventListener("input", () => {
+          if (pendingField && pendingField.kind === "enum") {
+            setMenuOpen(true);
+            renderSearchMenu();
+          }
+          renderTree();
+        });
+        searchInput.addEventListener("keydown", (event) => {
+          if (event.key === "Backspace" && !searchInput.value && pendingField) {
+            pendingField = null;
+            renderSearchTags();
+            setMenuOpen(true);
+            renderTree();
+            return;
+          }
+          if (event.key !== "Enter") return;
+          const text = searchInput.value.trim();
+          if (!text) return;
+          event.preventDefault();
+          addCondition(pendingField || fieldMeta("name"), text);
+        });
+        document.getElementById("parameter-search").addEventListener("input", (event) => renderParameters(event.target.value));
+        document.addEventListener("click", (event) => {
+          const popover = document.getElementById("spec-popover");
+          if (!popover.hidden && !event.target.closest(".module-page__demo")) popover.hidden = true;
+          if (menuOpen && !event.target.closest("#module-search-select")) setMenuOpen(false);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
