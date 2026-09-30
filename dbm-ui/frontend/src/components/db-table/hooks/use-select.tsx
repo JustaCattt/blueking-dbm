@@ -127,6 +127,7 @@ export const useSelect = (
                       disabled={Boolean(selectDisabled)}
                       label={() => true}
                       modelValue={Boolean(selectedRowMap.value[row[props.rowKey]])}
+                      style='top: 8px'
                       onChange={() => handleSelect(row)}
                     />
                   ) : (
