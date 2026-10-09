@@ -6719,5 +6719,6 @@
   "为所选上游实例新增 1 个从库": "Add 1 Standby Database to Selected Upstream Instances",
   "DTS 数据迁移": "DTS Data Migration",
   "按库表将数据从源集群迁到目标集群，目标库与源库同名": "Migrate data from the source cluster to the target cluster by table, with the same name for both databases",
+  "检查_非表对象_": "Check \"Non-Table Objects\"",
   "这行勿动！新增翻译请在上一行添加！": ""
 }

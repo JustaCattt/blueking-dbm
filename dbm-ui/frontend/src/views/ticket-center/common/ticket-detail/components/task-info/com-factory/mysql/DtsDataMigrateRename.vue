@@ -81,6 +81,9 @@
     <InfoItem :label="t('数据冲突处理')">
       {{ conflictHandleText || '--' }}
     </InfoItem>
+    <InfoItem :label="t('检查_非表对象_')">
+      {{ ticketDetails.details.check_non_table_object ? t('是') : t('否') }}
+    </InfoItem>
   </InfoList>
 </template>
 <script setup lang="ts">

@@ -100,6 +100,11 @@
           </BkRadio>
         </BkRadioGroup>
       </BkFormItem>
+      <BkFormItem>
+        <BkCheckbox v-model="formData.check_non_table_object">
+          {{ t('检查_非表对象_') }}
+        </BkCheckbox>
+      </BkFormItem>
       <TicketPayload v-model="formData.payload" />
       <DbMappingSideslider
         v-model:is-show="showMappingSlider"
@@ -256,6 +261,7 @@
   });
 
   const defaultData = () => ({
+    check_non_table_object: true,
     conflictHandle: 'error' as 'error' | 'replace' | 'ignore',
     payload: createTicketPayload(),
     tableData: [createTableRow()],
@@ -333,6 +339,7 @@
         });
       });
       Object.assign(formData, {
+        check_non_table_object: details.check_non_table_object ?? true,
         conflictHandle: details.task?.on_duplicate || 'error',
         payload: createTicketPayload(ticketDetail),
         tableData: tableData.length ? tableData : [createTableRow()],
@@ -341,6 +348,7 @@
   });
 
   const { loading: isSubmitting, run: createTicketRun } = useCreateTicket<{
+    check_non_table_object: boolean;
     infos: {
       dts_resource: {
         deploy: Record<string, never>;
@@ -386,6 +394,7 @@
     tableRef.value!.validate().then(() => {
       createTicketRun({
         details: {
+          check_non_table_object: formData.check_non_table_object,
           infos: formData.tableData.map((item) => ({
             dts_resource: {
               deploy: {},

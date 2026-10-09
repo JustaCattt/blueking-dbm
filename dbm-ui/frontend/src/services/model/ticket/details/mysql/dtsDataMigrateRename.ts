@@ -5,6 +5,7 @@ import type { DetailBase, DetailClusters, DetailSpecs } from '../common';
  */
 
 export interface DtsDataMigrateRename extends DetailBase {
+  check_non_table_object: boolean;
   clusters?: DetailClusters;
   infos: {
     dts_resource: {
