@@ -55,15 +55,6 @@
           :label="t('数据库信息')"
           required>
           <div class="db-config-row">
-            <DbTag
-              class="db-type-tag"
-              theme="info"
-              type="stroke">
-              <template #icon>
-                <i class="db-icon-mysql mr-5" />
-              </template>
-              {{ clusterTypeInfos[ClusterTypes.TENDBCLUSTER]?.name }}
-            </DbTag>
             <FormItemWithHint
               class="version-form-item"
               property="db_version"
@@ -220,9 +211,15 @@
   </BkSideslider>
 
   <Teleport to="#dbContentTitleAppend">
-    <span class="clone-module-meta">
-      <span> {{ t('业务') }}：{{ bizInfo.name }} </span>
-      <span> {{ t('源模块') }}：{{ String(route.query.moduleName) || '--' }} </span>
+    <!-- 数据库类型固定在导航栏展示（源模块已锁定，不随表单修改，与全局配置详情页同形） -->
+    <span class="clone-module-nav">
+      <DbTag theme="info">
+        {{ clusterTypeInfos[ClusterTypes.TENDBCLUSTER]?.name || ClusterTypes.TENDBCLUSTER }}
+      </DbTag>
+      <span class="clone-module-meta">
+        <span> {{ t('业务') }}：{{ bizInfo.name }} </span>
+        <span> {{ t('源模块') }}：{{ String(route.query.moduleName) || '--' }} </span>
+      </span>
     </span>
   </Teleport>
 </template>
@@ -706,13 +703,6 @@
     }
   }
 
-  .db-type-tag {
-    height: 30px;
-    color: @primary-color;
-    background: white;
-    border: 1px solid @border-primary;
-  }
-
   .sideslider-sub-title {
     position: relative;
     padding-left: 8px;
@@ -734,9 +724,16 @@
     }
   }
 
+  /* 导航栏：集群类型标签 + 业务 / 源模块信息（与全局配置详情页同形） */
+  .clone-module-nav {
+    display: inline-flex;
+    gap: 8px;
+    margin-left: 8px;
+    align-items: center;
+  }
+
   .clone-module-meta {
     display: inline-flex;
-    margin-left: 8px;
     font-size: 14px;
     color: #979ba5;
     align-items: center;

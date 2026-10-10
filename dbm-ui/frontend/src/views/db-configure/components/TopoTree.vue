@@ -310,7 +310,8 @@
     }
 
     .config-tree-search {
-      display: flex;
+      /* 不要加 display: flex：DbQuickSearch 的可见盒子是绝对定位的，作为 flex 子项没有固有宽度，
+         会被压成 0 宽导致整条搜索栏（含边框）不可见，这里保持块级元素让其铺满侧栏宽度 */
       margin-bottom: 16px;
     }
   }

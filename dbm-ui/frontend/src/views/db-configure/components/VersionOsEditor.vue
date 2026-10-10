@@ -12,98 +12,110 @@
 -->
 <template>
   <div class="version-os-editor">
-    <!-- 版本行：发行版 / 系列 / 版本号 -->
-    <div class="version-row">
-      <DbSelect
-        v-model="localSelected.distributionId"
-        class="version-select"
-        :clearable="false"
-        :disabled="disabled"
-        filterable
-        :loading="distributionLoading"
-        :placeholder="t('请选择发行版')"
-        :prefix="t('发行版')"
-        @change="handleDistributionChange">
-        <DbOption
-          v-for="item in distributionList"
-          :key="item.id"
-          :label="item.name"
-          :value="item.id" />
-      </DbSelect>
-      <DbSelect
-        v-model="localSelected.seriesId"
-        class="version-select"
-        :clearable="false"
-        :disabled="disabled || !localSelected.distributionId"
-        :loading="seriesLoading"
-        :placeholder="t('请选择')"
-        :prefix="t('系列')"
-        @change="handleSeriesChange">
-        <DbOption
-          v-for="item in seriesList"
-          :key="item.id"
-          :label="item.name"
-          :value="item.id" />
-      </DbSelect>
-      <DbSelect
-        v-model="localSelected.versionId"
-        class="version-select"
-        :clearable="false"
-        :disabled="disabled || !localSelected.seriesId"
-        :loading="versionLoading"
-        :placeholder="t('请选择')"
-        :prefix="t('版本号')"
-        @change="handleVersionChange">
-        <DbOption
-          v-for="item in versionList"
-          :key="item.id"
-          :label="item.name"
-          :value="item.id">
-          <span>{{ item.name }}</span>
-          <DbTag
-            v-if="item.recommend"
-            class="ml-5"
-            theme="success">
-            {{ t('推荐') }}
-          </DbTag>
-        </DbOption>
-      </DbSelect>
+    <!-- 版本行：系列 / 发行版 / 版本号（接入层 Proxy 隐式 DBM，不展示发行版下拉） -->
+    <div class="editor-row">
+      <span class="row-label">{{ t('版本') }}</span>
+      <div class="row-content version-row">
+        <DbSelect
+          v-model="localSelected.seriesId"
+          class="version-select"
+          :clearable="false"
+          :disabled="disabled || !localSelected.distributionId"
+          :loading="seriesLoading"
+          :placeholder="t('请选择')"
+          :prefix="t('系列')"
+          @change="handleSeriesChange">
+          <DbOption
+            v-for="item in seriesList"
+            :key="item.id"
+            :label="item.name"
+            :value="item.id" />
+        </DbSelect>
+        <DbSelect
+          v-if="showDistribution"
+          v-model="localSelected.distributionId"
+          class="version-select"
+          :clearable="false"
+          :disabled="disabled"
+          filterable
+          :loading="distributionLoading"
+          :placeholder="t('请选择发行版')"
+          :prefix="t('发行版')"
+          @change="handleDistributionChange">
+          <DbOption
+            v-for="item in distributionList"
+            :key="item.id"
+            :label="item.name"
+            :value="item.id" />
+        </DbSelect>
+        <DbSelect
+          v-model="localSelected.versionId"
+          class="version-select"
+          :clearable="false"
+          :disabled="disabled || !localSelected.seriesId"
+          :loading="versionLoading"
+          :placeholder="t('请选择')"
+          :prefix="t('版本号')"
+          @change="handleVersionChange">
+          <DbOption
+            v-for="item in versionList"
+            :key="item.id"
+            :label="item.name"
+            :value="item.id">
+            <span>{{ item.name }}</span>
+            <DbTag
+              v-if="item.recommend"
+              class="ml-5"
+              theme="success">
+              {{ t('推荐') }}
+            </DbTag>
+          </DbOption>
+        </DbSelect>
+      </div>
     </div>
-    <!-- 操作系统行：模式切换 + 取值 -->
-    <div class="os-row">
-      <span class="os-label">{{ t('操作系统版本') }}</span>
-      <div class="os-content">
-        <DbRadioGroup
+    <!-- 操作系统行：模式切换 + 取值（值区独立成行） -->
+    <div class="editor-row">
+      <span class="row-label">{{ t('操作系统版本') }}</span>
+      <div class="row-content os-content">
+        <BkRadioGroup
           v-if="versionSelected"
           v-model="localSelected.osMode">
-          <DbRadio value="follow">
-            {{ t('跟随版本包') }}
-          </DbRadio>
-          <DbRadio value="specify">
-            {{ t('指定范围') }}
-          </DbRadio>
-        </DbRadioGroup>
-        <template v-if="versionSelected && localSelected.osMode === 'follow'">
-          <span class="os-follow-text">{{ followOsText }}</span>
-        </template>
-        <template v-else-if="versionSelected && localSelected.osMode === 'specify'">
-          <DbSelect
-            v-model="localSelected.specifyOs"
-            class="os-select"
-            :disabled="osOptions.length === 0"
-            multiple
-            :placeholder="osOptions.length === 0 ? t('该版本暂无可用介质包') : t('请选择操作系统版本')"
-            @change="handleOsChange">
-            <DbOption
-              v-for="item in osOptions"
-              :key="item"
-              :label="item"
-              :value="item" />
-          </DbSelect>
-        </template>
+          <BkRadio label="follow">
+            {{ t('跟随版本包') }}<span class="radio-desc">（{{ t('随版本包自动更新') }}）</span>
+          </BkRadio>
+          <BkRadio label="specify">
+            {{ t('指定范围') }}<span class="radio-desc">（{{ t('从版本包中勾选') }}）</span>
+          </BkRadio>
+        </BkRadioGroup>
         <span
           v-else
           class="os-placeholder">{{ t('请先选择版本号') }}</span>
+        <!-- 跟随模式：灰色标签逐个展示当前版本支持的 OS -->
+        <div
+          v-if="versionSelected && localSelected.osMode === 'follow'"
+          class="os-value-box">
+          <DbTag
+            v-for="os in followOsList"
+            :key="os"
+            class="os-tag">
+            {{ os }}
+          </DbTag>
+        </div>
+        <!-- 指定模式：多选框勾选，已选项以可移除标签展示 -->
+        <DbSelect
+          v-else-if="versionSelected && localSelected.osMode === 'specify'"
+          v-model="localSelected.specifyOs"
+          class="os-select"
+          :disabled="osOptions.length === 0"
+          multiple
+          :placeholder="osOptions.length === 0 ? t('该版本暂无可用介质包') : t('请选择操作系统版本')"
+          @change="handleOsChange">
+          <DbOption
+            v-for="item in osOptions"
+            :key="item"
+            :label="item"
+            :value="item" />
+        </DbSelect>
       </div>
     </div>
   </div>
@@ -139,11 +151,14 @@
     disabled?: boolean;
     /** 发行版下拉加载的包类型：mysql / mysql-proxy / spider */
     pkgType: string;
+    /** 是否展示发行版下拉（接入层 Proxy 隐式 DBM，传 false 隐藏） */
+    showDistribution?: boolean;
   }
 
   const props = withDefaults(defineProps<Props>(), {
     defaultDistributionName: '',
     disabled: false,
+    showDistribution: true,
   });
 
   const emit = defineEmits<{
@@ -198,6 +213,7 @@
     onSuccess(data) {
       distributionList.value = data;
       // 无选中时按默认发行版名称选中（新建存储层默认 TXSQL；未匹配到则不自动选中）
+      // 接入层（showDistribution=false）同样走默认发行版（DBM）隐式选中
       if (!localSelected.distributionId && props.defaultDistributionName) {
         const matched = data.find((item) => item.name === props.defaultDistributionName);
         if (matched) {
@@ -289,10 +305,10 @@
     return Array.from(new Set(osGroups.value.flatMap((g) => g.permit_os)));
   });
 
-  /** 跟随模式展示：当前关联全集 */
-  const followOsText = computed(() => {
-    if (osOptions.value.length === 0) return t('该版本暂无可用介质包');
-    return osOptions.value.join('，');
+  /** 跟随模式展示：当前关联全集（灰色标签逐个展示） */
+  const followOsList = computed(() => {
+    if (osOptions.value.length === 0) return [t('该版本暂无可用介质包')];
+    return osOptions.value;
   });
 
   /** 按系列拉版本号列表 */
@@ -433,6 +449,38 @@
 
 <style lang="less" scoped>
   .version-os-editor {
+    .editor-row {
+      display: flex;
+      align-items: flex-start;
+
+      & + .editor-row {
+        margin-top: 16px;
+      }
+    }
+
+    .row-label {
+      flex-shrink: 0;
+      width: 76px;
+      padding-right: 12px;
+      font-size: 12px;
+      line-height: 32px;
+      color: #313238;
+      text-align: right;
+      white-space: nowrap;
+
+      &::after {
+        margin-left: 2px;
+        color: #ea3636;
+        content: '*';
+      }
+    }
+
+    .row-content {
+      flex: 1;
+      max-width: 520px;
+      min-width: 0;
+    }
+
     .version-row {
       display: flex;
       gap: 8px;
@@ -443,40 +491,49 @@
       }
     }
 
-    .os-row {
+    .os-content {
       display: flex;
-      align-items: flex-start;
-      margin-top: 8px;
+      flex-direction: column;
+      gap: 8px;
 
-      .os-label {
-        min-width: 100px;
-        padding-right: 12px;
-        font-size: 12px;
-        line-height: 32px;
-        color: #63656e;
-        text-align: right;
+      :deep(.bk-radio-group) {
+        display: flex;
+        align-items: center;
+        min-height: 32px;
       }
 
-      .os-content {
+      .radio-desc {
+        font-size: 12px;
+        line-height: 20px;
+        color: #979ba5;
+      }
+
+      // 跟随模式取值区：白底边框盒内展示灰色标签
+      .os-value-box {
         display: flex;
-        flex: 1;
-        align-items: center;
-        gap: 12px;
         flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        min-height: 32px;
+        padding: 3px 8px;
+        background: #fff;
+        border: 1px solid #dcdee5;
+        border-radius: 2px;
+      }
 
-        .os-follow-text {
-          font-size: 12px;
-          color: #63656e;
-        }
+      .os-tag {
+        color: #63656e;
+        background: #f0f1f5;
+      }
 
-        .os-select {
-          flex: 1;
-        }
+      .os-select {
+        width: 100%;
+      }
 
-        .os-placeholder {
-          font-size: 12px;
-          color: #c4c6cc;
-        }
+      .os-placeholder {
+        font-size: 12px;
+        line-height: 32px;
+        color: #c4c6cc;
       }
     }
   }

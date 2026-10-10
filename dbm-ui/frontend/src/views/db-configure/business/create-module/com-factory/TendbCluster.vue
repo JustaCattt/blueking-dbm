@@ -53,15 +53,6 @@
           :label="t('数据库信息')"
           required>
           <div class="db-config-row">
-            <DbTag
-              class="db-type-tag"
-              theme="info"
-              type="stroke">
-              <template #icon>
-                <i class="db-icon-mysql mr-5" />
-              </template>
-              {{ clusterTypeInfos[ClusterTypes.TENDBCLUSTER]?.name }}
-            </DbTag>
             <FormItemWithHint
               class="version-form-item"
               property="db_version"
@@ -177,7 +168,12 @@
     </template>
   </SmartAction>
   <Teleport to="#dbContentTitleAppend">
-    <span class="create-module-nav-desc"> {{ t('业务') }} : {{ bizInfo.name }} </span>
+    <span class="create-module-nav">
+      <DbTag theme="info">
+        {{ clusterTypeInfos[ClusterTypes.TENDBCLUSTER]?.name || ClusterTypes.TENDBCLUSTER }}
+      </DbTag>
+      <span class="create-module-nav-desc"> {{ t('业务') }} : {{ bizInfo.name }} </span>
+    </span>
   </Teleport>
 </template>
 
@@ -504,13 +500,6 @@
     }
   }
 
-  .db-type-tag {
-    height: 30px;
-    color: @primary-color;
-    background: white;
-    border: 1px solid @border-primary;
-  }
-
   .total-change-stats {
     margin-left: 16px;
     font-size: 13px;
@@ -540,10 +529,17 @@
     border-radius: 50%;
   }
 
+  /* 导航栏：集群类型标签 + 业务信息（与全局配置详情页同形） */
+  .create-module-nav {
+    display: inline-flex;
+    gap: 8px;
+    margin-left: 8px;
+    align-items: center;
+  }
+
   .create-module-nav-desc {
     position: relative;
     padding-left: 8px;
-    margin-left: 8px;
     font-family: 'Microsoft YaHei', sans-serif;
     font-size: 14px;
     line-height: 22px;

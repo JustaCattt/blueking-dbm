@@ -30,6 +30,8 @@
   `TableColumn` 的 `width` / `min-width`（不含 `EditableColumn`）
 - [有样式的容器不能由 `$slots.x` 决定渲染](doc/slot-wrapper-container.md) —— 改 `components/bkui-vue/**`
   里带 class 的 `v-if="$slots.xxx"` 容器，或给自研基础组件新增插槽出口
+- [不存在的 `Db*` 组件会被当成原生元素静默失效](doc/nonexistent-db-component.md) —— 写 `DbRadio` /
+  `DbRadioGroup` / `DbCheckbox` / `DbSwitch` 这类 bkui 组件族里没有 `Db*` 包装的标签
 
 ## B 类：只报告，改法未定
 

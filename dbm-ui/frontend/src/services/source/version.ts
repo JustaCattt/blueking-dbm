@@ -128,7 +128,7 @@ export function getDbVersionPermitOs(params: { db_version_id: number }) {
       permit_os: string[];
       permit_os_type: string;
     }[]
-  >(`${path}/dbversion/${params.db_version_id}/permit_os/`);
+  >(`${path}/dbversion/${params.db_version_id}/list_permit_os/`);
 }
 
 /**

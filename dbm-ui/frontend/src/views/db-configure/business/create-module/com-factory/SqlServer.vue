@@ -58,17 +58,6 @@
           :label="t('数据库信息')"
           required>
           <div class="db-config-row">
-            <DbTag
-              class="db-type-tag"
-              theme="info"
-              type="stroke">
-              <template #icon>
-                <DbIcon
-                  class="mr-4"
-                  type="sqlserver" />
-              </template>
-              {{ clusterTypeInfos[clusterType]?.name }}
-            </DbTag>
             <FormItemWithHint
               class="custom-form-item version-select-inline"
               property="version"
@@ -216,7 +205,12 @@
     </template>
   </SmartAction>
   <Teleport to="#dbContentTitleAppend">
-    <span class="create-module-nav-desc"> {{ t('业务') }} : {{ bizInfo.name }} </span>
+    <span class="create-module-nav">
+      <DbTag theme="info">
+        {{ clusterTypeInfos[clusterType]?.name || clusterType }}
+      </DbTag>
+      <span class="create-module-nav-desc"> {{ t('业务') }} : {{ bizInfo.name }} </span>
+    </span>
   </Teleport>
 </template>
 
@@ -548,18 +542,8 @@
     width: 100%;
     min-width: 0;
 
-    > *:not(.db-type-tag) {
+    > * {
       min-width: 140px;
-    }
-
-    .db-type-tag {
-      height: 32px;
-      min-width: 140px;
-      color: @primary-color;
-      background: white;
-      border: 1px solid @border-primary;
-      flex: 0 0 auto;
-      justify-content: center;
     }
 
     .version-select-inline {
@@ -636,10 +620,17 @@
     border-radius: 50%;
   }
 
+  /* 导航栏：集群类型标签 + 业务信息（与全局配置详情页同形） */
+  .create-module-nav {
+    display: inline-flex;
+    gap: 8px;
+    margin-left: 8px;
+    align-items: center;
+  }
+
   .create-module-nav-desc {
     position: relative;
     padding-left: 8px;
-    margin-left: 8px;
     font-family: 'Microsoft YaHei', sans-serif;
     font-size: 14px;
     line-height: 22px;

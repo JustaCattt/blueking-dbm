@@ -19,78 +19,93 @@
       :key="layer.componentName"
       class="version-layer-row">
       <span class="layer-name">{{ layer.label }}</span>
-      <span class="layer-version">{{ layer.versionText }}</span>
+      <span class="layer-version">
+        <span class="layer-field-label">{{ t('版本') }}：</span>{{ layer.versionText }}
+      </span>
       <span class="layer-os">
-        <span class="os-label">{{ t('操作系统版本') }}：</span>
+        <span class="layer-field-label">{{ t('操作系统版本') }}：</span>
         <span :class="{ 'os-empty': layer.osText === '--' }">{{ layer.osText }}</span>
+        <!-- 跟随版本包：默认灰底标签；指定范围：橙色标签 -->
         <DbTag
-          v-if="layer.info?.follow_package"
-          class="ml-4"
-          size="small"
-          theme="success">
-          {{ t('跟随版本包') }}
+          v-if="layer.info"
+          class="ml-8"
+          :theme="layer.info.follow_package ? '' : 'warning'">
+          {{ layer.info.follow_package ? t('跟随版本包') : t('指定版本包') }}
         </DbTag>
       </span>
-      <span class="layer-action">
-        <AuthButton
-          action-id="dbconfig_edit"
-          :resource="dbType"
-          size="small"
-          text
-          theme="primary"
-          @click="handleEditOs(layer)">
-          {{ t('编辑') }}
-        </AuthButton>
-      </span>
+      <AuthButton
+        v-bk-tooltips="t('编辑操作系统版本')"
+        action-id="dbconfig_edit"
+        class="layer-edit"
+        :resource="dbType"
+        text
+        @click="handleEditOs(layer)">
+        <DbIcon type="bk-dbm-icon db-icon-edit" />
+      </AuthButton>
     </div>
 
     <!-- OS 编辑弹窗：一次只改一层；模式与取值按 §2.3 -->
     <BkDialog
       :is-show="isShowOsDialog"
-      :title="osDialogTitle"
+      :title="t('编辑操作系统版本')"
       :width="560"
       @closed="handleDialogClosed">
       <div
         v-if="editingLayer"
         class="os-edit-body">
-        <div class="current-version-line">
-          {{ t('当前版本') }}：{{ editingLayer.versionText }}
-        </div>
-        <div class="os-mode-line">
-          <DbRadioGroup v-model="dialogForm.osMode">
-            <DbRadio value="follow">
-              {{ t('跟随版本包') }}
-            </DbRadio>
-            <DbRadio value="specify">
-              {{ t('指定范围') }}
-            </DbRadio>
-          </DbRadioGroup>
-        </div>
-        <div
-          v-if="dialogForm.osMode === 'follow'"
-          class="os-follow-tip">
-          {{ followTipText }}
-        </div>
-        <template v-else>
-          <DbSelect
-            v-model="dialogForm.specifyOs"
-            class="os-specify-select"
-            :disabled="osOptions.length === 0"
-            multiple
-            :placeholder="osOptions.length === 0 ? t('该版本暂无可用介质包') : t('请选择操作系统版本')"
-            @change="handleSpecifyChange">
-            <DbOption
-              v-for="item in osOptions"
-              :key="item"
-              :label="item"
-              :value="item" />
-          </DbSelect>
-          <p
-            v-if="specifyError"
-            class="specify-error">
-            {{ specifyError }}
-          </p>
-        </template>
+        <BkForm
+          form-type="vertical"
+          :model="dialogForm">
+          <BkFormItem
+            :label="t('操作系统版本')"
+            required>
+            <BkRadioGroup v-model="dialogForm.osMode">
+              <BkRadio label="follow">
+                {{ t('跟随版本包') }}<span class="radio-desc">（{{ t('随版本包自动更新') }}）</span>
+              </BkRadio>
+              <BkRadio label="specify">
+                {{ t('指定范围') }}<span class="radio-desc">（{{ t('从版本包中勾选') }}）</span>
+              </BkRadio>
+            </BkRadioGroup>
+            <!-- 跟随版本包：只读展示该版本当前实际可用 OS（协议 §5：展示用 effective_permit_os） -->
+            <div
+              v-if="dialogForm.osMode === 'follow'"
+              class="os-value-box">
+              <DbTag
+                v-for="os in followOsList"
+                :key="os"
+                class="os-tag">
+                {{ os }}
+              </DbTag>
+              <span
+                v-if="followOsList.length === 0"
+                class="os-empty-tip">
+                {{ t('该版本暂无可用介质包') }}
+              </span>
+            </div>
+            <!-- 指定范围：多选，已选项以可移除标签展示 -->
+            <template v-else>
+              <DbSelect
+                v-model="dialogForm.specifyOs"
+                class="os-specify-select"
+                :disabled="osOptions.length === 0"
+                multiple
+                :placeholder="osOptions.length === 0 ? t('该版本暂无可用介质包') : t('请选择操作系统版本')"
+                @change="handleSpecifyChange">
+                <DbOption
+                  v-for="item in osOptions"
+                  :key="item"
+                  :label="item"
+                  :value="item" />
+              </DbSelect>
+              <p
+                v-if="specifyError"
+                class="specify-error">
+                {{ specifyError }}
+              </p>
+            </template>
+          </BkFormItem>
+        </BkForm>
       </div>
       <template #footer>
         <BkButton
@@ -98,7 +113,7 @@
           style="margin-right: 8px"
           theme="primary"
           @click="handleSaveOs">
-          {{ t('保存') }}
+          {{ t('确定') }}
         </BkButton>
         <BkButton
           :disabled="isSubmitting"
@@ -201,11 +216,7 @@
     specifyOs: [] as string[],
   });
 
-  const osDialogTitle = computed(() =>
-    editingLayer.value ? `${t('编辑操作系统版本')} · ${editingLayer.value.label}` : '',
-  );
-
-  /** 当前版本 OS 候选 */
+  /** 当前版本 OS 候选（指定范围的备选） */
   const osOptions = ref<string[]>([]);
   const { run: fetchPermitOs } = useRequest(getDbVersionPermitOs, {
     manual: true,
@@ -214,11 +225,8 @@
     },
   });
 
-  const followTipText = computed(() =>
-    osOptions.value.length > 0
-      ? t('该范围随版本包关联的操作系统自动更新')
-      : t('该版本暂无可用介质包'),
-  );
+  /** 跟随版本包模式展示的实际可用 OS（协议 §5：展示口径为 effective_permit_os） */
+  const followOsList = computed(() => editingLayer.value?.info?.effective_permit_os ?? []);
 
   /** 打开弹窗：回填当前模式与取值（-- 时默认跟随，首次编辑时选定模式） */
   const handleEditOs = (layer: LayerDisplay) => {
@@ -277,43 +285,57 @@
 
 <style lang="less" scoped>
   .module-version-panel {
-    padding: 12px 24px;
+    padding: 16px 24px;
+    border-top: 1px solid #eaebf0;
 
+    /* 每层一个浅灰分组块：层名加粗，版本 / 操作系统版本同排，末尾编辑图标 */
     .version-layer-row {
       display: flex;
+      gap: 24px;
       align-items: center;
-      gap: 16px;
-      padding: 4px 0;
+      padding: 12px 16px;
       font-size: 12px;
       line-height: 20px;
+      background: #f5f7fa;
+      border-radius: 2px;
+
+      & + .version-layer-row {
+        margin-top: 16px;
+      }
 
       .layer-name {
         min-width: 48px;
-        color: #63656e;
+        font-weight: 700;
+        color: #313238;
       }
 
       .layer-version {
-        min-width: 200px;
+        min-width: 220px;
         color: #313238;
+      }
+
+      .layer-field-label {
+        color: #63656e;
       }
 
       .layer-os {
         display: inline-flex;
-        flex: 1;
         align-items: center;
         color: #313238;
-
-        .os-label {
-          color: #63656e;
-        }
 
         .os-empty {
           color: #c4c6cc;
         }
       }
 
-      .layer-action {
-        margin-left: auto;
+      .layer-edit {
+        font-size: 14px;
+        color: #63656e;
+        flex-shrink: 0;
+
+        &:hover {
+          color: #3a84ff;
+        }
       }
     }
   }
@@ -321,23 +343,39 @@
   .os-edit-body {
     padding: 8px 4px;
 
-    .current-version-line {
-      padding-bottom: 12px;
-      font-size: 13px;
-      color: #63656e;
-    }
-
-    .os-mode-line {
-      padding-bottom: 12px;
-    }
-
-    .os-follow-tip {
+    .radio-desc {
       font-size: 12px;
+      line-height: 20px;
       color: #979ba5;
+    }
+
+    /* 跟随版本包：白底边框盒内展示灰色标签（与创建模块的 OS 展示同形） */
+    .os-value-box {
+      display: flex;
+      min-height: 32px;
+      padding: 3px 8px;
+      margin-top: 8px;
+      background: #fff;
+      border: 1px solid #dcdee5;
+      border-radius: 2px;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .os-tag {
+      color: #63656e;
+      background: #f0f1f5;
+    }
+
+    .os-empty-tip {
+      font-size: 12px;
+      color: #c4c6cc;
     }
 
     .os-specify-select {
       width: 100%;
+      margin-top: 8px;
     }
 
     .specify-error {

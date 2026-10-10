@@ -23,32 +23,16 @@
     <DbForm
       ref="formRef"
       class="create-module-page db-scroll-y"
-      :label-width="100"
+      :label-width="160"
       :model="formData"
       :rules="rules"
       :scroll-align-to-top="false">
-      <!-- 模块信息 & 绑定数据库配置（紧凑布局） -->
-      <!-- 通用块：模块名；下一行字符集 -->
-      <div class="module-info-card">
-        <BkFormItem
-          :label="t('数据库类型')"
-          required>
-          <div class="db-type-row">
-            <DbTag
-              class="db-type-tag"
-              theme="info"
-              type="stroke">
-              <template #icon>
-                <i class="db-icon-mysql mr-5" />
-              </template>
-              {{ clusterTypeInfos[clusterType]?.name }}
-            </DbTag>
-            <span class="db-type-lock-tip">{{ t('入口已锁定_创建后不可改') }}</span>
-          </div>
-        </BkFormItem>
-      </div>
-
-      <div class="module-info-card">
+      <!-- 模块信息 + 存储层 / 接入层：同一张白卡，两个层用浅灰块分组 -->
+      <DbCard
+        v-model:collapse="isModuleInfoExpanded"
+        class="module-info-card"
+        mode="collapse"
+        :title="t('模块信息')">
         <FormItemWithHint
           class="form-item-name"
           :label="t('模块名称')"
@@ -65,7 +49,7 @@
               v-model="formData.alias_name"
               class="module-name-input"
               :maxlength="63"
-              :placeholder="t('请输入模块名')"
+              :placeholder="t('由英文字母、数字、连字符组成')"
               show-word-limit
               @change="handleValidate" />
             <DomainPreview :module-name="formData.alias_name" />
@@ -74,51 +58,49 @@
         <BkFormItem
           :label="t('字符集')"
           required>
-          <div class="charset-row">
-            <DbSelect
-              v-model="formData.charset"
-              class="charset-select-inline"
-              :clearable="false"
-              :disabled="isBindSuccessfully"
-              filterable
-              :placeholder="t('请选择字符集')"
-              :prefix="t('字符集')"
-              @change="handleValidate">
-              <DbOption
-                v-for="(item, index) of characterSets"
-                :key="index"
-                :label="item"
-                :value="item" />
-            </DbSelect>
-          </div>
+          <DbSelect
+            v-model="formData.charset"
+            class="charset-select"
+            :clearable="false"
+            :disabled="isBindSuccessfully"
+            filterable
+            :placeholder="t('请选择字符集')"
+            @change="handleValidate">
+            <DbOption
+              v-for="(item, index) of characterSets"
+              :key="index"
+              :label="item"
+              :value="item" />
+          </DbSelect>
         </BkFormItem>
-      </div>
 
-      <!-- 存储层：三级版本选型 + OS 约束（仅启用版本可选） -->
-      <div class="layer-config-card">
-        <div class="layer-title">{{ t('存储层') }}</div>
-        <VersionOsEditor
-          ref="storageEditorRef"
-          :db-type="DBTypes.MYSQL"
-          default-distribution-name="TXSQL"
-          pkg-type="mysql"
-          @before-series-change="handleBeforeStorageSeriesChange"
-          @change="handleStorageChange" />
-      </div>
+        <!-- 存储层：三级版本选型 + OS 约束（仅启用版本可选） -->
+        <div class="layer-config-card">
+          <div class="layer-title">{{ t('存储层') }}</div>
+          <VersionOsEditor
+            ref="storageEditorRef"
+            :db-type="DBTypes.MYSQL"
+            default-distribution-name="TXSQL"
+            pkg-type="mysql"
+            @before-series-change="handleBeforeStorageSeriesChange"
+            @change="handleStorageChange" />
+        </div>
 
-      <!-- 接入层：仅 MySQL 主从（tendbha）；系列 → 版本号，发行版隐式 DBM -->
-      <div
-        v-if="clusterType === ClusterTypes.TENDBHA"
-        class="layer-config-card">
-        <div class="layer-title">{{ t('接入层') }}</div>
-        <VersionOsEditor
-          ref="proxyEditorRef"
-          :db-type="DBTypes.MYSQL"
-          default-distribution-name="DBM"
-          pkg-type="mysql-proxy"
-          @before-series-change="handleBeforeProxySeriesChange"
-          @change="handleProxyChange" />
-      </div>
+        <!-- 接入层：仅 MySQL 主从（tendbha）；系列 → 版本号，发行版隐式 DBM -->
+        <div
+          v-if="clusterType === ClusterTypes.TENDBHA"
+          class="layer-config-card">
+          <div class="layer-title">{{ t('接入层') }}</div>
+          <VersionOsEditor
+            ref="proxyEditorRef"
+            :db-type="DBTypes.MYSQL"
+            default-distribution-name="DBM"
+            pkg-type="mysql-proxy"
+            :show-distribution="false"
+            @before-series-change="handleBeforeProxySeriesChange"
+            @change="handleProxyChange" />
+        </div>
+      </DbCard>
 
       <!-- 参数配置 — 四个 Tab -->
       <div class="param-config-wrapper">
@@ -180,7 +162,12 @@
     </template>
   </SmartAction>
   <Teleport to="#dbContentTitleAppend">
-    <span class="create-module-nav-desc"> {{ t('业务') }} : {{ bizInfo.name }} </span>
+    <span class="create-module-nav">
+      <DbTag theme="info">
+        {{ clusterTypeInfos[clusterType]?.name || clusterType }}
+      </DbTag>
+      <span class="create-module-nav-desc"> {{ t('业务') }} : {{ bizInfo.name }} </span>
+    </span>
   </Teleport>
 </template>
 
@@ -225,6 +212,9 @@
   const moduleId = ref(Number(route.params.db_module_id));
   const isBindSuccessfully = ref(false);
   const isSubmitting = ref(false);
+
+  /** 模块信息卡展开态：校验失败时自动展开，避免错误提示被折叠隐藏 */
+  const isModuleInfoExpanded = ref(true);
 
   // 表单数据
   const getFormData = () => ({
@@ -519,6 +509,8 @@
         },
       });
     } catch (e) {
+      // 校验失败时展开模块信息卡，避免错误提示被折叠隐藏
+      isModuleInfoExpanded.value = true;
       console.log(e);
     }
     isSubmitting.value = false;
@@ -547,13 +539,43 @@
     :deep(.bk-form-item) {
       max-width: 690px;
     }
+
+    /* 模块名称行不受 690px 限制：集群域名预览与输入框同行展示 */
+    :deep(.form-item-name) {
+      max-width: none;
+    }
   }
 
+  // 模块信息白卡：内部承载存储层 / 接入层两个浅灰分组块
   .module-info-card {
-    padding: 24px;
-    background: #fff;
     border-radius: 2px;
-    box-shadow: 0 2px 4px 0 rgb(25 25 41 / 5%);
+
+    /* 层内「版本 / 操作系统版本」的 label 列与表单 label 列对齐
+       （VersionOsEditor 自带 76px 固定列宽，此处按 label-width 160 覆盖） */
+    :deep(.row-label) {
+      width: 160px;
+      padding-right: 22px;
+    }
+
+    .layer-config-card {
+      padding: 16px 0;
+      background: #f5f7fa;
+      border-radius: 2px;
+
+      & + .layer-config-card {
+        margin-top: 16px;
+      }
+
+      .layer-title {
+        width: 160px;
+        padding-right: 22px;
+        margin-bottom: 16px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #313238;
+        text-align: right;
+      }
+    }
   }
 
   .form-item-name {
@@ -564,74 +586,18 @@
 
   .module-name-row {
     display: flex;
+    flex-wrap: wrap;
+    row-gap: 4px;
     align-items: center;
 
     .module-name-input {
-      width: 370px;
+      width: 520px;
       flex-shrink: 0;
     }
   }
 
-  .layer-config-card {
-    padding: 16px 24px 20px;
-    margin-top: 16px;
-    background: #fff;
-    border-radius: 2px;
-    box-shadow: 0 2px 4px 0 rgb(25 25 41 / 5%);
-
-    .layer-title {
-      padding-bottom: 12px;
-      margin-bottom: 12px;
-      font-size: 14px;
-      font-weight: 700;
-      color: #313238;
-      border-bottom: 1px solid #dcdee5;
-    }
-
-    .access-layer-tip {
-      padding-bottom: 8px;
-      font-size: 12px;
-      color: #979ba5;
-    }
-  }
-
-  .db-type-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-
-    .db-type-lock-tip {
-      font-size: 12px;
-      color: #979ba5;
-    }
-  }
-
-  .charset-row {
-    .charset-select-inline {
-      width: auto;
-      min-width: 160px;
-    }
-  }
-
-  .db-config-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-
-    .version-select-inline,
-    .charset-select-inline {
-      width: auto;
-      min-width: 160px;
-    }
-
-    .version-form-item,
-    .charset-form-item {
-      margin-bottom: 0;
-
-      :deep(.bk-form-content) {
-        margin-bottom: 0;
-      }
-    }
+  .charset-select {
+    width: 520px;
   }
 
   .param-config-wrapper {
@@ -643,13 +609,6 @@
     :deep(.bk-tab-content) {
       padding: 16px 16px 0;
     }
-  }
-
-  .db-type-tag {
-    height: 30px;
-    color: @primary-color;
-    background: white;
-    border: 1px solid @border-primary;
   }
 
   .total-change-stats {
@@ -681,10 +640,17 @@
     border-radius: 50%;
   }
 
+  /* 导航栏：集群类型标签 + 业务信息（与全局配置详情页同形） */
+  .create-module-nav {
+    display: inline-flex;
+    gap: 8px;
+    margin-left: 8px;
+    align-items: center;
+  }
+
   .create-module-nav-desc {
     position: relative;
     padding-left: 8px;
-    margin-left: 8px;
     font-family: 'Microsoft YaHei', sans-serif;
     font-size: 14px;
     line-height: 22px;
