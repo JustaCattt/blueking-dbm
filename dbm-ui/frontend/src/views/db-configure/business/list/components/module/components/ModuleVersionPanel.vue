@@ -33,10 +33,12 @@
           {{ layer.info.follow_package ? t('跟随版本包') : t('指定版本包') }}
         </DbTag>
       </span>
+      <!-- 协议 §2：只能修改已经设置过版本的组件；存量模块该层没有版本时禁止编辑 -->
       <AuthButton
-        v-bk-tooltips="t('编辑操作系统版本')"
+        v-bk-tooltips="layer.info ? t('编辑操作系统版本') : t('该层未设置版本，无法修改操作系统约束')"
         action-id="dbconfig_edit"
         class="layer-edit"
+        :disabled="!layer.info"
         :resource="dbType"
         text
         @click="handleEditOs(layer)">
@@ -56,6 +58,23 @@
         <BkForm
           form-type="vertical"
           :model="dialogForm">
+          <!-- 多 OS 类型版本：类型与范围必须同类型（协议 §0） -->
+          <BkFormItem
+            v-if="osTypeList.length > 1"
+            :label="t('操作系统类型')"
+            required>
+            <DbSelect
+              v-model="dialogForm.osType"
+              :clearable="false"
+              :placeholder="t('请选择操作系统类型')"
+              @change="handleOsTypeChange">
+              <DbOption
+                v-for="item in osTypeList"
+                :key="item"
+                :label="item"
+                :value="item" />
+            </DbSelect>
+          </BkFormItem>
           <BkFormItem
             :label="t('操作系统版本')"
             required>
@@ -191,8 +210,9 @@
     const config = layerConfigMap[props.clusterType] || [];
     return config.map((item) => {
       const info = props.dbVersionInfo[item.componentName];
+      // 协议 §5：版本记录被删时名称字段返回空串，需与 OS 列口径一致兜底为 --
       const versionText = info
-        ? [info.distribution, info.version_series, info.version_name].filter(Boolean).join(' / ')
+        ? [info.distribution, info.version_series, info.version_name].filter(Boolean).join(' / ') || '--'
         : '--';
       const osText = info?.effective_permit_os?.length ? info.effective_permit_os.join('，') : '--';
       return {
@@ -213,33 +233,68 @@
 
   const dialogForm = reactive({
     osMode: 'follow' as 'follow' | 'specify',
+    /** 选中的 OS 类型：协议 §0 类型与范围必须同类型，多类型版本必须显式选 */
+    osType: '',
     specifyOs: [] as string[],
   });
 
-  /** 当前版本 OS 候选（指定范围的备选） */
-  const osOptions = ref<string[]>([]);
+  /** 当前版本按类型分组的 OS 候选（协议 §4 的返回结构） */
+  const osGroups = ref<ServiceReturnType<typeof getDbVersionPermitOs>>([]);
+
+  /** OS 类型候选 */
+  const osTypeList = computed(() => osGroups.value.map((item) => item.permit_os_type));
+
+  /** 当前类型下的 OS 候选：不再取并集，避免选出跨类型的 permit_os */
+  const osOptions = computed(
+    () => osGroups.value.find((item) => item.permit_os_type === dialogForm.osType)?.permit_os ?? [],
+  );
+
   const { run: fetchPermitOs } = useRequest(getDbVersionPermitOs, {
     manual: true,
     onSuccess(data) {
-      osOptions.value = Array.from(new Set(data.flatMap((g) => g.permit_os)));
+      osGroups.value = data;
+      // 原类型不在新分组里就回落到首个类型
+      if (!data.some((group) => group.permit_os_type === dialogForm.osType)) {
+        dialogForm.osType = data[0]?.permit_os_type ?? '';
+      }
+      // 类型收敛后已选 OS 可能越界，剔除掉
+      const available = new Set(osOptions.value);
+      dialogForm.specifyOs = dialogForm.specifyOs.filter((os) => available.has(os));
     },
   });
 
-  /** 跟随版本包模式展示的实际可用 OS（协议 §5：展示口径为 effective_permit_os） */
-  const followOsList = computed(() => editingLayer.value?.info?.effective_permit_os ?? []);
+  /**
+   * 跟随版本包模式展示的可用 OS：
+   * 类型没改时用协议 §5 的 effective_permit_os（后端口径）；用户在弹窗里改了类型就展示该类型的候选，
+   * 否则会出现「类型已切成 Windows、下面仍列着 tlinux」的错配
+   */
+  const followOsList = computed(() => {
+    const info = editingLayer.value?.info;
+    if (info && dialogForm.osType === info.permit_os_type && info.effective_permit_os?.length) {
+      return info.effective_permit_os;
+    }
+    return osOptions.value;
+  });
 
   /** 打开弹窗：回填当前模式与取值（-- 时默认跟随，首次编辑时选定模式） */
   const handleEditOs = (layer: LayerDisplay) => {
     editingLayer.value = layer;
     specifyError.value = '';
     dialogForm.osMode = layer.info && !layer.info.follow_package ? 'specify' : 'follow';
+    // 类型与范围都允许改（协议 §2）：先带出模块保存的类型，候选加载后不属于该版本会被回落
+    dialogForm.osType = layer.info?.permit_os_type ?? '';
     dialogForm.specifyOs = layer.info?.permit_os ? [...layer.info.permit_os] : [];
+    osGroups.value = [];
     if (layer.info?.db_version_id) {
       fetchPermitOs({ db_version_id: layer.info.db_version_id });
-    } else {
-      osOptions.value = [];
     }
     isShowOsDialog.value = true;
+  };
+
+  /** 切换 OS 类型：已选 OS 属于旧类型，清空（协议 §0 类型与范围必须同类型） */
+  const handleOsTypeChange = () => {
+    dialogForm.specifyOs = [];
+    specifyError.value = '';
   };
 
   const handleSpecifyChange = () => {
@@ -270,7 +325,8 @@
       db_versions: {
         [editingLayer.value.componentName]: {
           permit_os: dialogForm.osMode === 'follow' ? [] : [...dialogForm.specifyOs],
-          permit_os_type: editingLayer.value.info.permit_os_type,
+          // 用弹窗里选定的类型，不再沿用旧值（协议 §2：类型和范围都可改）
+          permit_os_type: dialogForm.osType || editingLayer.value.info.permit_os_type,
         },
       },
     });

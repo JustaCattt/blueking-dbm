@@ -22,7 +22,7 @@
       " />
     <DbForm
       ref="formRef"
-      class="clone-module-page db-scroll-y"
+      class="clone-module-page"
       :label-width="100"
       :model="formData"
       :rules="rules"
@@ -751,7 +751,6 @@
 
 <style lang="less" scoped>
   .clone-module-page {
-    height: 100%;
     padding-bottom: 20px;
 
     :deep(.bk-form-item) {
@@ -832,6 +831,17 @@
     background: #fff;
     border-radius: 2px;
     box-shadow: 0 2px 4px 0 rgb(25 25 41 / 5%);
+
+    /* Tab 头吸附：整页滚动到参数区时保持可见，明确当前配置的是哪一部分；
+       底色必须不透明，否则表体会从吸顶区域透出来。
+       top 取负的内容区上内边距：滚动容器按 padding box 裁剪内容，sticky 的 top: 0 却相对 content box，
+       不抵消这段 padding 就会留出一条缝，表体行会从那道缝里露到 Tab 条上方 */
+    :deep(.bk-tab-header) {
+      position: sticky;
+      top: calc(-1 * var(--db-content-padding-top, 0px));
+      z-index: 99;
+      background: #f0f1f5;
+    }
 
     :deep(.bk-tab-content) {
       padding: 16px 16px 0;

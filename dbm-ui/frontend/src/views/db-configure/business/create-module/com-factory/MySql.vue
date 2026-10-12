@@ -22,7 +22,7 @@
       " />
     <DbForm
       ref="formRef"
-      class="create-module-page db-scroll-y"
+      class="create-module-page"
       :label-width="160"
       :model="formData"
       :rules="rules"
@@ -190,7 +190,7 @@
   import VersionOsEditor, { type VersionOsValue } from '@views/db-configure/components/VersionOsEditor.vue';
   import { saveConfigureState } from '@views/db-configure/utils/configureState';
 
-  import { random } from '@utils';
+  import { messageError, random } from '@utils';
 
   import ParamTable from '../components/ParamTable.vue';
 
@@ -231,10 +231,18 @@
     [ClusterTypes.TENDBSINGLE]: ['single'],
   };
 
+  /** 组件名 → 展示层名（提交校验提示用） */
+  const componentLabelMap: Record<string, string> = {
+    backend: '存储层',
+    proxy: '接入层',
+    single: '存储层',
+  };
+
   /** 存储层选型值（backend / single） */
   const storageVersion = ref<VersionOsValue>({
     distributionId: '',
     osMode: 'follow',
+    osType: '',
     seriesId: '',
     specifyOs: [],
     versionId: '',
@@ -243,6 +251,7 @@
   const proxyVersion = ref<VersionOsValue>({
     distributionId: '',
     osMode: 'follow',
+    osType: '',
     seriesId: '',
     specifyOs: [],
     versionId: '',
@@ -422,24 +431,26 @@
 
   /** 提交 */
   const handleSubmit = async () => {
+    // 前端补齐校验：后端只校验 db_versions 必传，不校验各层齐全，提交前须确保该集群类型的所有组件都传上来。
+    // 放在 isSubmitting 之前：提前返回时不能把按钮留在 loading 态
+    const componentNames = clusterComponentNames[clusterType.value] || [];
+    const validateResults = [
+      { componentName: 'backend', result: storageEditorRef.value?.validate() },
+      ...(clusterType.value === ClusterTypes.TENDBHA
+        ? [{ componentName: 'proxy', result: proxyEditorRef.value?.validate() }]
+        : []),
+    ];
+    const invalid = validateResults.find((item) => item.result && !item.result.ok);
+    if (invalid?.result) {
+      window.changeConfirm = true;
+      // 校验失败必须给用户可见反馈，不能只打日志（否则点确定像没反应）
+      messageError(`${t(componentLabelMap[invalid.componentName])}：${invalid.result.message}`);
+      return;
+    }
+
     isSubmitting.value = true;
     try {
       await formRef.value?.validate();
-
-      // 前端补齐校验：后端只校验 db_versions 必传，不校验各层齐全，提交前须确保该集群类型的所有组件都传上来
-      const componentNames = clusterComponentNames[clusterType.value] || [];
-      const validateResults = [
-        { componentName: 'backend', result: storageEditorRef.value?.validate() },
-        ...(clusterType.value === ClusterTypes.TENDBHA
-          ? [{ componentName: 'proxy', result: proxyEditorRef.value?.validate() }]
-          : []),
-      ];
-      const invalid = validateResults.find((item) => item.result && !item.result.ok);
-      if (invalid?.result) {
-        window.changeConfirm = true;
-        console.warn(`${invalid.componentName}: ${invalid.result.message}`);
-        return;
-      }
 
       // 组装 db_versions：{组件名: {db_version_id, permit_os_type, permit_os}}
       const dbVersions: Record<string, { db_version_id: number; permit_os: string[]; permit_os_type: string }> = {};
@@ -533,7 +544,6 @@
 
 <style lang="less" scoped>
   .create-module-page {
-    height: 100%;
     padding-bottom: 20px;
 
     :deep(.bk-form-item) {
@@ -605,6 +615,17 @@
     background: #fff;
     border-radius: 2px;
     box-shadow: 0 2px 4px 0 rgb(25 25 41 / 5%);
+
+    /* Tab 头吸附：整页滚动到参数区时保持可见，明确当前配置的是哪一部分；
+       底色必须不透明，否则表体会从吸顶区域透出来。
+       top 取负的内容区上内边距：滚动容器按 padding box 裁剪内容，sticky 的 top: 0 却相对 content box，
+       不抵消这段 padding 就会留出一条缝，表体行会从那道缝里露到 Tab 条上方 */
+    :deep(.bk-tab-header) {
+      position: sticky;
+      top: calc(-1 * var(--db-content-padding-top, 0px));
+      z-index: 99;
+      background: #f0f1f5;
+    }
 
     :deep(.bk-tab-content) {
       padding: 16px 16px 0;

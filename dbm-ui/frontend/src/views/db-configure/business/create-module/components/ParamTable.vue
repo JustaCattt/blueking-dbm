@@ -291,7 +291,7 @@
     /** 配置名称（用于保存时） */
     configName?: string;
     confType: string;
-    /** 是否固定分页 */
+    /** 是否固定分页（默认固定：整页滚动，表格不内滚，行数按每页条数撑开页面） */
     fixedPagination?: boolean;
     /** 层级信息（用于集群级别） */
     levelInfo?: Record<string, string>;
@@ -309,7 +309,7 @@
 
   const props = withDefaults(defineProps<Props>(), {
     configName: '',
-    fixedPagination: false,
+    fixedPagination: true,
     levelInfo: undefined,
     levelName: 'app',
     levelValue: undefined,
