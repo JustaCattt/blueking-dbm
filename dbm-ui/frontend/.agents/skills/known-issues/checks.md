@@ -31,7 +31,8 @@
 - [有样式的容器不能由 `$slots.x` 决定渲染](doc/slot-wrapper-container.md) —— 改 `components/bkui-vue/**`
   里带 class 的 `v-if="$slots.xxx"` 容器，或给自研基础组件新增插槽出口
 - [不存在的 `Db*` 组件会被当成原生元素静默失效](doc/nonexistent-db-component.md) —— 写 `DbRadio` /
-  `DbRadioGroup` / `DbCheckbox` / `DbSwitch` 这类 bkui 组件族里没有 `Db*` 包装的标签
+  `DbRadioGroup` / `DbCheckbox` / `DbSwitch` 这类 bkui 组件族里没有 `Db*` 包装的标签；或写 `<BkXxx>` 但
+  `bkui-vue` 的 barrel 里没导出该组件（如 `BkSearchSelect`，需显式 `import ... from 'bkui-vue/lib/search-select'`）
 - [给 DbTable 传非数值 max-height 会触发 tdesign 固定表头模式，表头飘在表体中间](doc/table-max-height-value.md)
   —— 给 `DbTable` / `PrimaryTable` 传 `max-height` / `:max-height`，且取值是 `'auto'` 这类非数字
 - [内容区里的 sticky 元素要抵消 `.db-navigation-content-wrapper` 的上内边距](doc/sticky-offset-content-padding.md)

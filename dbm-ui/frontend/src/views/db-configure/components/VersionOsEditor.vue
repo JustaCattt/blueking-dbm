@@ -55,7 +55,8 @@
           :disabled="disabled || !localSelected.seriesId"
           :loading="versionLoading"
           :placeholder="t('请选择')"
-          :prefix="t('版本号')"
+          :popover-min-width="320"
+          :prefix="t('版本')"
           @change="handleVersionChange">
           <DbOption
             v-for="item in versionList"

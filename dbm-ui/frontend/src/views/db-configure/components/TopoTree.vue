@@ -18,15 +18,18 @@
     :z-index="12">
     <div class="config-tree">
       <div class="config-tree-search">
-        <DbQuickSearch
+        <!-- §3.1 分字段搜索：show-input-before 让选中字段的字段名常驻显示在输入框内 -->
+        <BkSearchSelect
           v-model="treeSearchValue"
           :data="searchSelectData"
-          @change="handleSearchChange" />
+          :placeholder="t('模块名')"
+          show-input-before
+          unique-select />
       </div>
       <BkTree
         ref="treeRef"
         :data="displayTreeData"
-        :indent="16"
+        :indent="0"
         label="name"
         :node-content-action="['click']"
         node-key="treeId"
@@ -89,13 +92,14 @@
 </template>
 
 <script setup lang="ts">
+  import BkSearchSelect from 'bkui-vue/lib/search-select';
+  import type { ISearchItem } from 'bkui-vue/lib/search-select/utils';
   import { useI18n } from 'vue-i18n';
   import { useRoute } from 'vue-router';
 
   import { clusterTypeInfos, ClusterTypes, ConfLevels, DBTypes } from '@common/const';
 
   import AuthButton from '@components/auth-component/button.vue';
-  import DbQuickSearch from '@components/db-quick-search/Index.vue';
   import EmptyStatus from '@components/empty-status/EmptyStatus.vue';
 
   import type { TreeData, TreeState } from '@views/db-configure/common/types';
@@ -123,26 +127,25 @@
     treeSearchValue,
   } = useTreeData(treeState);
 
-  /** SearchSelect 分字段搜索条件（§3.1）：默认模块名；可选模块名/模块 ID/字符集；多条件同时生效 */
-  const searchSelectData = computed(() => [
+  /** SearchSelect 分字段搜索条件（§3.1）：默认模块名；可选模块名/模块 ID/字符集；多条件同时生效
+   *  文本字段不配置 children（供手动输入），字符集为枚举字段，候选取当前树数据去重（字典序） */
+  const searchSelectData = computed<ISearchItem[]>(() => [
     {
       id: 'moduleName',
       name: t('模块名'),
-      type: 'multiple-input',
     },
     {
       id: 'moduleId',
       name: t('模块 ID'),
-      type: 'multiple-input',
     },
     {
-      id: 'charset',
-      list: charsetOptions.value.map((item) => ({
-        label: item,
-        value: item,
+      children: charsetOptions.value.map((item) => ({
+        id: item,
+        name: item,
       })),
+      id: 'charset',
+      multiple: true,
       name: t('字符集'),
-      type: 'multiple',
     },
   ]);
 
@@ -150,21 +153,15 @@
   const displayTreeData = computed(() => filterTreeBySearch(treeState.data));
 
   /** 是否处于搜索态（含原关键字搜索与分字段条件） */
-  const isSearching = computed(
-    () => Boolean(treeState.search) || Object.values(treeSearchValue.value).some((v) => Boolean(v)),
-  );
-
-  /** 分字段搜索变化（多条件同时生效） */
-  const handleSearchChange = () => {
-    // 分字段条件即时过滤 displayTreeData；原关键字搜索兜底保留
-  };
+  const isSearching = computed(() => Boolean(treeState.search) || treeSearchValue.value.length > 0);
 
   /** 关联集群数：≥1000 显示 999+（口径同详情，纯展示） */
   const formatClusterCount = (count: number) => (count >= 1000 ? '999+' : String(count));
 
   const handleClearSearch = () => {
     treeState.search = '';
-    treeSearchValue.value = {};
+    // 清空分字段条件（SearchSelect 的值为数组，置空即恢复未搜索态）
+    treeSearchValue.value = [];
   };
 
   const handleRefresh = () => {
@@ -310,9 +307,17 @@
     }
 
     .config-tree-search {
-      /* 不要加 display: flex：DbQuickSearch 的可见盒子是绝对定位的，作为 flex 子项没有固有宽度，
-         会被压成 0 宽导致整条搜索栏（含边框）不可见，这里保持块级元素让其铺满侧栏宽度 */
       margin-bottom: 16px;
+
+      /* BkSearchSelect 默认 float: left 且宽度由内容决定，侧栏里需要它铺满整行 */
+      :deep(.bk-search-select) {
+        float: none;
+        width: 100%;
+
+        .bk-search-select-container {
+          width: 100%;
+        }
+      }
     }
   }
 </style>
