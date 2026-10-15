@@ -55,7 +55,7 @@
           :disabled="disabled || !localSelected.seriesId"
           :loading="versionLoading"
           :placeholder="t('请选择')"
-          :popover-min-width="320"
+          :popover-min-width="256"
           :prefix="t('版本')"
           @change="handleVersionChange">
           <DbOption
@@ -90,7 +90,9 @@
         </BkRadioGroup>
         <span
           v-else
-          class="os-placeholder">{{ t('请先选择版本号') }}</span>
+          class="os-placeholder">
+          {{ t('请先选择版本号') }}
+        </span>
         <!-- 多 OS 类型版本：必须先定类型，协议 §0 每个组件只能写一个 permit_os_type -->
         <DbSelect
           v-if="versionSelected && osTypeList.length > 1"
@@ -124,6 +126,7 @@
           class="os-select"
           :disabled="osOptions.length === 0"
           multiple
+          multiple-mode="tag"
           :placeholder="osOptions.length === 0 ? t('该版本暂无可用介质包') : t('请选择操作系统版本')"
           @change="handleOsChange">
           <DbOption
@@ -140,7 +143,12 @@
 <script setup lang="ts">
   import { useRequest } from 'vue-request';
 
-  import { getDbVersionList,getDbVersionPermitOs,getReleaseVersionList, getVersionSeriesList  } from '@services/source/version';
+  import {
+    getDbVersionList,
+    getDbVersionPermitOs,
+    getReleaseVersionList,
+    getVersionSeriesList,
+  } from '@services/source/version';
 
   import { DBTypes } from '@common/const';
 
@@ -226,10 +234,7 @@
 
   // ============ 发行版 ============
   const distributionList = ref<ServiceReturnType<typeof getReleaseVersionList>>([]);
-  const {
-    loading: distributionLoading,
-    run: fetchDistributionList,
-  } = useRequest(getReleaseVersionList, {
+  const { loading: distributionLoading, run: fetchDistributionList } = useRequest(getReleaseVersionList, {
     manual: true,
     onSuccess(data) {
       distributionList.value = data;
@@ -247,10 +252,7 @@
 
   // ============ 系列 ============
   const seriesList = ref<ServiceReturnType<typeof getVersionSeriesList>>([]);
-  const {
-    loading: seriesLoading,
-    run: fetchSeriesList,
-  } = useRequest(getVersionSeriesList, {
+  const { loading: seriesLoading, run: fetchSeriesList } = useRequest(getVersionSeriesList, {
     manual: true,
     onSuccess(data) {
       seriesList.value = data;
@@ -291,10 +293,7 @@
 
   // ============ 版本号 ============
   const versionList = ref<ServiceReturnType<typeof getDbVersionList>>([]);
-  const {
-    loading: versionLoading,
-    run: fetchVersionList,
-  } = useRequest(getDbVersionList, {
+  const { loading: versionLoading, run: fetchVersionList } = useRequest(getDbVersionList, {
     manual: true,
     onSuccess(data) {
       versionList.value = data.filter((item) => item.enable);
@@ -333,7 +332,7 @@
 
   /** 跟随模式展示：当前类型下的关联全集（灰色标签逐个展示） */
   const followOsList = computed(() => {
-    if (osOptions.value.length === 0) return [t('该版本暂无可用介质包')];
+    if (osOptions.value.length === 0) return [`${localSelected.osType} ${t('全部')}`];
     return osOptions.value;
   });
 
@@ -452,11 +451,9 @@
 
   defineExpose({
     /** 当前选中系列名（模块名查重组合：模块名-存储层系列-字符集） */
-    getSeriesName: () =>
-      seriesList.value.find((item) => item.id === localSelected.seriesId)?.name ?? '',
+    getSeriesName: () => seriesList.value.find((item) => item.id === localSelected.seriesId)?.name ?? '',
     /** 当前选中版本号名称（参数 Tab 版本标识） */
-    getVersionName: () =>
-      versionList.value.find((item) => item.id === localSelected.versionId)?.name ?? '',
+    getVersionName: () => versionList.value.find((item) => item.id === localSelected.versionId)?.name ?? '',
     /** 导出协议写入结构：{db_version_id, permit_os_type, permit_os} */
     getWriteValue: (): {
       db_version_id: number;

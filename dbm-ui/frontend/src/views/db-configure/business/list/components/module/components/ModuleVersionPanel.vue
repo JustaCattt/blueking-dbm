@@ -22,28 +22,30 @@
       <span class="layer-version">
         <span class="layer-field-label">{{ t('版本') }}：</span>{{ layer.versionText }}
       </span>
-      <span class="layer-os">
-        <span class="layer-field-label">{{ t('操作系统版本') }}：</span>
-        <span :class="{ 'os-empty': layer.osText === '--' }">{{ layer.osText }}</span>
-        <!-- 跟随版本包：默认灰底标签；指定范围：橙色标签 -->
-        <DbTag
-          v-if="layer.info"
-          class="ml-8"
-          :theme="layer.info.follow_package ? '' : 'warning'">
-          {{ layer.info.follow_package ? t('跟随版本包') : t('指定版本包') }}
-        </DbTag>
-      </span>
-      <!-- 协议 §2：只能修改已经设置过版本的组件；存量模块该层没有版本时禁止编辑 -->
-      <AuthButton
-        v-bk-tooltips="layer.info ? t('编辑操作系统版本') : t('该层未设置版本，无法修改操作系统约束')"
-        action-id="dbconfig_edit"
-        class="layer-edit"
-        :disabled="!layer.info"
-        :resource="dbType"
-        text
-        @click="handleEditOs(layer)">
-        <DbIcon type="bk-dbm-icon db-icon-edit" />
-      </AuthButton>
+      <div class="layer-os-actions">
+        <span class="layer-os">
+          <span class="layer-field-label">{{ t('操作系统版本') }}：</span>
+          <span :class="{ 'os-empty': layer.osText === '--' }">{{ layer.osText }}</span>
+          <!-- 跟随版本包：默认灰底标签；指定范围：橙色标签 -->
+          <DbTag
+            v-if="layer.info"
+            class="ml-8"
+            :theme="layer.info.follow_package ? '' : 'warning'">
+            {{ layer.info.follow_package ? t('跟随版本包') : t('指定版本包') }}
+          </DbTag>
+        </span>
+        <!-- 协议 §2：只能修改已经设置过版本的组件；存量模块该层没有版本时禁止编辑 -->
+        <AuthButton
+          v-bk-tooltips="layer.info ? t('编辑操作系统版本') : t('该层未设置版本，无法修改操作系统约束')"
+          action-id="dbconfig_edit"
+          class="layer-edit"
+          :disabled="!layer.info"
+          :resource="dbType"
+          text
+          @click="handleEditOs(layer)">
+          <DbIcon type="bk-dbm-icon db-icon-edit" />
+        </AuthButton>
+      </div>
     </div>
 
     <!-- OS 编辑弹窗：一次只改一层；模式与取值按 §2.3 -->
@@ -109,6 +111,7 @@
                 class="os-specify-select"
                 :disabled="osOptions.length === 0"
                 multiple
+                multiple-mode="tag"
                 :placeholder="osOptions.length === 0 ? t('该版本暂无可用介质包') : t('请选择操作系统版本')"
                 @change="handleSpecifyChange">
                 <DbOption
@@ -148,10 +151,7 @@
   import { useI18n } from 'vue-i18n';
   import { useRequest } from 'vue-request';
 
-  import {
-    type ComponentVersionInfo,
-    updateModuleVersionOs,
-  } from '@services/source/cmdb';
+  import { type ComponentVersionInfo, updateModuleVersionOs } from '@services/source/cmdb';
   import { getDbVersionPermitOs } from '@services/source/version';
 
   import type { ClusterTypes, DBTypes } from '@common/const';
@@ -341,37 +341,56 @@
 
 <style lang="less" scoped>
   .module-version-panel {
-    padding: 16px 24px;
-    border-top: 1px solid #eaebf0;
+    position: relative;
+    padding: 12px 0 16px;
+    margin: 0 24px;
+
+    &::before {
+      position: absolute;
+      top: -1px;
+      right: 0;
+      left: 0;
+      height: 1px;
+      background: #eaebf0;
+      content: '';
+    }
 
     /* 每层一个浅灰分组块：层名加粗，版本 / 操作系统版本同排，末尾编辑图标 */
     .version-layer-row {
       display: flex;
-      gap: 24px;
-      align-items: center;
-      padding: 12px 16px;
+      min-height: 40px;
+      padding: 0 16px;
       font-size: 12px;
       line-height: 20px;
       background: #f5f7fa;
       border-radius: 2px;
+      box-sizing: border-box;
+      gap: 32px;
+      align-items: center;
 
       & + .version-layer-row {
-        margin-top: 16px;
+        margin-top: 12px;
       }
 
       .layer-name {
         min-width: 48px;
+        flex-shrink: 0;
         font-weight: 700;
         color: #313238;
       }
 
       .layer-version {
-        min-width: 220px;
         color: #313238;
       }
 
       .layer-field-label {
         color: #63656e;
+      }
+
+      .layer-os-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
       }
 
       .layer-os {
@@ -385,8 +404,13 @@
       }
 
       .layer-edit {
-        font-size: 14px;
-        color: #63656e;
+        width: 16px;
+        height: 16px;
+        min-width: 16px;
+        padding: 0;
+        font-size: 16px;
+        line-height: 16px;
+        color: #979ba5;
         flex-shrink: 0;
 
         &:hover {

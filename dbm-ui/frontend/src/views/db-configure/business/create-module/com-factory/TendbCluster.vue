@@ -112,15 +112,18 @@
             :name="tab.conf_file"
             render-directive="show">
             <template #label>
-              {{ tab.name }}
-              <span
-                v-if="(tabChangedCountMap[tab.conf_file] ?? 0) > 0"
-                class="tab-modified-dot" />
+              <span class="param-tab-label">
+                {{ tab.name }}
+                <span
+                  v-if="(tabChangedCountMap[tab.conf_file] ?? 0) > 0"
+                  class="tab-modified-dot" />
+              </span>
             </template>
             <ParamTable
               :ref="(el: any) => setTableRef(tab.name, el)"
               :conf-type="tab.conf_type"
               :namespace="tab.namespace"
+              :sticky-operations="activeConfType === tab.conf_file"
               :version="
                 tab.conf_type === 'proxyconf'
                   ? formData.spider_version
@@ -564,10 +567,10 @@
     padding-bottom: 20px;
 
     :deep(.bk-form-item) {
-      max-width: 690px;
+      max-width: 890px;
     }
 
-    /* 模块名称行不受 690px 限制：集群域名预览与输入框同行展示 */
+    /* 模块名称行不受宽度限制，域名预览与输入框同行展示 */
     :deep(.form-item-name) {
       max-width: none;
     }
@@ -582,6 +585,10 @@
     :deep(.row-label) {
       width: 160px;
       padding-right: 22px;
+    }
+
+    :deep(.row-content) {
+      max-width: 720px;
     }
 
     .layer-config-card {
@@ -618,13 +625,15 @@
     align-items: center;
 
     .module-name-input {
-      width: 520px;
+      width: 720px;
+      max-width: 100%;
       flex-shrink: 0;
     }
   }
 
   .charset-select {
-    width: 520px;
+    width: 720px;
+    max-width: 100%;
   }
 
   .param-config-wrapper {
@@ -669,13 +678,23 @@
     color: #979ba5;
   }
 
+  .param-tab-label {
+    display: inline-flex;
+    height: 42px;
+    padding-right: 8px;
+    align-items: center;
+  }
+
   .tab-modified-dot {
-    display: inline-block;
+    position: absolute;
+    top: 10px;
+    right: 16px;
     width: 8px;
     height: 8px;
-    margin-left: 4px;
     background: #f59500;
+    border: 1px solid #fff;
     border-radius: 50%;
+    box-sizing: border-box;
   }
 
   /* 导航栏：集群类型标签 + 业务信息（与全局配置详情页同形） */

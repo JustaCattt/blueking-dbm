@@ -20,6 +20,7 @@
       <!-- 模块头部信息 -->
       <DbCard
         class="module-header-card mb-16"
+        :class="{ 'has-version-panel': [DBTypes.MYSQL, DBTypes.TENDBCLUSTER].includes(dbType) }"
         mode="collapse"
         :title="treeNode?.name">
         <template #desc>
@@ -116,10 +117,12 @@
           <ParamTable
             v-else
             :conf-type="tab.conf_type"
+            fixed-pagination
             level-name="module"
             :level-value="moduleInfo.moduleId"
             :namespace="tab.namespace"
             selectable
+            sticky-operations
             :version="tab.conf_file" />
         </template>
       </ConfTab>
@@ -343,6 +346,21 @@
     :deep(.db-card-content) {
       padding: 0;
     }
+
+    &.has-version-panel {
+      padding: 12px 0 0;
+
+      :deep(.db-card-header) {
+        min-height: 32px;
+        padding: 0 24px;
+      }
+
+      :deep(.module-info-bar) {
+        min-height: 40px;
+        padding: 0 24px;
+        box-sizing: border-box;
+      }
+    }
   }
 
   .module-header-actions {
@@ -352,6 +370,15 @@
   }
 
   .module-conf-tab {
+    --param-operations-sticky-top: 42px;
+
+    :deep(.bk-tab-header) {
+      position: sticky;
+      top: 0;
+      z-index: 99;
+      background: #f0f1f5;
+    }
+
     box-shadow: 0 2px 4px 0 rgb(25 25 41 / 5%);
 
     :deep(.bk-tab-content) {

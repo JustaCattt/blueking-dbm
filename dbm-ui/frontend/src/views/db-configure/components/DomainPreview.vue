@@ -67,6 +67,8 @@
 <style lang="less" scoped>
   .domain-preview {
     display: inline-flex;
+    font-size: 12px;
+    line-height: 20px;
     align-items: center;
     flex-shrink: 0;
     white-space: nowrap;

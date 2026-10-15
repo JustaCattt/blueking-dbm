@@ -11,7 +11,6 @@
  * the specific language governing permissions and limitations under the License.
  */
 
-import type { ISearchValue } from 'bkui-vue/lib/search-select/utils';
 import type { SearchOption } from 'bkui-vue/lib/tree/props';
 import type { Ref } from 'vue';
 import { useRequest } from 'vue-request';
@@ -57,12 +56,8 @@ export const useTreeData = (treeState: TreeState) => {
    */
   const treePrefixIcon = (data: any, type: string) => (type === 'node_action' ? 'default' : null);
 
-  /**
-   * SearchSelect 分字段搜索（§3.1）：默认字段模块名；可选模块名/模块 ID/字符集；多条件同时生效
-   * - 模块名、模块 ID：文本模糊包含匹配（同字段多值为「或」）
-   * - 字符集：枚举精确等于匹配（同字段多值为「或」），候选取当前树数据去重（字典序）
-   */
-  const treeSearchValue = ref<ISearchValue[]>([]);
+  // DbQuickSearch 按字段输出逗号分隔字符串，同字段多值为或，不同字段为与
+  const treeSearchValue = ref<Record<string, string>>({});
 
   /** 字符集枚举候选：取当前树数据的模块第二行描述去重，按字典序排列 */
   const charsetOptions = computed(() => {
@@ -84,15 +79,7 @@ export const useTreeData = (treeState: TreeState) => {
 
   /** 分字段过滤树数据（返回过滤后的新树；业务节点始终保留，非模块节点不参与过滤） */
   const filterTreeBySearch = (nodes: TreeData[]): TreeData[] => {
-    // SearchSelect 的值为 {id, name, values:[{id,name}]} 列表：手动输入的文本字段值落在 name 上，
-    // 从候选项选择的枚举字段值落在 values 上，这里两者都取。
-    // 同字段的多个值为「或」，不同字段之间为「与」
-    const pickValues = (fieldId: string) => {
-      const searchValue = treeSearchValue.value.find((item) => item.id === fieldId);
-      if (!searchValue) return [];
-      const values = (searchValue.values || []).map((item) => item.name);
-      return values.length > 0 ? values : [searchValue.name].filter(Boolean);
-    };
+    const pickValues = (fieldId: string) => (treeSearchValue.value[fieldId] || '').split(',').filter(Boolean);
     const moduleNameKeywords = pickValues('moduleName');
     const moduleIdKeywords = pickValues('moduleId');
     const charsets = pickValues('charset');
@@ -415,12 +402,11 @@ export const useTreeData = (treeState: TreeState) => {
 
   /**
    * 模块节点第二行描述：`${存储层系列}，${字符集}`（§3.1 树节点展示查重组合）
-   * 字段约定：存储层系列取 extra.version，字符集取 extra.charset。
-   * 后端 resource_tree 目前尚未返回 charset（已确认会补），未返回时该段留空、不展示第二行；
+   * 字段约定：存储层系列取 extra.version_series（fallback extra.version），字符集取 extra.charset。
    * 只有其中一个有值时，第二行只展示已有的一段。
    */
   const buildModuleSubDescription = (item: BizConfTopoTreeModel) => {
-    const series = item.extra?.version || '';
+    const series = item.extra?.version_series || item.extra?.version || '';
     const charset = item.extra?.charset || '';
     if (series && charset) {
       return `${series}，${charset}`;

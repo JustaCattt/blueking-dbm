@@ -13,45 +13,55 @@
 
 <template>
   <BkLoading :loading="loading">
-    <div class="param-operations mb-16">
-      <div class="param-operations-left">
-        <BkButton
-          theme="primary"
-          @click="handleAddParam">
-          {{ t('添加参数') }}
-        </BkButton>
-        <BkButton
-          v-if="selectable"
-          :disabled="selectedRows.length === 0"
-          @click="handleBatchEdit">
-          {{ t('批量编辑') }}
-        </BkButton>
-        <div
-          v-if="changedCount > 0"
-          class="only-changed">
-          <I18nT
-            keypath="已修改n项"
-            tag="span">
-            <template #n>
-              <span style="font-weight: 700; color: #f59500">{{ changedCount }}</span>
-            </template>
-          </I18nT>
+    <!-- Affix 默认启用底部吸附，用 NaN 关闭底部比较，仅保留顶部吸附 -->
+    <component
+      :is="stickyOperations ? Affix : 'div'"
+      ref="operationsAffixRef"
+      v-bind="stickyOperations ? { container: getScrollContainer, offsetTop: 42, offsetBottom: Number.NaN, zIndex: 98 } : {}"
+      class="param-operations-wrapper mb-16"
+      :class="{ 'is-sticky': stickyOperations }">
+      <div
+        ref="operationsRef"
+        class="param-operations">
+        <div class="param-operations-left">
+          <BkButton
+            theme="primary"
+            @click="handleAddParam">
+            {{ t('添加参数') }}
+          </BkButton>
+          <BkButton
+            v-if="selectable"
+            :disabled="selectedRows.length === 0"
+            @click="handleBatchEdit">
+            {{ t('批量编辑') }}
+          </BkButton>
+          <div
+            v-if="changedCount > 0"
+            class="only-changed">
+            <I18nT
+              keypath="共修改n个参数"
+              tag="span">
+              <template #n>
+                <span style="font-weight: 700; color: #f59500">{{ changedCount }}</span>
+              </template>
+            </I18nT>
+          </div>
+        </div>
+        <div class="param-operations-right">
           <BkCheckbox
             v-model="showChangedOnly"
             @change="refreshTable">
             {{ t('仅显示已修改') }}
           </BkCheckbox>
+          <DbQuickSearch
+            v-model="searchValue"
+            :data="quickSearchData"
+            parse-url
+            style="width: 500px"
+            @change="refreshTable" />
         </div>
       </div>
-      <div class="param-operations-right">
-        <DbQuickSearch
-          v-model="searchValue"
-          :data="quickSearchData"
-          parse-url
-          style="width: 500px"
-          @change="refreshTable" />
-      </div>
-    </div>
+    </component>
     <DbTable
       ref="paramTableRef"
       :data-source="paramDataSource"
@@ -265,9 +275,12 @@
 
 <script setup lang="tsx">
   import _ from 'lodash';
+  import Affix from 'tdesign-vue-next/es/affix';
   import type { Instance } from 'tippy.js';
   import { I18nT, useI18n } from 'vue-i18n';
   import { useRequest } from 'vue-request';
+
+  import { useResizeObserver } from '@vueuse/core';
 
   import { getConfigNames, getLevelConfig, updateBusinessConfig, validateConfItems } from '@services/source/configs';
 
@@ -304,6 +317,8 @@
     rowKey?: string;
     /** 是否支持行选择（批量编辑） */
     selectable?: boolean;
+    /** 是否将操作栏吸附在参数 Tab 下方 */
+    stickyOperations?: boolean;
     version: string;
   }
 
@@ -315,10 +330,35 @@
     levelValue: undefined,
     rowKey: 'conf_name',
     selectable: false,
+    stickyOperations: false,
   });
 
   const { t } = useI18n();
   const globalBizsStore = useGlobalBizs();
+
+  const operationsRef = ref<HTMLElement>();
+  const operationsAffixRef = ref<HTMLElement | { handleScroll: () => void }>();
+
+  // 新建页由内容区滚动，工具栏固定在 42px 的 Tab 下方
+  const getScrollContainer = () => operationsRef.value?.closest<HTMLElement>('.db-navigation-content-wrapper') ?? window;
+
+  const updateOperationsAffix = () => {
+    const affix = operationsAffixRef.value;
+    if (operationsRef.value?.offsetWidth && affix && 'handleScroll' in affix) {
+      affix.handleScroll();
+    }
+  };
+
+  // 切回 Tab 和页面改宽时更新固定位置、占位及宽度
+  watch(
+    () => props.stickyOperations,
+    () => nextTick(updateOperationsAffix),
+    { flush: 'post' },
+  );
+  useResizeObserver(
+    () => operationsRef.value?.closest<HTMLElement>('.param-config-wrapper'),
+    updateOperationsAffix,
+  );
 
   const allConfItems = ref<ConfItem[]>([]);
   const originConfItems = ref<ConfItem[]>([]);
@@ -795,6 +835,15 @@
 </script>
 
 <style lang="less" scoped>
+  .param-operations-wrapper.is-sticky {
+    margin-top: -16px;
+
+    .param-operations {
+      padding: 16px 0;
+      background: #fff;
+    }
+  }
+
   .param-operations {
     display: flex;
     align-items: center;
@@ -808,6 +857,8 @@
 
     .only-changed {
       display: flex;
+      font-size: 12px;
+      line-height: 20px;
       align-items: center;
       gap: 8px;
 
@@ -831,8 +882,8 @@
 
   .inline-edit-cell-confirm {
     display: inline-flex;
-    height: 26px;
-    min-width: 26px;
+    height: 32px;
+    min-width: 32px;
     padding: 0;
     font-size: 16px;
     align-items: center;
@@ -841,8 +892,8 @@
 
   .inline-edit-cell-cancel {
     display: inline-flex;
-    height: 26px;
-    min-width: 26px;
+    height: 32px;
+    min-width: 32px;
     padding: 0;
     font-size: 16px;
     align-items: center;

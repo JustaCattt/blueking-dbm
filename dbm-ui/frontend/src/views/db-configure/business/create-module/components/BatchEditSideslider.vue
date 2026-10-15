@@ -155,13 +155,27 @@
                 </td>
                 <td :class="{ 'is-changed': item.isChanged }">
                   <span
-                    v-bk-tooltips="{
-                      content: item.newValue,
-                      disabled: !overflowMap[`new_${item.conf_name}`],
-                    }"
-                    class="diff-cell-text"
-                    @mouseenter="(e: MouseEvent) => checkOverflow(e, `new_${item.conf_name}`)">
-                    {{ item.newValue }}
+                    v-if="!item.isChanged"
+                    class="no-constraint-text">
+                    {{ t('无变化') }}
+                  </span>
+                  <span
+                    v-else
+                    class="diff-value">
+                    <span
+                      v-bk-tooltips="{
+                        content: item.newValue,
+                        disabled: !overflowMap[`new_${item.conf_name}`],
+                      }"
+                      class="diff-cell-text"
+                      @mouseenter="(e: MouseEvent) => checkOverflow(e, `new_${item.conf_name}`)">
+                      {{ item.newValue }}
+                    </span>
+                    <DbTag
+                      size="small"
+                      theme="warning">
+                      {{ t('自定义') }}
+                    </DbTag>
                   </span>
                 </td>
               </tr>
@@ -484,6 +498,24 @@
       td.is-changed {
         background: #fdf4e8;
       }
+    }
+
+    .diff-value {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .diff-cell-text {
+        min-width: 0;
+      }
+
+      :deep(.dbm-tag) {
+        flex-shrink: 0;
+      }
+    }
+
+    .no-constraint-text {
+      color: #c4c6cc;
     }
 
     .diff-cell-text {

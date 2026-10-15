@@ -24,6 +24,8 @@ export default class BizConfTopoTree {
     proxy_version: string;
     /** 存储层系列（模块树第二行展示用，即模块配置的 db_version） */
     version: string;
+    /** 模块版本系列（模块树第二行展示用，与 charset 组合展示） */
+    version_series?: string;
   };
   instance_id: number;
   instance_name: string;
