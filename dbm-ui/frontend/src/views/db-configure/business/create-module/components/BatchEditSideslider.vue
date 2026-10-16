@@ -154,15 +154,14 @@
                   </span>
                 </td>
                 <td :class="{ 'is-changed': item.isChanged }">
-                  <span
-                    v-if="!item.isChanged"
-                    class="no-constraint-text">
-                    {{ t('无变化') }}
-                  </span>
-                  <span
-                    v-else
-                    class="diff-value">
+                  <span class="diff-value">
                     <span
+                      v-if="!item.isChanged"
+                      class="no-constraint-text">
+                      {{ t('无变化') }}
+                    </span>
+                    <span
+                      v-else
                       v-bk-tooltips="{
                         content: item.newValue,
                         disabled: !overflowMap[`new_${item.conf_name}`],
@@ -342,15 +341,11 @@
   };
 
   const handleSave = () => {
-    const changedItems = editItems.value
-      .filter((item) => {
-        const origin = originItems.value.find((o) => o.conf_name === item.conf_name);
-        return origin?.conf_value !== item.conf_value;
-      })
-      .map((item) => ({
-        ...item,
-        op_type: 'update' as const,
-      }));
+    // 保存会将所有保留的选中项固化为自定义，不按数值是否变化过滤
+    const changedItems = editItems.value.map((item) => ({
+      ...item,
+      op_type: 'update' as const,
+    }));
 
     if (changedItems.length === 0) {
       handleClose();

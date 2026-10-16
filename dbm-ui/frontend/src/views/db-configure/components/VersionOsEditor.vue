@@ -50,12 +50,12 @@
         </DbSelect>
         <DbSelect
           v-model="localSelected.versionId"
-          class="version-select"
+          class="version-select version-name-select"
           :clearable="false"
           :disabled="disabled || !localSelected.seriesId"
           :loading="versionLoading"
           :placeholder="t('请选择')"
-          :popover-min-width="256"
+          :popover-min-width="400"
           :prefix="t('版本')"
           @change="handleVersionChange">
           <DbOption
@@ -118,16 +118,28 @@
             class="os-tag">
             {{ os }}
           </DbTag>
+          <span
+            v-if="followOsList.length === 0"
+            class="os-placeholder">
+            {{ osLoading ? t('加载中') : t('该版本暂无可用介质包') }}
+          </span>
         </div>
         <!-- 指定模式：多选框勾选，已选项以可移除标签展示 -->
         <DbSelect
           v-else-if="versionSelected && localSelected.osMode === 'specify'"
           v-model="localSelected.specifyOs"
           class="os-select"
-          :disabled="osOptions.length === 0"
+          :disabled="osLoading || osOptions.length === 0"
+          :loading="osLoading"
           multiple
           multiple-mode="tag"
-          :placeholder="osOptions.length === 0 ? t('该版本暂无可用介质包') : t('请选择操作系统版本')"
+          :placeholder="
+            osLoading
+              ? t('加载中')
+              : osOptions.length === 0
+                ? t('该版本暂无可用介质包')
+                : t('请选择操作系统版本')
+          "
           @change="handleOsChange">
           <DbOption
             v-for="item in osOptions"
@@ -281,7 +293,6 @@
           localSelected.seriesId = series.id;
           versionList.value = enabledVersions;
           localSelected.versionId = recommendItem.id;
-          fetchPermitOs({ db_version_id: recommendItem.id });
           syncValue();
           return;
         }
@@ -304,9 +315,11 @@
 
   // ============ OS 候选 ============
   const osGroups = ref<ServiceReturnType<typeof getDbVersionPermitOs>>([]);
-  const { run: fetchPermitOs } = useRequest(getDbVersionPermitOs, {
+  const { loading: osLoading, run: fetchPermitOs } = useRequest(getDbVersionPermitOs, {
     manual: true,
-    onSuccess(data) {
+    onSuccess(data, [params]) {
+      // 只接收当前版本的候选，防止旧请求回填其它版本的 OS
+      if (params.db_version_id !== localSelected.versionId) return;
       osGroups.value = data;
       // 类型集合随版本变化：原类型不在新分组里就回落到首个类型，避免写出与 OS 不同类型的 permit_os_type
       if (!data.some((group) => group.permit_os_type === localSelected.osType)) {
@@ -317,8 +330,21 @@
         const available = new Set(osOptions.value);
         localSelected.specifyOs = localSelected.specifyOs.filter((os) => available.has(os));
       }
+      syncValue();
     },
   });
+
+  // 手动选择、推荐默认和外部回填统一按当前版本加载候选
+  watch(
+    () => localSelected.versionId,
+    (versionId) => {
+      osGroups.value = [];
+      if (versionId !== '') {
+        fetchPermitOs({ db_version_id: versionId });
+      }
+    },
+    { immediate: true },
+  );
 
   /** OS 类型候选（当前版本的类型分组） */
   const osTypeList = computed(() => osGroups.value.map((g) => g.permit_os_type));
@@ -331,10 +357,7 @@
   });
 
   /** 跟随模式展示：当前类型下的关联全集（灰色标签逐个展示） */
-  const followOsList = computed(() => {
-    if (osOptions.value.length === 0) return [`${localSelected.osType} ${t('全部')}`];
-    return osOptions.value;
-  });
+  const followOsList = computed(() => osOptions.value);
 
   /** 按系列拉版本号列表 */
   const loadVersions = (seriesId: number) => {
@@ -353,7 +376,6 @@
     const recommendItem = versionList.value.find((item) => item.recommend);
     if (recommendItem && !localSelected.versionId) {
       localSelected.versionId = recommendItem.id;
-      fetchPermitOs({ db_version_id: recommendItem.id });
       syncValue();
     }
   };
@@ -383,11 +405,10 @@
     // 页面有参数 Tab 已改项时弹 InfoBox；无监听者直接放行
     emit('before-series-change', proceed);
   };
-  /** 切换版本号：拉取 OS 候选（类型集合随版本变，清空后由候选结果回填首个类型） */
-  const handleVersionChange = (val: number) => {
+  /** 切换版本号：清空旧类型和取值，候选由版本监听统一加载 */
+  const handleVersionChange = () => {
     localSelected.specifyOs = [];
     localSelected.osType = '';
-    fetchPermitOs({ db_version_id: val });
     syncValue();
   };
 
@@ -398,6 +419,9 @@
       if (mode === 'specify') {
         // 切到指定范围：已选留空（§2.3 用户切换模式）
         localSelected.specifyOs = [];
+        if (localSelected.versionId !== '' && osOptions.value.length === 0 && !osLoading.value) {
+          fetchPermitOs({ db_version_id: localSelected.versionId });
+        }
       }
       syncValue();
     },
@@ -439,7 +463,6 @@
       }
       if (val.versionId && val.versionId !== localSelected.versionId) {
         localSelected.versionId = val.versionId;
-        fetchPermitOs({ db_version_id: val.versionId });
       }
       // 外部带出的 OS 类型（克隆回填 / 详情编辑）：非空即采用，候选加载后不属于该版本会被回落
       if (val.osType && val.osType !== localSelected.osType) {
@@ -513,7 +536,7 @@
 
     .row-content {
       flex: 1;
-      max-width: 520px;
+      max-width: var(--module-form-content-width, 520px);
       min-width: 0;
     }
 
@@ -524,6 +547,10 @@
       .version-select {
         flex: 1;
         min-width: 0;
+      }
+
+      .version-name-select {
+        flex: 2;
       }
     }
 

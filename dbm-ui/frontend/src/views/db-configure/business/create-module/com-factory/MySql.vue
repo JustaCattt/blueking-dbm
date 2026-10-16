@@ -547,10 +547,11 @@
 
 <style lang="less" scoped>
   .create-module-page {
+    --module-form-content-width: 960px;
     padding-bottom: 20px;
 
     :deep(.bk-form-item) {
-      max-width: 890px;
+      max-width: calc(160px + var(--module-form-content-width));
     }
 
     /* 模块名称行不受宽度限制，域名预览与输入框同行展示 */
@@ -571,7 +572,7 @@
     }
 
     :deep(.row-content) {
-      max-width: 720px;
+      max-width: var(--module-form-content-width);
     }
 
     .layer-config-card {
@@ -608,14 +609,14 @@
     align-items: center;
 
     .module-name-input {
-      width: 720px;
+      width: var(--module-form-content-width);
       max-width: 100%;
       flex-shrink: 0;
     }
   }
 
   .charset-select {
-    width: 720px;
+    width: var(--module-form-content-width);
     max-width: 100%;
   }
 

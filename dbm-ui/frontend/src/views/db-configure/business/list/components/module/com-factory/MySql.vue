@@ -13,9 +13,9 @@
       :related-clusters="moduleInfo.relatedClusters" />
     <span class="module-info-item">
       <span class="module-info-label">{{ t('最近更新') }}：</span>
-      <bk-user-display-name :user-id="moduleInfo.updatedBy || ''" />/{{
-        moduleInfo.updatedAt ? utcDisplayTime(moduleInfo.updatedAt) : '--'
-      }}
+      <bk-user-display-name :user-id="moduleInfo.updatedBy || ''" />
+      <span class="module-update-separator">{{ ' / ' }}</span>
+      {{ moduleInfo.updatedAt ? utcDisplayTime(moduleInfo.updatedAt) : '--' }}
     </span>
   </div>
 </template>
@@ -87,6 +87,10 @@
     line-height: 20px;
     color: #313238;
     white-space: nowrap;
+  }
+
+  .module-update-separator {
+    white-space: pre;
   }
 
   /* 字段名灰、值深（设计稿口径） */

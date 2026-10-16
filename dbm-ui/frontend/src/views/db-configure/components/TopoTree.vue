@@ -290,7 +290,7 @@
     }
 
     .config-tree-add-btn {
-      display: none;
+      display: flex;
       width: 26px;
       height: 26px;
       min-width: 26px;
@@ -307,20 +307,11 @@
           color: @primary-color;
         }
 
-        .config-tree-add-btn {
-          display: flex;
-        }
-
         .config-tree-tag {
           background-color: #3a84ff;
         }
       }
 
-      &:hover {
-        .config-tree-add-btn {
-          display: flex;
-        }
-      }
     }
   }
 </style>

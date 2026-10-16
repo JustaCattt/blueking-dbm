@@ -42,7 +42,7 @@
           required
           :rules="rules.alias_name">
           <template #hint>
-            {{ t('仅支持小写字母、数字、连字符，同时会参与集群域名生成，') }}
+            {{ t('仅支持小写字母、数字、连字符，') }}
             <span class="hint-warning">{{ t('创建后不可改') }}</span>
           </template>
           <div class="module-name-row">
@@ -53,7 +53,6 @@
               :placeholder="t('由英文字母、数字、连字符组成')"
               show-word-limit
               @change="handleValidate" />
-            <DomainPreview :module-name="formData.alias_name" />
           </div>
         </FormItemWithHint>
         <BkFormItem
@@ -240,7 +239,6 @@
   import DbTable from '@components/db-table/IndexNew.vue';
   import FormItemWithHint from '@components/form-item-with-hint/Index.vue';
 
-  import DomainPreview from '@views/db-configure/components/DomainPreview.vue';
   import VersionOsEditor, { type VersionOsValue } from '@views/db-configure/components/VersionOsEditor.vue';
   import { saveConfigureState } from '@views/db-configure/utils/configureState';
 
@@ -819,10 +817,6 @@
       max-width: 690px;
     }
 
-    /* 模块名称行不受 690px 限制：集群域名预览与输入框同行展示 */
-    :deep(.form-item-name) {
-      max-width: none;
-    }
   }
 
   // 模块信息白卡（DbCard）：内部承载存储层 / 接入层两个浅灰分组块

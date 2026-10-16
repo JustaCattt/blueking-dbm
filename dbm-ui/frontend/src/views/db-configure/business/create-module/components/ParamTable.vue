@@ -184,6 +184,12 @@
                 @mouseenter="handleCellMouseEnter($event, row)">
                 {{ row.flag_encrypt === 1 ? '******' : (row.conf_value ?? '--') }}
               </span>
+              <DbTag
+                v-if="batchCustomizedNames.has(row.conf_name)"
+                size="small"
+                theme="warning">
+                {{ t('自定义') }}
+              </DbTag>
               <DbIcon
                 v-if="row.flag_readonly !== 1"
                 v-bk-tooltips="{ content: t('编辑参数') }"
@@ -365,6 +371,8 @@
   const availableParams = ref<ConfItem[]>([]);
   // 本地新增但尚未被服务端数据刷新覆盖的项（追加到列表末尾，不破坏原始排序）
   const pendingAddedItems = ref<ConfItem[]>([]);
+  // 批量编辑即固化为自定义，数值与继承值相同也需要提交
+  const batchCustomizedNames = ref(new Set<string>());
 
   // 行唯一标识字段
   const rowKeyField = computed(() => props.rowKey as keyof ConfItem);
@@ -439,7 +447,7 @@
   /** 获取行样式名（修改项行添加 class） */
   const getRowClassName = ({ row }: { row: ConfItem }) => {
     const origin = originConfItems.value.find((o) => o.conf_name === row.conf_name);
-    if (origin && row.conf_value !== origin.conf_value) {
+    if (origin && (row.conf_value !== origin.conf_value || batchCustomizedNames.value.has(row.conf_name))) {
       return 'row-modified';
     }
     return '';
@@ -589,6 +597,7 @@
       originConfItems.value = _.cloneDeep(res.conf_items || []);
       // 服务端数据已包含最新变更，清空本地新增缓存
       pendingAddedItems.value = [];
+      batchCustomizedNames.value.clear();
       nextTick(() => {
         paramTableRef.value?.fetchData({}, true);
       });
@@ -740,17 +749,22 @@
   /** 批量编辑保存回调 - 前端暂存变更 */
   const handleBatchEditSaved = (changedItems: ConfItem[]) => {
     changedItems.forEach((changedItem) => {
-      const target = allConfItems.value.find((item) => item.conf_name === changedItem.conf_name);
+      const addedItem = pendingAddedItems.value.find((item) => item.conf_name === changedItem.conf_name);
+      const target = addedItem ?? allConfItems.value.find((item) => item.conf_name === changedItem.conf_name);
       if (target) {
         target.conf_value = changedItem.conf_value;
-        target.op_type = 'update';
+        target.op_type = addedItem ? 'add' : 'update';
+        batchCustomizedNames.value.add(target.conf_name);
       }
     });
     refreshTable();
   };
 
   /** 是否有变更 */
-  const hasChange = () => pendingAddedItems.value.length > 0 || !_.isEqual(allConfItems.value, originConfItems.value);
+  const hasChange = () =>
+    pendingAddedItems.value.length > 0 ||
+    batchCustomizedNames.value.size > 0 ||
+    !_.isEqual(allConfItems.value, originConfItems.value);
 
   /** 获取变更的参数列表 */
   const getChangedItems = () => {
@@ -764,7 +778,7 @@
     // 已修改的参数（与服务端初始值对比）
     allConfItems.value.forEach((item) => {
       const origin = originConfItems.value.find((o) => o.conf_name === item.conf_name);
-      if (origin && origin.conf_value !== item.conf_value) {
+      if (origin && (origin.conf_value !== item.conf_value || batchCustomizedNames.value.has(item.conf_name))) {
         changedItems.push({ ...item, op_type: 'update' });
       }
     });
@@ -804,6 +818,7 @@
     originConfItems.value = [];
     availableParams.value = [];
     pendingAddedItems.value = [];
+    batchCustomizedNames.value.clear();
     tippyInstances.forEach((inst) => inst.destroy());
     tippyInstances.length = 0;
   };
