@@ -6689,5 +6689,9 @@
   "高性能": "High Performance",
   "准备中": "Preparing",
   "dts-worker 规格": "dts-worker spec",
+  "操作系统候选加载失败，请重新选择版本": "Failed to load operating system options. Please select the version again.",
+  "Linux 全部": "All Linux",
+  "该版本暂无可用介质包": "No enabled packages are available for this version",
+  "该版本没有 Linux 类型的已启用介质包": "This version has no enabled Linux packages",
   "这行勿动！新增翻译请在上一行添加！": ""
 }

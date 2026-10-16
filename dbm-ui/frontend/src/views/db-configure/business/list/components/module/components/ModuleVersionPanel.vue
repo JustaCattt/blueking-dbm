@@ -60,23 +60,6 @@
         <BkForm
           form-type="vertical"
           :model="dialogForm">
-          <!-- 多 OS 类型版本：类型与范围必须同类型（协议 §0） -->
-          <BkFormItem
-            v-if="osTypeList.length > 1"
-            :label="t('操作系统类型')"
-            required>
-            <DbSelect
-              v-model="dialogForm.osType"
-              :clearable="false"
-              :placeholder="t('请选择操作系统类型')"
-              @change="handleOsTypeChange">
-              <DbOption
-                v-for="item in osTypeList"
-                :key="item"
-                :label="item"
-                :value="item" />
-            </DbSelect>
-          </BkFormItem>
           <BkFormItem
             :label="t('操作系统版本')"
             required>
@@ -88,44 +71,17 @@
                 {{ t('指定范围') }}<span class="radio-desc">（{{ t('从版本包中勾选') }}）</span>
               </BkRadio>
             </BkRadioGroup>
-            <!-- 跟随版本包：只读展示该版本当前实际可用 OS（协议 §5：展示用 effective_permit_os） -->
-            <div
-              v-if="dialogForm.osMode === 'follow'"
-              class="os-value-box">
-              <DbTag
-                v-for="os in followOsList"
-                :key="os"
-                class="os-tag">
-                {{ os }}
-              </DbTag>
-              <span
-                v-if="followOsList.length === 0"
-                class="os-empty-tip">
-                {{ t('该版本暂无可用介质包') }}
-              </span>
-            </div>
-            <!-- 指定范围：多选，已选项以可移除标签展示 -->
-            <template v-else>
-              <DbSelect
-                v-model="dialogForm.specifyOs"
-                class="os-specify-select"
-                :disabled="osOptions.length === 0"
-                multiple
-                multiple-mode="tag"
-                :placeholder="osOptions.length === 0 ? t('该版本暂无可用介质包') : t('请选择操作系统版本')"
-                @change="handleSpecifyChange">
-                <DbOption
-                  v-for="item in osOptions"
-                  :key="item"
-                  :label="item"
-                  :value="item" />
-              </DbSelect>
-              <p
-                v-if="specifyError"
-                class="specify-error">
-                {{ specifyError }}
-              </p>
-            </template>
+            <VersionOsSelect
+              v-model="dialogForm.specifyOs"
+              class="os-specify-select"
+              :mode="dialogForm.osMode"
+              :version-id="editingLayer.info?.db_version_id ?? ''"
+              @change="handleSpecifyChange" />
+            <p
+              v-if="dialogForm.osMode === 'specify' && specifyError"
+              class="specify-error">
+              {{ specifyError }}
+            </p>
           </BkFormItem>
         </BkForm>
       </div>
@@ -152,11 +108,12 @@
   import { useRequest } from 'vue-request';
 
   import { type ComponentVersionInfo, updateModuleVersionOs } from '@services/source/cmdb';
-  import { getDbVersionPermitOs } from '@services/source/version';
 
   import type { ClusterTypes, DBTypes } from '@common/const';
 
   import AuthButton from '@components/auth-component/button.vue';
+
+  import VersionOsSelect from '@views/db-configure/components/VersionOsSelect.vue';
 
   import { messageSuccess } from '@utils';
 
@@ -233,47 +190,7 @@
 
   const dialogForm = reactive({
     osMode: 'follow' as 'follow' | 'specify',
-    /** 选中的 OS 类型：协议 §0 类型与范围必须同类型，多类型版本必须显式选 */
-    osType: '',
     specifyOs: [] as string[],
-  });
-
-  /** 当前版本按类型分组的 OS 候选（协议 §4 的返回结构） */
-  const osGroups = ref<ServiceReturnType<typeof getDbVersionPermitOs>>([]);
-
-  /** OS 类型候选 */
-  const osTypeList = computed(() => osGroups.value.map((item) => item.permit_os_type));
-
-  /** 当前类型下的 OS 候选：不再取并集，避免选出跨类型的 permit_os */
-  const osOptions = computed(
-    () => osGroups.value.find((item) => item.permit_os_type === dialogForm.osType)?.permit_os ?? [],
-  );
-
-  const { run: fetchPermitOs } = useRequest(getDbVersionPermitOs, {
-    manual: true,
-    onSuccess(data) {
-      osGroups.value = data;
-      // 原类型不在新分组里就回落到首个类型
-      if (!data.some((group) => group.permit_os_type === dialogForm.osType)) {
-        dialogForm.osType = data[0]?.permit_os_type ?? '';
-      }
-      // 类型收敛后已选 OS 可能越界，剔除掉
-      const available = new Set(osOptions.value);
-      dialogForm.specifyOs = dialogForm.specifyOs.filter((os) => available.has(os));
-    },
-  });
-
-  /**
-   * 跟随版本包模式展示的可用 OS：
-   * 类型没改时用协议 §5 的 effective_permit_os（后端口径）；用户在弹窗里改了类型就展示该类型的候选，
-   * 否则会出现「类型已切成 Windows、下面仍列着 tlinux」的错配
-   */
-  const followOsList = computed(() => {
-    const info = editingLayer.value?.info;
-    if (info && dialogForm.osType === info.permit_os_type && info.effective_permit_os?.length) {
-      return info.effective_permit_os;
-    }
-    return osOptions.value;
   });
 
   /** 打开弹窗：回填当前模式与取值（-- 时默认跟随，首次编辑时选定模式） */
@@ -281,20 +198,8 @@
     editingLayer.value = layer;
     specifyError.value = '';
     dialogForm.osMode = layer.info && !layer.info.follow_package ? 'specify' : 'follow';
-    // 类型与范围都允许改（协议 §2）：先带出模块保存的类型，候选加载后不属于该版本会被回落
-    dialogForm.osType = layer.info?.permit_os_type ?? '';
-    dialogForm.specifyOs = layer.info?.permit_os ? [...layer.info.permit_os] : [];
-    osGroups.value = [];
-    if (layer.info?.db_version_id) {
-      fetchPermitOs({ db_version_id: layer.info.db_version_id });
-    }
+    dialogForm.specifyOs = [...(layer.info?.effective_permit_os ?? [])];
     isShowOsDialog.value = true;
-  };
-
-  /** 切换 OS 类型：已选 OS 属于旧类型，清空（协议 §0 类型与范围必须同类型） */
-  const handleOsTypeChange = () => {
-    dialogForm.specifyOs = [];
-    specifyError.value = '';
   };
 
   const handleSpecifyChange = () => {
@@ -325,8 +230,7 @@
       db_versions: {
         [editingLayer.value.componentName]: {
           permit_os: dialogForm.osMode === 'follow' ? [] : [...dialogForm.specifyOs],
-          // 用弹窗里选定的类型，不再沿用旧值（协议 §2：类型和范围都可改）
-          permit_os_type: dialogForm.osType || editingLayer.value.info.permit_os_type,
+          permit_os_type: 'Linux',
         },
       },
     });
@@ -427,30 +331,6 @@
       font-size: 12px;
       line-height: 20px;
       color: #979ba5;
-    }
-
-    /* 跟随版本包：白底边框盒内展示灰色标签（与创建模块的 OS 展示同形） */
-    .os-value-box {
-      display: flex;
-      min-height: 32px;
-      padding: 3px 8px;
-      margin-top: 8px;
-      background: #fff;
-      border: 1px solid #dcdee5;
-      border-radius: 2px;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .os-tag {
-      color: #63656e;
-      background: #f0f1f5;
-    }
-
-    .os-empty-tip {
-      font-size: 12px;
-      color: #c4c6cc;
     }
 
     .os-specify-select {

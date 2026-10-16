@@ -14,7 +14,7 @@
     <span class="module-info-item">
       <span class="module-info-label">{{ t('最近更新') }}：</span>
       <bk-user-display-name :user-id="moduleInfo.updatedBy || ''" />
-      <span class="module-update-separator">{{ ' / ' }}</span>
+      <span class="module-update-separator">&nbsp;/&nbsp;</span>
       {{ moduleInfo.updatedAt ? utcDisplayTime(moduleInfo.updatedAt) : '--' }}
     </span>
   </div>

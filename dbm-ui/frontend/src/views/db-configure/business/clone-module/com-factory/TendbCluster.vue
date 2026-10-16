@@ -86,6 +86,7 @@
           <div class="layer-title">{{ t('存储层') }}</div>
           <VersionOsEditor
             ref="storageEditorRef"
+            v-model="storageVersion"
             :db-type="DBTypes.MYSQL"
             default-distribution-name="TXSQL"
             pkg-type="mysql"
@@ -98,6 +99,7 @@
           <div class="layer-title">{{ t('接入层') }}</div>
           <VersionOsEditor
             ref="spiderEditorRef"
+            v-model="spiderVersion"
             :db-type="DBTypes.MYSQL"
             pkg-type="spider"
             @before-series-change="handleBeforeSpiderSeriesChange"
@@ -326,7 +328,7 @@
 
   /**
    * 由源模块 db_version_info 还原三级选型的回填结构：
-   * 发行版/系列按名称匹配版本接口的 ID，版本号直接用 db_version_id，OS 约束按 follow_package/permit_os 还原
+   * 发行版/系列按名称匹配版本接口的 ID，版本号直接用 db_version_id，OS 约束按 follow_package/effective_permit_os 还原
    */
   const buildVersionOsValue = async (
     info: ComponentVersionInfo | undefined,
@@ -342,10 +344,9 @@
     return {
       distributionId: distribution.id,
       osMode: info.follow_package ? 'follow' : 'specify',
-      // 带出源模块保存的 OS 类型（协议 §0：类型与范围必须同类型）
-      osType: info.permit_os_type,
+      osType: 'Linux',
       seriesId: series.id,
-      specifyOs: [...info.permit_os],
+      specifyOs: [...info.effective_permit_os],
       versionId: info.db_version_id,
     };
   };

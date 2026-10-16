@@ -80,7 +80,8 @@
       <div class="row-content os-content">
         <BkRadioGroup
           v-if="versionSelected"
-          v-model="localSelected.osMode">
+          v-model="localSelected.osMode"
+          @change="handleOsModeChange">
           <BkRadio label="follow">
             {{ t('跟随版本包') }}<span class="radio-desc">（{{ t('随版本包自动更新') }}）</span>
           </BkRadio>
@@ -93,60 +94,13 @@
           class="os-placeholder">
           {{ t('请先选择版本号') }}
         </span>
-        <!-- 多 OS 类型版本：必须先定类型，协议 §0 每个组件只能写一个 permit_os_type -->
-        <DbSelect
-          v-if="versionSelected && osTypeList.length > 1"
-          v-model="localSelected.osType"
-          class="os-type-select"
-          :clearable="false"
-          :disabled="disabled"
-          :placeholder="t('请选择操作系统类型')"
-          @change="handleOsTypeChange">
-          <DbOption
-            v-for="item in osTypeList"
-            :key="item"
-            :label="item"
-            :value="item" />
-        </DbSelect>
-        <!-- 跟随模式：灰色标签逐个展示当前版本支持的 OS -->
-        <div
-          v-if="versionSelected && localSelected.osMode === 'follow'"
-          class="os-value-box">
-          <DbTag
-            v-for="os in followOsList"
-            :key="os"
-            class="os-tag">
-            {{ os }}
-          </DbTag>
-          <span
-            v-if="followOsList.length === 0"
-            class="os-placeholder">
-            {{ osLoading ? t('加载中') : t('该版本暂无可用介质包') }}
-          </span>
-        </div>
-        <!-- 指定模式：多选框勾选，已选项以可移除标签展示 -->
-        <DbSelect
-          v-else-if="versionSelected && localSelected.osMode === 'specify'"
+        <VersionOsSelect
+          v-if="versionSelected"
           v-model="localSelected.specifyOs"
           class="os-select"
-          :disabled="osLoading || osOptions.length === 0"
-          :loading="osLoading"
-          multiple
-          multiple-mode="tag"
-          :placeholder="
-            osLoading
-              ? t('加载中')
-              : osOptions.length === 0
-                ? t('该版本暂无可用介质包')
-                : t('请选择操作系统版本')
-          "
-          @change="handleOsChange">
-          <DbOption
-            v-for="item in osOptions"
-            :key="item"
-            :label="item"
-            :value="item" />
-        </DbSelect>
+          :mode="localSelected.osMode"
+          :version-id="localSelected.versionId"
+          @change="handleOsChange" />
       </div>
     </div>
   </div>
@@ -155,14 +109,11 @@
 <script setup lang="ts">
   import { useRequest } from 'vue-request';
 
-  import {
-    getDbVersionList,
-    getDbVersionPermitOs,
-    getReleaseVersionList,
-    getVersionSeriesList,
-  } from '@services/source/version';
+  import { getDbVersionList, getReleaseVersionList, getVersionSeriesList } from '@services/source/version';
 
   import { DBTypes } from '@common/const';
+
+  import VersionOsSelect from '@views/db-configure/components/VersionOsSelect.vue';
 
   import { t } from '@locales/index';
 
@@ -173,7 +124,7 @@
   export interface VersionOsValue {
     distributionId: number | '';
     osMode: 'follow' | 'specify';
-    /** 选中的操作系统类型（协议 §0：每个组件只能写一个 permit_os_type，取值必须与所选 OS 同类型） */
+    /** MySQL / TenDBCluster 的操作系统类型固定为 Linux */
     osType: string;
     seriesId: number | '';
     specifyOs: string[];
@@ -212,7 +163,7 @@
     default: () => ({
       distributionId: '',
       osMode: 'follow',
-      osType: '',
+      osType: 'Linux',
       seriesId: '',
       specifyOs: [],
       versionId: '',
@@ -222,7 +173,7 @@
   const localSelected = reactive<VersionOsValue>({
     distributionId: modelValue.value.distributionId,
     osMode: modelValue.value.osMode,
-    osType: modelValue.value.osType,
+    osType: 'Linux',
     seriesId: modelValue.value.seriesId,
     specifyOs: [...modelValue.value.specifyOs],
     versionId: modelValue.value.versionId,
@@ -313,52 +264,6 @@
     },
   });
 
-  // ============ OS 候选 ============
-  const osGroups = ref<ServiceReturnType<typeof getDbVersionPermitOs>>([]);
-  const { loading: osLoading, run: fetchPermitOs } = useRequest(getDbVersionPermitOs, {
-    manual: true,
-    onSuccess(data, [params]) {
-      // 只接收当前版本的候选，防止旧请求回填其它版本的 OS
-      if (params.db_version_id !== localSelected.versionId) return;
-      osGroups.value = data;
-      // 类型集合随版本变化：原类型不在新分组里就回落到首个类型，避免写出与 OS 不同类型的 permit_os_type
-      if (!data.some((group) => group.permit_os_type === localSelected.osType)) {
-        localSelected.osType = data[0]?.permit_os_type ?? '';
-      }
-      // 换版本后：指定范围的已选只保留新版本、新类型下仍关联的 OS（§2.3 换该层版本）
-      if (localSelected.osMode === 'specify') {
-        const available = new Set(osOptions.value);
-        localSelected.specifyOs = localSelected.specifyOs.filter((os) => available.has(os));
-      }
-      syncValue();
-    },
-  });
-
-  // 手动选择、推荐默认和外部回填统一按当前版本加载候选
-  watch(
-    () => localSelected.versionId,
-    (versionId) => {
-      osGroups.value = [];
-      if (versionId !== '') {
-        fetchPermitOs({ db_version_id: versionId });
-      }
-    },
-    { immediate: true },
-  );
-
-  /** OS 类型候选（当前版本的类型分组） */
-  const osTypeList = computed(() => osGroups.value.map((g) => g.permit_os_type));
-
-  /** 当前类型下的候选列表：协议 §4 按 permit_os_type 分组返回，组件只能写一个类型，不能取并集 */
-  const osOptions = computed(() => {
-    if (!localSelected.versionId) return [];
-    const group = osGroups.value.find((item) => item.permit_os_type === localSelected.osType);
-    return group?.permit_os ?? [];
-  });
-
-  /** 跟随模式展示：当前类型下的关联全集（灰色标签逐个展示） */
-  const followOsList = computed(() => osOptions.value);
-
   /** 按系列拉版本号列表 */
   const loadVersions = (seriesId: number) => {
     fetchVersionList({ version_series__in: String(seriesId) });
@@ -386,8 +291,6 @@
     localSelected.seriesId = '';
     localSelected.versionId = '';
     localSelected.specifyOs = [];
-    localSelected.osType = '';
-    osGroups.value = [];
     loadSeries(val);
     syncValue();
   };
@@ -397,43 +300,25 @@
     const proceed = () => {
       localSelected.versionId = '';
       localSelected.specifyOs = [];
-      localSelected.osType = '';
-      osGroups.value = [];
       loadVersions(val);
       syncValue();
     };
     // 页面有参数 Tab 已改项时弹 InfoBox；无监听者直接放行
     emit('before-series-change', proceed);
   };
-  /** 切换版本号：清空旧类型和取值，候选由版本监听统一加载 */
+  /** 切换版本号：清空旧取值，候选由版本监听统一加载 */
   const handleVersionChange = () => {
     localSelected.specifyOs = [];
-    localSelected.osType = '';
     syncValue();
   };
 
-  /** 切换 OS 模式 */
-  watch(
-    () => localSelected.osMode,
-    (mode) => {
-      if (mode === 'specify') {
-        // 切到指定范围：已选留空（§2.3 用户切换模式）
-        localSelected.specifyOs = [];
-        if (localSelected.versionId !== '' && osOptions.value.length === 0 && !osLoading.value) {
-          fetchPermitOs({ db_version_id: localSelected.versionId });
-        }
-      }
-      syncValue();
-    },
-  );
+  // 仅用户切换模式时清空取值，异步克隆回填不触发清空。
+  const handleOsModeChange = () => {
+    localSelected.specifyOs = [];
+    syncValue();
+  };
 
   const handleOsChange = () => {
-    syncValue();
-  };
-
-  /** 切换 OS 类型：已选 OS 属于旧类型，清空，避免提交出与类型不匹配的 permit_os */
-  const handleOsTypeChange = () => {
-    localSelected.specifyOs = [];
     syncValue();
   };
 
@@ -453,6 +338,13 @@
   watch(
     () => modelValue.value,
     (val) => {
+      localSelected.osMode = val.osMode;
+      if (
+        val.specifyOs.length !== localSelected.specifyOs.length ||
+        val.specifyOs.some((os, index) => os !== localSelected.specifyOs[index])
+      ) {
+        localSelected.specifyOs = [...val.specifyOs];
+      }
       if (val.distributionId && val.distributionId !== localSelected.distributionId) {
         localSelected.distributionId = val.distributionId;
         loadSeries(val.distributionId);
@@ -463,10 +355,6 @@
       }
       if (val.versionId && val.versionId !== localSelected.versionId) {
         localSelected.versionId = val.versionId;
-      }
-      // 外部带出的 OS 类型（克隆回填 / 详情编辑）：非空即采用，候选加载后不属于该版本会被回落
-      if (val.osType && val.osType !== localSelected.osType) {
-        localSelected.osType = val.osType;
       }
     },
     { deep: true, immediate: true },
@@ -483,16 +371,12 @@
       permit_os: string[];
       permit_os_type: string;
     } => {
-      // OS 类型：用用户选定的类型（多类型版本必须与所选 OS 同类型），无候选时给空
-      const osType = localSelected.osType || osGroups.value[0]?.permit_os_type || '';
       return {
         db_version_id: Number(localSelected.versionId),
         permit_os: localSelected.osMode === 'follow' ? [] : [...localSelected.specifyOs],
-        permit_os_type: osType,
+        permit_os_type: 'Linux',
       };
     },
-    /** 当前 OS 类型候选 */
-    osTypeList,
     /** 校验当前层选型完整性（版本必选；指定范围至少 1 项） */
     validate: () => {
       if (!versionSelected.value) {
@@ -569,28 +453,6 @@
         font-size: 12px;
         line-height: 20px;
         color: #979ba5;
-      }
-
-      // 跟随模式取值区：白底边框盒内展示灰色标签
-      .os-value-box {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        align-items: center;
-        min-height: 32px;
-        padding: 3px 8px;
-        background: #fff;
-        border: 1px solid #dcdee5;
-        border-radius: 2px;
-      }
-
-      .os-tag {
-        color: #63656e;
-        background: #f0f1f5;
-      }
-
-      .os-type-select {
-        width: 220px;
       }
 
       .os-select {
