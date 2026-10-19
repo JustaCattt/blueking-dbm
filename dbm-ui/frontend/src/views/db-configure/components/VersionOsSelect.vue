@@ -22,7 +22,6 @@
     multiple
     multiple-mode="tag"
     :placeholder="placeholder"
-    :show-all="mode === 'specify'"
     @change="handleChange">
     <DbOption
       v-for="os in options"
@@ -52,7 +51,7 @@
     default: () => [],
   });
   type Emits = (e: 'change', value: string[]) => void;
-  // “全部”只用于控件展示，父组件始终持有具体 OS 列表快照。
+  // “全部”仅用于跟随版本包且 Linux 范围不限时的只读回显。
   const allOptionId = '__linux_all__';
   const osGroups = ref<ServiceReturnType<typeof getDbVersionPermitOs>>([]);
   const supportSystems = ref<string[]>([]);
@@ -70,12 +69,7 @@
       if (!linuxGroup.value) return [];
       return linuxGroup.value.permit_os.length ? linuxGroup.value.permit_os : [allOptionId];
     }
-    const selected = new Set(modelValue.value);
-    const allSelected =
-      options.value.length > 0 &&
-      selected.size === options.value.length &&
-      options.value.every((os) => selected.has(os));
-    return allSelected ? [allOptionId] : modelValue.value;
+    return modelValue.value;
   });
 
   const {
@@ -138,7 +132,7 @@
 
   const handleChange = (value: string[]) => {
     if (selectDisabled.value) return;
-    const next = value.includes(allOptionId) ? [...options.value] : [...new Set(value)];
+    const next = [...new Set(value)];
     modelValue.value = next;
     emit('change', next);
   };

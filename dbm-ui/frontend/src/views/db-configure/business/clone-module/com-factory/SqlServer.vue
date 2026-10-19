@@ -773,6 +773,7 @@
 
   .module-name-row {
     display: flex;
+    column-gap: 12px;
     align-items: center;
 
     .module-name-input {

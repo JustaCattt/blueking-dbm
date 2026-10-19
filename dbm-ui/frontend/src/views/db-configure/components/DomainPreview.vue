@@ -1,5 +1,5 @@
 <template>
-  <div class="domain-preview ml-12">
+  <div class="domain-preview">
     <span>{{ t('集群域名预览') }}：</span>
     <div class="domain-preview-list">
       <!-- 主域名 / 单节点域名 -->

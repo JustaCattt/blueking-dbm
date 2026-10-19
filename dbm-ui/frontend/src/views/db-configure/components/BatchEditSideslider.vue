@@ -170,12 +170,6 @@
                 <td :class="{ 'is-changed': item.isChanged }">
                   <span class="diff-value">
                     <span
-                      v-if="!item.isChanged"
-                      class="no-constraint-text">
-                      {{ t('无变化') }}
-                    </span>
-                    <span
-                      v-else
                       v-bk-tooltips="{
                         content: item.newValue,
                         disabled: !overflowMap[`new_${item.conf_name}`],

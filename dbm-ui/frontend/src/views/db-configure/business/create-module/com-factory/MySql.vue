@@ -412,8 +412,7 @@
    */
   const isVersionSelectionComplete = computed(() => {
     const storage = storageVersion.value;
-    const storageOk =
-      storage.versionId !== '' && (storage.osMode === 'follow' || storage.specifyOs.length > 0);
+    const storageOk = storage.versionId !== '' && (storage.osMode === 'follow' || storage.specifyOs.length > 0);
     if (!storageOk) return false;
     if (clusterType.value === ClusterTypes.TENDBHA) {
       const proxy = proxyVersion.value;
@@ -548,6 +547,7 @@
 <style lang="less" scoped>
   .create-module-page {
     --module-form-content-width: 960px;
+
     padding-bottom: 20px;
 
     :deep(.bk-form-item) {
@@ -605,7 +605,7 @@
   .module-name-row {
     display: flex;
     flex-wrap: wrap;
-    row-gap: 4px;
+    gap: 4px 12px;
     align-items: center;
 
     .module-name-input {
