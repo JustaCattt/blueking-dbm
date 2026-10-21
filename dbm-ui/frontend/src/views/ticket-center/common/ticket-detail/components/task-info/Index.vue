@@ -17,7 +17,7 @@
     mode="collapse"
     :title="t('需求信息')">
     <ComFactory :data="data" />
-    <InfoList>
+    <InfoList v-if="!isDataExport">
       <Item
         :label="t('备注')"
         style="width: 100%">
@@ -35,6 +35,8 @@
 
   import TicketModel from '@services/model/ticket/ticket';
 
+  import { TicketTypes } from '@common/const';
+
   import InfoList, { Item } from './com-factory/components/info-list/Index.vue';
   import ComFactory from './com-factory/Index.vue';
 
@@ -46,10 +48,11 @@
     name: 'TicketTaskInfo',
   });
 
-  defineProps<Props>();
+  const props = defineProps<Props>();
 
   const { t } = useI18n();
   const route = useRoute();
+  const isDataExport = computed(() => [TicketTypes.MYSQL_DUMP_DATA, TicketTypes.TENDBCLUSTER_DUMP_DATA].includes(props.data.ticket_type));
 
   const isTaskInfoCardCollapse = ref(true);
 
