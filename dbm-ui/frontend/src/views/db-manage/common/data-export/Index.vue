@@ -16,24 +16,34 @@
     <BkAlert
       class="mb-20"
       closable
-      :title="t('将源集群中的数据导出为文件。按库表导出支持整表或按条件导出，可带表结构；按 SQL 导出执行查询 SQL 中的 SELECT，导出查询结果。系统库不在导出范围内。')" />
-    <div class="mb-24">
-      <CardCheckbox
-        v-model="exportMode"
-        :desc="t('选择库表，整表或按条件导出数据与表结构')"
-        :disabled="isSubmitting"
-        :disabled-tooltips="t('提交中')"
-        :title="t('按库表导出')"
-        true-value="table" />
-      <CardCheckbox
-        v-model="exportMode"
-        class="ml-8"
-        :desc="t('输入或上传查询 SQL，导出 SELECT 的查询结果')"
-        :disabled="isSubmitting"
-        :disabled-tooltips="t('提交中')"
-        :title="t('按 SQL 导出')"
-        true-value="sql" />
-    </div>
+      :title="
+        t(
+          '将源集群中的数据导出为文件。按库表导出支持整表或按条件导出，可带表结构；按 SQL 导出执行查询 SQL 中的 SELECT，导出查询结果。系统库不在导出范围内。',
+        )
+      " />
+    <DbForm
+      class="mb-24"
+      form-type="vertical">
+      <DbFormItem
+        :label="t('导出模式')"
+        required>
+        <CardCheckbox
+          v-model="exportMode"
+          :desc="t('选择库表，整表或按条件导出数据与表结构')"
+          :disabled="isSubmitting"
+          :disabled-tooltips="t('提交中')"
+          :title="t('按库表导出')"
+          true-value="table" />
+        <CardCheckbox
+          v-model="exportMode"
+          class="ml-8"
+          :desc="t('输入或上传查询 SQL，导出 SELECT 的查询结果')"
+          :disabled="isSubmitting"
+          :disabled-tooltips="t('提交中')"
+          :title="t('按 SQL 导出')"
+          true-value="sql" />
+      </DbFormItem>
+    </DbForm>
     <BkLoading :loading="isSubmitting">
       <KeepAlive :key="resetKey">
         <Component
@@ -88,7 +98,7 @@
   const resetKey = ref(0);
   const restoreTicket = ref(true);
   const isPreparing = ref(false);
-  const modeComponent = computed(() => exportMode.value === 'sql' ? SqlMode : TableMode);
+  const modeComponent = computed(() => (exportMode.value === 'sql' ? SqlMode : TableMode));
   const ticketType = props.dbType === DBTypes.MYSQL ? TicketTypes.MYSQL_DUMP_DATA : TicketTypes.TENDBCLUSTER_DUMP_DATA;
 
   useTicketDetail<Mysql.DumpData>(ticketType, {
@@ -98,29 +108,35 @@
     },
   });
 
-  const { loading: ticketLoading, run: createTicketRun } = useCreateTicket<{
-    charset: string;
-    cluster_id: number;
-    databases: string[];
-    dump_data: boolean;
-    dump_schema: boolean;
-    tables: string[];
-    tables_ignore: string[];
-    where: string;
-  } | {
-    charset: string;
-    cluster_id: number;
-    export_mode: 'sql';
-    result_format: 'txt' | 'csv';
-    sql_filename: string;
-    sql_path: string;
-  }>(ticketType, {
+  const { loading: ticketLoading, run: createTicketRun } = useCreateTicket<
+    | {
+        charset: string;
+        cluster_id: number;
+        databases: string[];
+        dump_data: boolean;
+        dump_schema: boolean;
+        tables: string[];
+        tables_ignore: string[];
+        where: string;
+      }
+    | {
+        charset: string;
+        cluster_id: number;
+        export_mode: 'sql';
+        result_format: 'txt' | 'csv';
+        sql_filename: string;
+        sql_path: string;
+      }
+  >(ticketType, {
     onError(errors) {
-      eventBus.emit('db-toolbox-error', errors.map((item) =>
-        item.field === 'sql'
-          ? `${t('语句序号：n', { n: item.row_key })} ${item.errors}`
-          : item.errors,
-      ).join('\n'));
+      eventBus.emit(
+        'db-toolbox-error',
+        errors
+          .map((item) =>
+            item.field === 'sql' ? `${t('语句序号：n', { n: item.row_key })} ${item.errors}` : item.errors,
+          )
+          .join('\n'),
+      );
     },
   });
 

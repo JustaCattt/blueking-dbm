@@ -30,9 +30,9 @@
         :placeholder="t('请选择源集群')" />
     </FormItemWithHint>
 
-    <!-- 导出方式 -->
+    <!-- 导出范围 -->
     <FormItemWithHint
-      :label="t('导出方式')"
+      :label="t('导出范围')"
       :model="formData.exportScope"
       property="exportScope"
       required>
