@@ -12,126 +12,124 @@
 -->
 
 <template>
-  <DtsMigrateWrapper>
-    <SmartAction>
-      <BatchInput
-        :config="batchInputConfig"
-        @change="handleBatchInput" />
-      <EditableTable
-        :key="tableKey"
-        ref="tableRef"
-        class="mt-16 mb-20"
-        :model="formData.tableData">
-        <EditableRow
-          v-for="(item, index) in formData.tableData"
-          :key="index">
-          <ClusterColumn
-            v-model="item.source_cluster"
-            allow-repeat
-            field="source_cluster.master_domain"
-            :label="t('源集群')"
-            :selected="selectedSourceClusters"
-            @batch-edit="handleBatchEditSourceCluster"
-            @request-success="handleSourceClusterChange(item)" />
-          <EditableColumn
-            :append-rules="dbMappingRules"
-            :disabled-method="disabledDbMapping"
-            field="db_mapping"
-            :label="t('库映射')"
-            :min-width="200"
-            required>
-            <EditableBlock
-              :model-value="item.db_mapping.map((mapping) => `${mapping.source_db} → ${mapping.target_db}`).join(',')"
-              :placeholder="t('请设置库映射')"
-              style="cursor: pointer"
-              @click="handleOpenMapping(item)">
-              <div
-                v-if="item.db_mapping.length"
-                class="db-mapping-item">
-                {{ item.db_mapping[0].source_db }} → {{ item.db_mapping[0].target_db }}
-                {{ t('共n条', { n: item.db_mapping.length }) }}
-              </div>
-            </EditableBlock>
-          </EditableColumn>
-          <TargetClusterColumn
-            v-model="item.target_cluster"
-            :cluster="item.source_cluster"
-            :selected="selectedTargetClusters"
-            source-field="source_cluster" />
-          <SpecColumn
-            v-model="item.spec_id"
-            :cluster-type="DBTypes.MYSQL"
-            :current-spec-id-list="getSpecIdList(item.source_cluster)"
-            field="spec_id"
-            :label="t('dts-worker 规格')"
-            :machine-type="MachineTypes.MYSQL_BACKEND"
-            required
-            selectable
-            @batch-edit="handleBatchEdit" />
-          <ResourceTagColumn
-            v-model="item.labels"
-            @batch-edit="handleBatchEdit" />
-          <AvailableResourceColumn
-            :params="{
-              city: item.source_cluster.region,
-              subzones: item.source_cluster.cluster_subzones.join(','),
-              for_bizs: [currentBizId, 0],
-              resource_types: [DBTypes.MYSQL, 'PUBLIC'],
-              spec_id: item.spec_id,
-              labels: item.labels.map((label) => label.id).join(','),
-            }" />
-          <OperationColumn
-            v-model:table-data="formData.tableData"
-            :create-row-method="createTableRow" />
-        </EditableRow>
-      </EditableTable>
-      <BkFormItem
-        :label="t('数据冲突处理')"
-        required>
-        <BkRadioGroup v-model="formData.conflictHandle">
-          <BkRadio label="replace">
-            {{ t('覆盖旧数据') }}
-          </BkRadio>
-          <BkRadio label="ignore">
-            {{ t('保留旧数据') }}
-          </BkRadio>
-          <BkRadio label="error">
-            {{ t('报错并停止') }}
-          </BkRadio>
-        </BkRadioGroup>
-      </BkFormItem>
-      <BkFormItem
-        :label="t('备份位置')"
-        required>
-        <BkRadioGroup v-model="formData.backupLocale">
-          <BkRadio label="master"> Master </BkRadio>
-          <BkRadio label="slave"> Slave </BkRadio>
-        </BkRadioGroup>
-      </BkFormItem>
-      <TicketPayload v-model="formData.payload" />
-      <DbMappingSideslider
-        v-model:is-show="showMappingSlider"
-        :data="currentEditingRow?.db_mapping || []"
-        :source-cluster="{
-          id: currentEditingRow?.source_cluster.id || 0,
-          master_domain: currentEditingRow?.source_cluster.master_domain || '',
-        }"
-        :target-domain="currentEditingRow?.target_cluster.master_domain || ''"
-        @confirm="handleMappingConfirm" />
-      <template #action>
-        <BkButton
-          class="mr-8 w-88"
-          :loading="isSubmitting"
-          theme="primary"
-          @click="handleSubmit">
-          {{ t('提交') }}
-        </BkButton>
-        <DbResetButton
-          class="ml-8"
-          :confirm-handler="handleReset"
-          :disabled="isSubmitting" />
-      </template>
-    </SmartAction>
+  <DtsMigrateWrapper :data="formData">
+    <BatchInput
+      :config="batchInputConfig"
+      @change="handleBatchInput" />
+    <EditableTable
+      :key="tableKey"
+      ref="tableRef"
+      class="mt-16 mb-20"
+      :model="formData.tableData">
+      <EditableRow
+        v-for="(item, index) in formData.tableData"
+        :key="index">
+        <ClusterColumn
+          v-model="item.source_cluster"
+          allow-repeat
+          field="source_cluster.master_domain"
+          :label="t('源集群')"
+          :selected="selectedSourceClusters"
+          @batch-edit="handleBatchEditSourceCluster"
+          @request-success="handleSourceClusterChange(item)" />
+        <EditableColumn
+          :append-rules="dbMappingRules"
+          :disabled-method="disabledDbMapping"
+          field="db_mapping"
+          :label="t('库映射')"
+          :min-width="200"
+          required>
+          <EditableBlock
+            :model-value="item.db_mapping.map((mapping) => `${mapping.source_db} → ${mapping.target_db}`).join(',')"
+            :placeholder="t('请设置库映射')"
+            style="cursor: pointer"
+            @click="handleOpenMapping(item)">
+            <div
+              v-if="item.db_mapping.length"
+              class="db-mapping-item">
+              {{ item.db_mapping[0].source_db }} → {{ item.db_mapping[0].target_db }}
+              {{ t('共n条', { n: item.db_mapping.length }) }}
+            </div>
+          </EditableBlock>
+        </EditableColumn>
+        <TargetClusterColumn
+          v-model="item.target_cluster"
+          :cluster="item.source_cluster"
+          :selected="selectedTargetClusters"
+          source-field="source_cluster" />
+        <SpecColumn
+          v-model="item.spec_id"
+          :cluster-type="DBTypes.MYSQL"
+          :current-spec-id-list="getSpecIdList(item.source_cluster)"
+          field="spec_id"
+          :label="t('dts-worker 规格')"
+          :machine-type="MachineTypes.MYSQL_BACKEND"
+          required
+          selectable
+          @batch-edit="handleBatchEdit" />
+        <ResourceTagColumn
+          v-model="item.labels"
+          @batch-edit="handleBatchEdit" />
+        <AvailableResourceColumn
+          :params="{
+            city: item.source_cluster.region,
+            subzones: item.source_cluster.cluster_subzones.join(','),
+            for_bizs: [currentBizId, 0],
+            resource_types: [DBTypes.MYSQL, 'PUBLIC'],
+            spec_id: item.spec_id,
+            labels: item.labels.map((label) => label.id).join(','),
+          }" />
+        <OperationColumn
+          v-model:table-data="formData.tableData"
+          :create-row-method="createTableRow" />
+      </EditableRow>
+    </EditableTable>
+    <BkFormItem
+      :label="t('数据冲突处理')"
+      required>
+      <BkRadioGroup v-model="formData.conflictHandle">
+        <BkRadio label="replace">
+          {{ t('覆盖旧数据') }}
+        </BkRadio>
+        <BkRadio label="ignore">
+          {{ t('保留旧数据') }}
+        </BkRadio>
+        <BkRadio label="error">
+          {{ t('报错并停止') }}
+        </BkRadio>
+      </BkRadioGroup>
+    </BkFormItem>
+    <BkFormItem
+      :label="t('备份位置')"
+      required>
+      <BkRadioGroup v-model="formData.backupLocale">
+        <BkRadio label="master"> Master </BkRadio>
+        <BkRadio label="slave"> Slave </BkRadio>
+      </BkRadioGroup>
+    </BkFormItem>
+    <TicketPayload v-model="formData.payload" />
+    <DbMappingSideslider
+      v-model:is-show="showMappingSlider"
+      :data="currentEditingRow?.db_mapping || []"
+      :source-cluster="{
+        id: currentEditingRow?.source_cluster.id || 0,
+        master_domain: currentEditingRow?.source_cluster.master_domain || '',
+      }"
+      :target-domain="currentEditingRow?.target_cluster.master_domain || ''"
+      @confirm="handleMappingConfirm" />
+    <template #action>
+      <BkButton
+        class="mr-8 w-88"
+        :loading="isSubmitting"
+        theme="primary"
+        @click="handleSubmit">
+        {{ t('提交') }}
+      </BkButton>
+      <DbResetButton
+        class="ml-8"
+        :confirm-handler="handleReset"
+        :disabled="isSubmitting" />
+    </template>
   </DtsMigrateWrapper>
 </template>
 <script lang="ts" setup>
@@ -352,6 +350,7 @@
   });
 
   const { loading: isSubmitting, run: createTicketRun } = useCreateTicket<{
+    backup_locale: 'master' | 'slave';
     infos: {
       dts_resource: {
         deploy: Record<string, never>;
@@ -389,7 +388,6 @@
       };
       source_role: 'master' | 'slave';
     }[];
-    backup_locale: 'master' | 'slave';
     task: {
       on_duplicate: 'error' | 'replace' | 'ignore';
     };
@@ -399,6 +397,7 @@
     tableRef.value!.validate().then(() => {
       createTicketRun({
         details: {
+          backup_locale: formData.backupLocale,
           infos: formData.tableData.map((item) => ({
             dts_resource: {
               deploy: {},
@@ -436,7 +435,6 @@
             },
             source_role: formData.sourceRole,
           })),
-          backup_locale: formData.backupLocale,
           task: {
             on_duplicate: formData.conflictHandle,
           },

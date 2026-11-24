@@ -80,6 +80,7 @@
 
   import TendbClusterModel from '@services/model/tendbcluster/tendbcluster';
   import type { TendbCluster } from '@services/model/ticket/ticket';
+  import { getTendbClusterList } from '@services/source/tendbcluster';
 
   import { useCreateTicket, useTicketDetail } from '@hooks';
 
@@ -98,6 +99,7 @@
 
   const { t } = useI18n();
   const router = useRouter();
+  const route = useRoute();
   const tableRef = useTemplateRef('table');
 
   const currentBizId = window.PROJECT_CONFIG.BIZ_ID;
@@ -129,6 +131,19 @@
   });
 
   const formData = reactive(defaultData());
+
+  // 异构迁移的添加入口预填目标集群；每行选择一个主机，对应数量 1。
+  const initialClusterId = Number(route.query.cluster_id);
+  if (!route.query.ticketId && Number.isSafeInteger(initialClusterId) && initialClusterId > 0) {
+    getTendbClusterList({ cluster_ids: String(initialClusterId) })
+      .then((result) => {
+        const cluster = result.results[0];
+        if (cluster && !formData.tableData[0].cluster.master_domain) {
+          formData.tableData[0].cluster = cluster;
+        }
+      })
+      .catch(() => {});
+  }
 
   const selected = computed(() => formData.tableData.filter((item) => item.cluster.id).map((item) => item.cluster));
   const hostCounter = computed(() => {

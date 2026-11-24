@@ -12,6 +12,10 @@
 
 - [实例导出使用主机 ID，不是实例 ID](doc/instance-export-host-ids.md) —— 新增或修改 `DropdownExportExcel` 的
   `export-type="instance"`，且 `:ids` 来自取 `item.id` 的 `selectedIdList`；应使用公共选择 hook 的 `selectedHostIdList`
+- [下拉框创建与跳转动作放扩展插槽，不作为选项](doc/select-action-extension.md) ——
+  Select 中新增添加 / 新建 / 跳转动作，或用特殊选项值和 change 回调触发操作
+- [同族工具箱单据复用入口，不重复展示子方式](doc/toolbox-sibling-entry.md) —— 新增工具箱单据，同族页面已有方式切换且
+  `toolboxMenuList.ts` 已有代表入口和 `bind`
 - [单据详情与提单入口对齐并复用同族展示](doc/ticket-detail-entry-alignment.md) —— 新增或修改
   `ticket-center/common/ticket-detail/components/task-info/com-factory/**`，涉及 `backupinfo` 或目标规格展示
 - [validate 失败走 reject，不 resolve `false`](doc/validate-failure-contract.md) —— 用到 `DbForm` / `EditableTable` 的
@@ -38,8 +42,8 @@
   `v-if="$slots.xxx"` 容器，或给自研基础组件新增插槽出口
 - [BkComposeFormItem 里放本地 Db* 组件，第二个控件会掉到下一行](doc/compose-form-item-db-component.md) —— 往
   `<BkComposeFormItem>` 里放 `DbSelect` / `DbInput` / `DbTagInput`，或用它做「输入 + 单位」这类并排布局
-- [表单项用 DbFormItem、输入框用 DbInput](doc/db-form-item-db-input.md) —— 本次新增或改到的模板里有
-  `BkFormItem` / `bk-form-item` / `BkInput` / `bk-input`（ESLint 只报 warn，不拦提交）
+- [表单项用 DbFormItem、输入框用 DbInput](doc/db-form-item-db-input.md) —— 本次新增或改到的模板里有 `BkFormItem` /
+  `bk-form-item` / `BkInput` / `bk-input`（ESLint 只报 warn，不拦提交）
 - [单据详情里的改单数据（内容版本、改单记录）走 props，不用 provide / inject](doc/ticket-modify-data-props.md) —— 改
   `views/ticket-center/common/action-confirm/**` 或 `views/ticket-center/common/ticket-detail/**` 里提交
   `version`、使用改单记录的代码，或新增流程类型入口 / 流程状态组件 / 待办类型

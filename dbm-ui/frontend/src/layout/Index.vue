@@ -163,6 +163,7 @@
     [menuEnum.databaseManage]: [
       'DbManage',
       'MysqlManage',
+      'MYSQL_DTS_DATA_MIGRATE_HETERO',
       'EsManage',
       'HdfsManage',
       'OracleManage',

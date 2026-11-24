@@ -126,3 +126,18 @@ export const mergeDiskSpace = (params: {
     target_clusters: number[];
   }[];
 }) => http.post<MysqlMergeDiskSpaceModel[]>('/apis/mysql/toolbox/mysql_disk_space/', params);
+
+// 按库表范围获取异构迁移的整份 TSpider 建表 SQL。
+export function getDtsSchemaSql(params: {
+  cluster_id: number;
+  db_patterns: string[];
+  ignore_dbs: string[];
+  ignore_tables: string[];
+  table_patterns: string[];
+  target_cluster_id: number;
+}) {
+  return http.post<{
+    sql: string;
+    tables: { db: string; shard_key: string; table: string }[];
+  }>(`/apis/mysql/bizs/${window.PROJECT_CONFIG.BIZ_ID}/dts/schema_sql/`, params);
+}

@@ -18,6 +18,7 @@ ls -d src/views/db-manage/mysql/*/ | awk -F/ '{print $(NF-1)}' | grep -E '^[A-Z]
 | `MYSQL_DATA_MIGRATE` | DB 数据克隆 | A | `TargetClusterColumn`（多目标）、`DataSchemaGrantColumn` |
 | `MYSQL_DUMP_DATA` | 数据导出 | C | `common/data-export` 共享入口、`table-mode` / `sql-mode` 动态表单、`KeepAlive` 保留各模式输入 |
 | `MYSQL_DTS_DATA_MIGRATE` | DTS 同名迁移 | F | `DtsMigrateWrapper`、`TargetClusterColumn`（单目标）、`checkNotExist` 库表校验、`sync_scope` 四字段 `string[]` 协议 |
+| `MYSQL_DTS_DATA_MIGRATE_HETERO` | DTS 异构迁移 | F | `DtsMigrateWrapper`、`SpiderMntColumn`、`schema-sql` 整份 SQL 编辑及只读侧滑、双端鉴权 |
 | `MYSQL_DTS_DATA_MIGRATE_RENAME` | DTS 库改名迁移 | F | `DtsMigrateWrapper`、`TargetClusterColumn`（单目标）、`DbMappingSideslider`、库映射防误清 |
 | `MYSQL_FIXPOINT_EXIST_CLUSTER` | 构造（已有集群） | F | `FixpointWrapper`、`target-cluster-column`、多个子列组件 |
 | `MYSQL_FIXPOINT_NEW_CLUSTER` | 构造（新集群） | F | `FixpointWrapper` |

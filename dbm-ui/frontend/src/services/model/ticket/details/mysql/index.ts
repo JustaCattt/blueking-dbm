@@ -11,6 +11,7 @@ export * from './dataMigrate';
 export * from './dataRepair';
 export * from './deleteClearDb';
 export * from './dtsDataMigrate';
+export * from './dtsDataMigrateHetero';
 export * from './dtsDataMigrateRename';
 export * from './dumpData';
 export * from './flashBack';

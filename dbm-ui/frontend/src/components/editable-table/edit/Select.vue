@@ -56,6 +56,11 @@
         name="tag"
         :selected="selected" />
     </template>
+    <template
+      v-if="slots.extension"
+      #extension>
+      <slot name="extension" />
+    </template>
   </DbSelect>
 </template>
 <script lang="ts">
@@ -85,6 +90,7 @@
   const slots = defineSlots<{
     allOptionIcon?: () => VNode;
     default?: () => VNode;
+    extension?: () => VNode;
     option?: (value: { item: Record<string, any> }) => VNode;
     tag?: (value: { selected: SelectedItem[] }) => VNode;
     tagRender?: (item: SelectedItem) => VNode;
