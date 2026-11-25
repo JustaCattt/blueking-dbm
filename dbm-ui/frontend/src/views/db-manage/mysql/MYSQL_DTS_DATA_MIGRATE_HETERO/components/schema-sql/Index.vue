@@ -20,7 +20,9 @@
     <template #header>
       <div class="schema-sql-header">
         <span class="schema-sql-title">{{ t('目标表结构') }}</span>
-        <span class="schema-sql-context" :title="`${sourceDomain} → ${targetDomain}`">
+        <span
+          class="schema-sql-context"
+          :title="`${sourceDomain} → ${targetDomain}`">
           {{ sourceDomain }} → {{ targetDomain }}
         </span>
       </div>
@@ -59,21 +61,39 @@
                   :class="{ 'is-active': activeLine === table.line, 'is-warn': !table.shardKey }"
                   type="button"
                   @click="handleLocate(table)">
-                  <span class="schema-sql-status" :class="{ 'is-warn': !table.shardKey }">
-                    <DbIcon v-if="!table.shardKey" type="attention" />
-                    <span v-else class="schema-sql-status-dot" />
+                  <span
+                    class="schema-sql-status"
+                    :class="{ 'is-warn': !table.shardKey }">
+                    <DbIcon
+                      v-if="!table.shardKey"
+                      type="attention" />
+                    <span
+                      v-else
+                      class="schema-sql-status-dot" />
                   </span>
-                  <span class="schema-sql-table-name" :title="table.table">{{ table.table }}</span>
-                  <span class="schema-sql-table-meta" :class="{ 'schema-sql-danger': !table.shardKey }">
+                  <span
+                    class="schema-sql-table-name"
+                    :title="table.table">
+                    {{ table.table }}
+                  </span>
+                  <span
+                    class="schema-sql-table-meta"
+                    :class="{ 'schema-sql-danger': !table.shardKey }">
                     <span>shardkey:</span>
-                    <span class="schema-sql-table-key" :title="table.shardKey">{{ table.shardKey || '--' }}</span>
+                    <span
+                      class="schema-sql-table-key"
+                      :title="table.shardKey">
+                      {{ table.shardKey || '--' }}
+                    </span>
                   </span>
                 </button>
               </div>
             </div>
             <div class="schema-sql-summary">
               {{ t('共 n 张表', { n: parsedTables.length }) }}
-              <span v-if="missingTables.length" class="schema-sql-danger">
+              <span
+                v-if="missingTables.length"
+                class="schema-sql-danger">
                 {{ t('n 张缺 shardkey', { n: missingTables.length }) }}
               </span>
             </div>
@@ -105,7 +125,9 @@
                 type="file"
                 @change="handleUpload" />
             </div>
-            <div ref="editorContainer" class="schema-sql-editor" />
+            <div
+              ref="editorContainer"
+              class="schema-sql-editor" />
           </div>
         </div>
       </BkLoading>
@@ -292,20 +314,20 @@
       // 背景使用原型的 text-primary 97% + black，与工作台 CSS 保持一致。
       monaco.editor.defineTheme('dts-schema', {
         base: 'vs-dark',
-        inherit: true,
-        rules: [],
         colors: {
           'editor.background': '#303136',
           'editorLineNumber.foreground': '#ffffff52',
         },
+        inherit: true,
+        rules: [],
       });
       editor = monaco.editor.create(editorContainerRef.value, {
         automaticLayout: true,
         fontSize: 12,
-        lineHeight: 20,
-        padding: { top: 12, bottom: 24 },
         language: 'sql',
+        lineHeight: 20,
         minimap: { enabled: false },
+        padding: { bottom: 24, top: 12 },
         readOnly: props.readonly,
         scrollBeyondLastLine: false,
         theme: 'dts-schema',

@@ -61,3 +61,15 @@ export const parseSchemaSql = (sql: string): SchemaTable[] => {
     }];
   });
 };
+
+// 表结构摘要：提单页与单据详情共用，避免两处解析规则跑偏
+export const getSchemaSummary = (
+  sql: string,
+  translate: (key: string, named: Record<string, number>) => string,
+  emptyText = '--',
+) => {
+  if (!sql) return emptyText;
+  const tables = parseSchemaSql(sql);
+  const missing = tables.filter((table) => !table.shardKey).length;
+  return `${translate('共 n 张表', { n: tables.length })}${missing ? `，${translate('n 张缺 shardkey', { n: missing })}` : ''}`;
+};

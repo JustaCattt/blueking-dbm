@@ -51,21 +51,23 @@
     <TicketInfoTableColumn
       col-key="spider_mnt"
       :get-copy-value="(row: RowData) => row.spider_mnt"
-      :min-width="140"
+      :min-width="200"
       :title="t('Spider 运维节点')">
       <template #default="{ row }: { row: RowData }">{{ row.spider_mnt || '--' }}</template>
     </TicketInfoTableColumn>
     <TicketInfoTableColumn
       col-key="target_schema_sql"
-      :min-width="140"
+      :min-width="220"
       :title="t('目标表结构')">
       <template #default="{ row }: { row: RowData }">
         <BkButton
+          v-if="row.target_schema_sql"
           text
-          theme="primary"
+          :theme="hasMissingShardKey(row) ? 'danger' : 'primary'"
           @click="handleViewSql(row)">
-          {{ t('查看 SQL') }}
+          {{ getSchemaSummary(row.target_schema_sql, t) }}
         </BkButton>
+        <span v-else>--</span>
       </template>
     </TicketInfoTableColumn>
     <TicketInfoTableColumn
@@ -109,6 +111,7 @@
   import TagBlock from '@components/tag-block/Index.vue';
 
   import SchemaSql from '@views/db-manage/mysql/MYSQL_DTS_DATA_MIGRATE_HETERO/components/schema-sql/Index.vue';
+  import { getSchemaSummary, parseSchemaSql } from '@views/db-manage/mysql/MYSQL_DTS_DATA_MIGRATE_HETERO/schemaSql';
 
   import InfoList, { Item as InfoItem } from '../components/info-list/Index.vue';
 
@@ -170,4 +173,5 @@
     selectedRow.value = row;
     showSql.value = true;
   };
+  const hasMissingShardKey = (row: RowData) => parseSchemaSql(row.target_schema_sql).some((table) => !table.shardKey);
 </script>

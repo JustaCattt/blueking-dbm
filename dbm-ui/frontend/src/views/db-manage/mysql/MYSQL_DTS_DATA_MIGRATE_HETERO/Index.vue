@@ -77,7 +77,9 @@
           <EditableBlock
             v-if="!canFetch(item)"
             :placeholder="t('待选源表与目标集群')" />
-          <EditableBlock v-else :model-value="schemaSummary(item)">
+          <EditableBlock
+            v-else
+            :model-value="schemaSummary(item)">
             <span v-if="item.schema_status === 'loading'">{{ t('加载中…') }}</span>
             <template v-else-if="item.schema_status === 'error'">
               <span class="schema-danger">{{ t('加载失败') }}</span>
@@ -125,7 +127,7 @@
           :create-row-method="createTableRow" />
       </EditableRow>
     </EditableTable>
-    <BkFormItem
+    <DbFormItem
       :label="t('数据冲突处理')"
       required>
       <BkRadioGroup v-model="formData.conflictHandle">
@@ -133,15 +135,15 @@
         <BkRadio label="ignore">{{ t('保留旧数据') }}</BkRadio>
         <BkRadio label="error">{{ t('报错并停止') }}</BkRadio>
       </BkRadioGroup>
-    </BkFormItem>
-    <BkFormItem
+    </DbFormItem>
+    <DbFormItem
       :label="t('备份位置')"
       required>
       <BkRadioGroup v-model="formData.backupLocale">
         <BkRadio label="master">Master</BkRadio>
         <BkRadio label="slave">Slave</BkRadio>
       </BkRadioGroup>
-    </BkFormItem>
+    </DbFormItem>
     <TicketPayload v-model="formData.payload" />
     <template #action>
       <BkButton
@@ -176,7 +178,7 @@
   import TendbhaModel from '@services/model/mysql/tendbha';
   import TendbClusterModel from '@services/model/tendbcluster/tendbcluster';
   import type { Mysql } from '@services/model/ticket/ticket';
-  import { simpleCheckAllowed } from '@services/source/iam';
+  import { checkAuthAllowed, getApplyDataLink } from '@services/source/iam';
 
   import { useCreateTicket, useTicketDetail } from '@hooks';
 
@@ -199,7 +201,7 @@
   import SchemaSql from './components/schema-sql/Index.vue';
   import SpiderMntColumn from './components/SpiderMntColumn.vue';
   import TargetClusterColumn from './components/TargetClusterColumn.vue';
-  import { parseSchemaSql } from './schemaSql';
+  import { getSchemaSummary, parseSchemaSql } from './schemaSql';
 
   interface RowData {
     ignore_db_list: string[];
@@ -222,6 +224,7 @@
   const tableRef = useTemplateRef('table');
   const tableKey = ref(random());
   const currentBizId = window.PROJECT_CONFIG.BIZ_ID;
+  const DTS_MIGRATE_HETERO_ACTION_ID = 'mysql_dts_data_migrate_hetero';
   const showSql = ref(false);
   const focusMissing = ref(false);
   const editingRow = ref<RowData>();
@@ -280,12 +283,7 @@
       row.source_cluster.id && row.target_cluster.id && row.source_db_list.length && row.source_table_list.length,
     );
   const hasMissingShardKey = (row: RowData) => parseSchemaSql(row.target_schema_sql).some((table) => !table.shardKey);
-  const schemaSummary = (row: RowData) => {
-    if (!row.target_schema_sql) return t('获取');
-    const tables = parseSchemaSql(row.target_schema_sql);
-    const missing = tables.filter((table) => !table.shardKey).length;
-    return `${t('共 n 张表', { n: tables.length })}${missing ? `，${t('n 张缺 shardkey', { n: missing })}` : ''}`;
-  };
+  const schemaSummary = (row: RowData) => getSchemaSummary(row.target_schema_sql, t, t('获取'));
   const schemaRules = [
     {
       message: t('该行尚未获取目标表结构，请重新获取'),
@@ -327,9 +325,7 @@
       formData.tableData.forEach((row) => {
         const scope = scopeKey(row);
         if (row.schema_scope === scope) return;
-        row.target_schema_sql = '';
-        row.schema_status = 'idle';
-        row.schema_scope = scope;
+        Object.assign(row, { schema_scope: scope, schema_status: 'idle', target_schema_sql: '' });
         if (editingRow.value === row) showSql.value = false;
       });
       if (editingRow.value && !formData.tableData.includes(editingRow.value)) showSql.value = false;
@@ -465,23 +461,13 @@
       const resourceIds = [
         ...new Set(snapshot.tableData.flatMap((row) => [row.source_cluster.id, row.target_cluster.id])),
       ];
-      const checks = await Promise.all(
-        resourceIds.map(async (resourceId) => ({
-          allowed: await simpleCheckAllowed({
-            action_id: 'mysql_dts_data_migrate_hetero',
-            bk_biz_id: currentBizId,
-            resource_id: resourceId,
-          }),
-          resourceId,
-        })),
-      );
-      const denied = checks.find((check) => !check.allowed);
+      const resources = resourceIds.map((resourceId) => ({ id: String(resourceId), type: 'mysql' }));
+      const actionIds = [DTS_MIGRATE_HETERO_ACTION_ID];
+      const allowedList = await checkAuthAllowed({ action_ids: actionIds, resources });
+      // 结果按动作返回，只查了一个动作，非空且全部放行才算有权限
+      const denied = allowedList.length < 1 || allowedList.some((item) => !item.is_allowed);
       if (denied) {
-        permissionDialog(undefined, {
-          action_id: 'mysql_dts_data_migrate_hetero',
-          bk_biz_id: currentBizId,
-          resource_id: denied.resourceId,
-        });
+        permissionDialog(await getApplyDataLink({ action_ids: actionIds, resources }));
         return;
       }
       await createTicketRun({
